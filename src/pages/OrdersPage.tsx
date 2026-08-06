@@ -14,9 +14,10 @@ interface Props {
   loading: boolean;
   onRefresh: () => void;
   onOpen: (o: Order) => void;
+  activeRow?: number;
 }
 
-export default function OrdersPage({ orders, updatedAt, loading, onRefresh, onOpen }: Props) {
+export default function OrdersPage({ orders, updatedAt, loading, onRefresh, onOpen, activeRow }: Props) {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
 
@@ -102,8 +103,10 @@ export default function OrdersPage({ orders, updatedAt, loading, onRefresh, onOp
             {orders.length === 0 ? 'Замовлень поки немає' : 'Нічого не знайдено'}
           </div>
         )}
-        {filtered.map(o => (
-          <OrderCard key={o.headerRow} order={o} onOpen={() => onOpen(o)} />
+        {filtered.map((o, i) => (
+          <div key={o.headerRow} className={i < 5 ? `rise rise-${i + 1}` : undefined}>
+            <OrderCard order={o} onOpen={() => onOpen(o)} active={o.headerRow === activeRow} />
+          </div>
         ))}
       </div>
     </div>

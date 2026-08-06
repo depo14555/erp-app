@@ -5,8 +5,8 @@
 // ================================================================
 
 import { useState } from 'react';
-import { KeyRound, Loader2 } from 'lucide-react';
-import { api, setToken } from '../api';
+import { KeyRound, Loader2, FlaskConical, Database } from 'lucide-react';
+import { api, setToken, getEnv, setEnv, ENVS, EnvKey } from '../api';
 
 interface Props {
   onSuccess: () => void;
@@ -16,6 +16,13 @@ export default function TokenGate({ onSuccess }: Props) {
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [env, setEnvState] = useState<EnvKey>(getEnv());
+
+  function pickEnv(k: EnvKey) {
+    setEnv(k);
+    setEnvState(k);
+    setError('');
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,6 +51,23 @@ export default function TokenGate({ onSuccess }: Props) {
         <p className="text-[13px] text-gray-500 text-center mt-1 mb-5">
           Введіть ключ доступу, щоб підключитися до вашої таблиці
         </p>
+
+        {/* Вибір джерела даних */}
+        <div className="flex gap-1.5 mb-3">
+          {(Object.keys(ENVS) as EnvKey[]).map(k => {
+            const on = env === k;
+            const Icon = k === 'test' ? FlaskConical : Database;
+            return (
+              <button key={k} type="button" onClick={() => pickEnv(k)}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-[12px] font-bold transition-colors"
+                style={on
+                  ? { background: k === 'test' ? '#FEF3C7' : '#EBF2FE', color: k === 'test' ? '#92400E' : '#1F6FEB' }
+                  : { background: '#F5F6F8', color: '#9CA3AF' }}>
+                <Icon size={13} /> {ENVS[k].label}
+              </button>
+            );
+          })}
+        </div>
 
         <input
           type="password"

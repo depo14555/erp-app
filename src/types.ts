@@ -111,6 +111,14 @@ export interface DashboardData {
   updatedAt: string;
 }
 
+export interface Lists {
+  operations: string[];
+  executors: string[];
+  orderStatus: string[];
+  rowStatus: string[];
+  materials: string[];
+}
+
 export interface NotificationItem {
   time: string;
   orderId: string;

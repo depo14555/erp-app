@@ -10,16 +10,18 @@ import { Order, statusStyle } from '../types';
 interface Props {
   order: Order;
   onOpen: () => void;
+  active?: boolean;
 }
 
-export default function OrderCard({ order, onOpen }: Props) {
+export default function OrderCard({ order, onOpen, active }: Props) {
   const st = statusStyle(order.status);
   const pct = order.total > 0 ? Math.round((100 * order.done) / order.total) : 0;
 
   return (
     <button
       onClick={onOpen}
-      className="w-full text-left bg-white rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.06)] ring-1 ring-gray-900/5 overflow-hidden flex active:scale-[0.995] transition-transform cv-auto"
+      className="w-full text-left card overflow-hidden flex press cv-auto"
+      style={active ? { borderColor: 'var(--accent)', background: 'var(--accent-soft)' } : undefined}
     >
       {/* Смуга статусу */}
       <span className="w-1 flex-shrink-0" style={{ background: st.solid }} />

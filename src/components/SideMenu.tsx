@@ -7,8 +7,9 @@
 // ================================================================
 
 import { useState } from 'react';
-import { X, ChevronRight, LogOut, Smartphone } from 'lucide-react';
+import { X, ChevronRight, LogOut, Smartphone, FlaskConical, Database } from 'lucide-react';
 import { AppTab } from '../types';
+import { EnvKey, ENVS, setEnv } from '../api';
 
 interface MenuItem {
   icon: string;
@@ -100,15 +101,23 @@ const BADGE_STYLE: Record<string, string> = {
 };
 
 interface Props {
+  env: EnvKey;
   onClose: () => void;
   onNavigate: (tab: AppTab) => void;
   onSoon: (label: string) => void;
   onLogout: () => void;
+  onEnvChange: () => void;
 }
 
-export default function SideMenu({ onClose, onNavigate, onSoon, onLogout }: Props) {
+export default function SideMenu({ env, onClose, onNavigate, onSoon, onLogout, onEnvChange }: Props) {
   const [dept, setDept] = useState('prod');
   const active = DEPTS.find(d => d.key === dept)!;
+
+  function switchEnv(next: EnvKey) {
+    if (next === env) return;
+    setEnv(next);
+    onEnvChange();
+  }
 
   return (
     <div className="fixed inset-0 z-[70] flex">
@@ -187,8 +196,32 @@ export default function SideMenu({ onClose, onNavigate, onSoon, onLogout }: Prop
           </div>
         </div>
 
-        {/* Низ */}
-        <div className="flex-shrink-0 border-t border-gray-100 p-2">
+        {/* Низ: середовище + вихід */}
+        <div className="flex-shrink-0 border-t border-gray-100 p-2 space-y-1">
+          <p className="px-3 pt-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">
+            Джерело даних
+          </p>
+          <div className="flex gap-1 px-1">
+            {(Object.keys(ENVS) as EnvKey[]).map(k => {
+              const on = env === k;
+              const Icon = k === 'test' ? FlaskConical : Database;
+              return (
+                <button key={k} onClick={() => switchEnv(k)}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-2xl text-[11.5px] font-bold transition-colors"
+                  style={on
+                    ? { background: k === 'test' ? '#FEF3C7' : 'var(--accent-soft)', color: k === 'test' ? '#92400E' : 'var(--accent)' }
+                    : { background: '#F5F6F8', color: 'var(--ink-3)' }}>
+                  <Icon size={13} /> {ENVS[k].label}
+                </button>
+              );
+            })}
+          </div>
+          {env === 'test' && (
+            <p className="px-3 pb-1 text-[10.5px] text-amber-700">
+              Працюєте з копією — реальні дані не змінюються.
+            </p>
+          )}
+
           <button
             onClick={onLogout}
             className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-2xl text-left text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors"

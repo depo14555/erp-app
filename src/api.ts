@@ -9,27 +9,59 @@
 
 import {
   OrdersResponse, OrderDetail, ChatThread, ChatMessage,
-  DashboardData, NotificationItem, SearchRow,
+  DashboardData, NotificationItem, SearchRow, Lists,
 } from './types';
 
-const WEB_APP_URL =
-  'https://script.google.com/macros/s/AKfycbxuGYsq8E6zJc-Kh9pUEuiN4Qg_VH0ZkfGcP13DN-m0YVOp2B82xMiJ_ooGOq61xWok/exec';
+/** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
+export const ENVS = {
+  prod: {
+    label: 'Робоча таблиця',
+    url: 'https://script.google.com/macros/s/AKfycbxuGYsq8E6zJc-Kh9pUEuiN4Qg_VH0ZkfGcP13DN-m0YVOp2B82xMiJ_ooGOq61xWok/exec',
+  },
+  test: {
+    label: 'Тестова копія',
+    url: 'https://script.google.com/macros/s/AKfycbyVbeLHISP7xQVUlxPBPIp1J9u-fz63oO3kzPk6iO3_qfrKaXR9trWcQ_QN2tUgjgQ7yg/exec',
+  },
+} as const;
+
+export type EnvKey = keyof typeof ENVS;
 
 const REQUEST_TIMEOUT = 30000;
 const RETRY_DELAY = 1500;
 const CACHE_TTL = 5 * 60 * 1000;
 
-const TOKEN_KEY = 'erp-api-token';
+const ENV_KEY = 'erp-env';
 const CACHE_PREFIX = 'erp-cache:';
 
+export function getEnv(): EnvKey {
+  const v = localStorage.getItem(ENV_KEY);
+  return v === 'test' ? 'test' : 'prod';
+}
+export function setEnv(env: EnvKey): void {
+  localStorage.setItem(ENV_KEY, env);
+  clearCache();
+}
+function webAppUrl(): string {
+  return ENVS[getEnv()].url;
+}
+
+/** Токен зберігається окремо для кожного середовища. */
+function tokenKey(env: EnvKey = getEnv()): string {
+  return env === 'test' ? 'erp-api-token-test' : 'erp-api-token';
+}
 export function getToken(): string {
-  return localStorage.getItem(TOKEN_KEY) || '';
+  return localStorage.getItem(tokenKey()) || '';
 }
 export function setToken(t: string): void {
-  localStorage.setItem(TOKEN_KEY, t.trim());
+  localStorage.setItem(tokenKey(), t.trim());
 }
 export function hasToken(): boolean {
   return getToken().length > 0;
+}
+export function clearCache(): void {
+  Object.keys(localStorage)
+    .filter(k => k.startsWith(CACHE_PREFIX))
+    .forEach(k => localStorage.removeItem(k));
 }
 
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -66,7 +98,7 @@ async function fetchOnce(payload: Record<string, unknown>): Promise<any> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
   try {
-    const res = await fetch(WEB_APP_URL, {
+    const res = await fetch(webAppUrl(), {
       method: 'POST',
       body: JSON.stringify({ ...payload, token: getToken() }),
       mode: 'cors',
@@ -138,6 +170,22 @@ export const api = {
 
   setRowStatus(row: number, status: string): Promise<{ ok: boolean }> {
     return post('erp.setRowStatus', { row, status });
+  },
+
+  /** Редагування полів рядка (десктопна таблиця). */
+  updateRow(row: number, fields: Record<string, string>): Promise<{ ok: boolean; changed: string[] }> {
+    return post('erp.updateRow', { row, fields });
+  },
+
+  /** Довідники для випадаючих списків (кеш 5 хв). */
+  async getLists(force = false): Promise<Lists> {
+    if (!force) {
+      const cached = cacheGet<Lists>('lists');
+      if (cached) return cached;
+    }
+    const data = await post('erp.lists');
+    cacheSet('lists', data);
+    return data;
   },
 
   /** Зведення для головного екрана. */

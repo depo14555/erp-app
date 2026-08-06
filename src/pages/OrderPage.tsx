@@ -10,17 +10,20 @@ import {
   ExternalLink, User, Search,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
-import { OrderDetail, OrderItem, statusStyle, fileKind } from '../types';
+import ItemsTable from '../components/ItemsTable';
+import { OrderDetail, OrderItem, Lists, statusStyle, fileKind } from '../types';
 
 interface Props {
   detail: OrderDetail;
   orderStatusList: string[];
   rowStatusList: string[];
+  lists: Lists | null;
   loading: boolean;
   onBack: () => void;
   onRefresh: () => void;
   onSetOrderStatus: (s: string) => void;
   onSetRowStatus: (row: number, s: string) => void;
+  onUpdateRow: (row: number, field: string, value: string) => Promise<void>;
 }
 
 const GROUP_META = {
@@ -33,13 +36,17 @@ const GROUP_META = {
 const PAGE = 40; // позицій на групу за раз — великі замовлення (400+) не вішають телефон
 
 export default function OrderPage({
-  detail, orderStatusList, rowStatusList, loading,
-  onBack, onRefresh, onSetOrderStatus, onSetRowStatus,
+  detail, orderStatusList, rowStatusList, lists, loading,
+  onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow,
 }: Props) {
   const [q, setQ] = useState('');
   const [pickOrder, setPickOrder] = useState(false);
   const [pickRow, setPickRow] = useState<OrderItem | null>(null);
   const [limits, setLimits] = useState<Record<string, number>>({});
+  // На широкому екрані за замовчуванням таблиця, на телефоні — картки
+  const [view, setView] = useState<'cards' | 'table'>(
+    typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'table' : 'cards'
+  );
 
   const { header, items } = detail;
   const st = statusStyle(header.status);
@@ -64,53 +71,76 @@ export default function OrderPage({
   const done = items.filter(i => !i.group && String(i.rowStatus).includes('Готово')).length;
   const total = items.filter(i => !i.group).length;
 
+  const pct = total > 0 ? Math.round((100 * done) / total) : 0;
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Шапка замовлення */}
-      <div className="flex-shrink-0" style={{ background: st.solid }}>
-        <div className="flex items-center gap-1 px-2 py-2">
-          <button onClick={onBack} className="p-1 text-white/90 active:scale-90 transition-transform" aria-label="Назад">
-            <ChevronLeft size={26} strokeWidth={2.5} />
+    <div className="flex flex-col h-full bg-[var(--bg)]">
+      {/* Шапка замовлення — світла, мінімалістична */}
+      <div className="flex-shrink-0 bg-white border-b hairline">
+        <div className="flex items-center gap-1 px-2 pt-2">
+          <button onClick={onBack} className="p-1.5 press rounded-xl" style={{ color: 'var(--accent)' }} aria-label="Назад">
+            <ChevronLeft size={24} strokeWidth={2.2} />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-white font-bold text-[15px] truncate">
+            <h1 className="font-bold text-[17px] truncate leading-tight tracking-tight">
               {header.orderNum || header.projectId || 'Замовлення'}
             </h1>
-            <p className="text-white/80 text-[11px] truncate flex items-center gap-1">
+            <p className="text-[12px] truncate flex items-center gap-1" style={{ color: 'var(--ink-2)' }}>
               <User size={11} /> {header.client || '—'}
             </p>
           </div>
-          <button onClick={onRefresh} className="p-2 text-white/90 active:scale-90 transition-transform" aria-label="Оновити">
+          {header.folderUrl && (
+            <a href={header.folderUrl} target="_blank" rel="noreferrer"
+              className="p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Папка">
+              <FolderOpen size={18} />
+            </a>
+          )}
+          <button onClick={onRefresh} className="p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Оновити">
             <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
 
-        <div className="px-3 pb-3 flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setPickOrder(true)}
-            className="bg-white/95 px-3 py-1.5 rounded-xl text-[12px] font-bold active:scale-95 transition-transform"
-            style={{ color: st.fg }}
-          >
+        <div className="px-3 pb-2.5 pt-1.5 flex items-center gap-2 flex-wrap">
+          <button onClick={() => setPickOrder(true)}
+            className="px-3 py-1.5 rounded-full text-[12px] font-bold press"
+            style={{ background: st.bg, color: st.fg }}>
             {header.status || 'без статусу'} ▾
           </button>
-          <span className="text-white/90 text-[11px] font-semibold">
-            Готово {done} з {total}
-          </span>
-          {header.folderUrl && (
-            <a
-              href={header.folderUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="ml-auto flex items-center gap-1 bg-white/20 text-white px-2.5 py-1.5 rounded-xl text-[11px] font-bold"
-            >
-              <FolderOpen size={13} /> Папка
-            </a>
-          )}
+
+          <div className="flex items-center gap-2 flex-1 min-w-[140px]">
+            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-full rounded-full grow-x" style={{ width: `${pct}%`, background: st.solid }} />
+            </div>
+            <span className="text-[11px] font-semibold tabular-nums" style={{ color: 'var(--ink-2)' }}>
+              {done}/{total}
+            </span>
+          </div>
+
+          {/* Перемикач вигляду: картки / таблиця */}
+          <div className="flex bg-gray-100 rounded-full p-0.5">
+            {(['cards', 'table'] as const).map(v => (
+              <button key={v} onClick={() => setView(v)}
+                className="px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors"
+                style={view === v ? { background: '#fff', color: 'var(--ink)' } : { color: 'var(--ink-3)' }}>
+                {v === 'cards' ? 'Картки' : 'Таблиця'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
+      {view === 'table' ? (
+        <div className="flex-1 min-h-0 bg-white">
+          <ItemsTable
+            items={filtered.filter(i => !i.group)}
+            lists={lists}
+            onSave={(row, field, value) => onUpdateRow(row, field, value)}
+          />
+        </div>
+      ) : (
+      <>
       {/* Пошук по позиціях */}
-      <div className="px-3 py-2 bg-gray-50">
+      <div className="px-3 py-2">
         <div className="relative">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -227,6 +257,8 @@ export default function OrderPage({
           );
         })}
       </div>
+      </>
+      )}
 
       {pickOrder && (
         <StatusPicker
