@@ -19,16 +19,45 @@ function Tile({ label, value, sub, Icon, color }: {
   Icon: typeof Package; color: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl ring-1 ring-gray-200/70 p-3">
-      <div className="flex items-center gap-2 mb-1.5">
-        <span className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: `${color}15`, color }}>
-          <Icon size={15} />
+    <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.06)] ring-1 ring-gray-900/5 p-3.5">
+      <div className="flex items-start justify-between mb-2">
+        <span className="text-[11px] font-bold text-gray-500 leading-tight pr-2">{label}</span>
+        <span className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: `${color}14`, color }}>
+          <Icon size={16} />
         </span>
-        <span className="text-[11px] font-bold text-gray-500 leading-tight">{label}</span>
       </div>
-      <p className="text-[24px] font-bold text-gray-900 tabular-nums leading-none">{value}</p>
-      {sub && <p className="text-[11px] text-gray-400 mt-1">{sub}</p>}
+      <p className="text-[26px] font-bold text-gray-900 tabular-nums leading-none tracking-tight">{value}</p>
+      {sub && <p className="text-[10.5px] text-gray-400 mt-1.5">{sub}</p>}
+    </div>
+  );
+}
+
+/** Кільце прогресу — головний показник готовності. */
+function ProgressRing({ pct, done, total }: { pct: number; done: number; total: number }) {
+  const R = 34, C = 2 * Math.PI * R;
+  return (
+    <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.06)] ring-1 ring-gray-900/5 p-4 flex items-center gap-4">
+      <div className="relative flex-shrink-0">
+        <svg width="84" height="84" viewBox="0 0 84 84" className="-rotate-90">
+          <circle cx="42" cy="42" r={R} fill="none" stroke="#EEF2F6" strokeWidth="9" />
+          <circle cx="42" cy="42" r={R} fill="none" stroke="#4F46E5" strokeWidth="9"
+            strokeLinecap="round" strokeDasharray={C}
+            strokeDashoffset={C - (C * pct) / 100} />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-[19px] font-bold text-gray-900 tabular-nums leading-none">{pct}%</span>
+          <span className="text-[9px] text-gray-400 font-semibold mt-0.5">готово</span>
+        </div>
+      </div>
+      <div className="min-w-0">
+        <p className="text-[12px] font-bold text-gray-500">Позиції у виробництві</p>
+        <p className="text-[22px] font-bold text-gray-900 tabular-nums leading-tight mt-0.5">
+          {done.toLocaleString('uk-UA')}
+          <span className="text-[14px] text-gray-400 font-semibold"> / {total.toLocaleString('uk-UA')}</span>
+        </p>
+        <p className="text-[10.5px] text-gray-400 mt-1">по всіх замовленнях</p>
+      </div>
     </div>
   );
 }
@@ -55,21 +84,20 @@ export default function DashboardPage({ data, loading, onRefresh, onOpenOrder }:
         </button>
       </div>
 
+      {/* Головний показник */}
+      <ProgressRing pct={pct} done={counts.positionsDone} total={counts.positions} />
+
       {/* Лічильники */}
       <div className="grid grid-cols-2 gap-2.5">
-        <Tile label="В роботі" value={counts.activeOrders} sub={`всього ${counts.orders} замовлень`}
+        <Tile label="Замовлень в роботі" value={counts.activeOrders} sub={`з ${counts.orders} усього`}
           Icon={TrendingUp} color="#EF6C00" />
-        <Tile label="Завершено" value={counts.doneOrders} sub="готові та відвантажені"
+        <Tile label="Завершено" value={counts.doneOrders} sub="готові, здані, відвантажені"
           Icon={CheckCircle2} color="#2E7D32" />
-        <Tile label="Позицій" value={counts.positions} sub="у всіх замовленнях"
-          Icon={Package} color="#1565C0" />
-        <Tile label="Готово позицій" value={`${pct}%`} sub={`${counts.positionsDone} з ${counts.positions}`}
-          Icon={CheckCircle2} color="#00695C" />
       </div>
 
       {/* Розподіл за статусами */}
       {byStatus.length > 0 && (
-        <section className="bg-white rounded-2xl ring-1 ring-gray-200/70 p-3">
+        <section className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.06)] ring-1 ring-gray-900/5 p-3.5">
           <h2 className="text-[12px] font-bold text-gray-500 mb-2.5">Замовлення за статусами</h2>
           <div className="space-y-2">
             {byStatus.map(s => {
@@ -94,7 +122,7 @@ export default function DashboardPage({ data, loading, onRefresh, onOpenOrder }:
 
       {/* Завантаження виконавців */}
       {executors.length > 0 && (
-        <section className="bg-white rounded-2xl ring-1 ring-gray-200/70 p-3">
+        <section className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.06)] ring-1 ring-gray-900/5 p-3.5">
           <h2 className="text-[12px] font-bold text-gray-500 mb-2.5 flex items-center gap-1.5">
             <Users size={13} /> Завантаження виконавців
           </h2>
@@ -121,7 +149,7 @@ export default function DashboardPage({ data, loading, onRefresh, onOpenOrder }:
 
       {/* Найближчі терміни */}
       {deadlines.length > 0 && (
-        <section className="bg-white rounded-2xl ring-1 ring-gray-200/70 p-3">
+        <section className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.06)] ring-1 ring-gray-900/5 p-3.5">
           <h2 className="text-[12px] font-bold text-gray-500 mb-2 flex items-center gap-1.5">
             <Clock size={13} /> Терміни
           </h2>

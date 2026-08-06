@@ -112,6 +112,22 @@
     animation: slide-up 0.3s ease-out;
   }
 
+  /* Бокове меню: виїзд зліва */
+  @keyframes slide-in-left {
+    from {
+      opacity: 0;
+      transform: translateX(-18px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .animate-slide-in-left {
+    animation: slide-in-left 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
   /* Нижня шторка: плавний виїзд знизу БЕЗ горизонтального зсуву
      (slide-up має translateX(-50%) для центрованих тостів — для шторок
      він давав стрибок наприкінці анімації) */

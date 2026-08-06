@@ -5,7 +5,7 @@
 // ================================================================
 
 import { useCallback, useEffect, useState } from 'react';
-import { LayoutDashboard, ClipboardList, Search, MessageSquare, LogOut, Bell } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Search, MessageSquare, Bell, Menu } from 'lucide-react';
 import { api, hasToken, setToken } from './api';
 import { Order, OrderDetail, AppTab, DashboardData } from './types';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
@@ -16,6 +16,7 @@ import SearchPage from './pages/SearchPage';
 import OrderPage from './pages/OrderPage';
 import ChatPage from './pages/ChatPage';
 import NotificationsSheet from './components/NotificationsSheet';
+import SideMenu from './components/SideMenu';
 import Toast from './components/Toast';
 import InstallPrompt from './components/InstallPrompt';
 import UpdatePrompt from './components/UpdatePrompt';
@@ -41,6 +42,7 @@ export default function App() {
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [toast, setToast] = useState<{ msg: string; err?: boolean } | null>(null);
 
   const isOnline = useOnlineStatus();
@@ -132,17 +134,27 @@ export default function App() {
   return (
     <div className="h-[100dvh] flex flex-col bg-gray-50">
       {!detail && (
-        <header className="flex-shrink-0 bg-white border-b border-gray-200 px-3 h-12 flex items-center gap-2">
-          <span className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-[13px]">
-            ⚙
-          </span>
-          <h1 className="flex-1 text-[15px] font-bold text-gray-900 truncate">ERP Металообробка</h1>
-          <button onClick={() => setShowNotifs(true)} className="p-2 text-gray-500 active:text-blue-600" aria-label="Події">
-            <Bell size={18} />
-          </button>
-          <button onClick={logout} className="p-2 text-gray-400 active:text-gray-600" aria-label="Вийти">
-            <LogOut size={17} />
-          </button>
+        <header className="flex-shrink-0 bg-gradient-to-r from-indigo-600 to-blue-600 px-2 pt-2 pb-2.5 text-white">
+          <div className="flex items-center gap-1">
+            <button onClick={() => setShowMenu(true)}
+              className="p-2 text-white/90 active:scale-90 transition-transform" aria-label="Меню">
+              <Menu size={21} />
+            </button>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-[15px] font-bold truncate leading-tight">
+                {TABS.find(t => t.key === tab)?.label ?? 'ERP'}
+              </h1>
+              <p className="text-[10.5px] text-white/70 truncate">
+                {tab === 'dashboard' && dashboard
+                  ? `${dashboard.counts.activeOrders} в роботі · ${dashboard.counts.orders} всього`
+                  : 'ERP Металообробка'}
+              </p>
+            </div>
+            <button onClick={() => setShowNotifs(true)}
+              className="p-2 text-white/90 active:scale-90 transition-transform" aria-label="Події">
+              <Bell size={19} />
+            </button>
+          </div>
         </header>
       )}
 
@@ -183,20 +195,34 @@ export default function App() {
       <OfflineBanner isOnline={isOnline} pendingCount={0} />
 
       {!detail && (
-        <nav className="flex-shrink-0 bg-white border-t border-gray-200 flex">
-          {TABS.map(({ key, label, Icon }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2 transition-colors ${
-                tab === key ? 'text-blue-600' : 'text-gray-400'
-              }`}
-            >
-              <Icon size={19} strokeWidth={tab === key ? 2.5 : 2} />
-              <span className="text-[10px] font-bold">{label}</span>
-            </button>
-          ))}
+        <nav className="flex-shrink-0 bg-white/95 backdrop-blur border-t border-gray-200/70 flex px-1.5 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))]">
+          {TABS.map(({ key, label, Icon }) => {
+            const on = tab === key;
+            return (
+              <button
+                key={key}
+                onClick={() => setTab(key)}
+                className="flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-2xl transition-colors"
+                style={on ? { background: '#EEF2FF' } : undefined}
+              >
+                <Icon size={19} strokeWidth={on ? 2.6 : 2}
+                  className={on ? 'text-indigo-600' : 'text-gray-400'} />
+                <span className={`text-[10px] font-bold ${on ? 'text-indigo-700' : 'text-gray-400'}`}>
+                  {label}
+                </span>
+              </button>
+            );
+          })}
         </nav>
+      )}
+
+      {showMenu && (
+        <SideMenu
+          onClose={() => setShowMenu(false)}
+          onNavigate={t => { setTab(t); setDetail(null); setShowMenu(false); }}
+          onSoon={label => { setShowMenu(false); showToast(`«${label}» — поки виконується в таблиці`); }}
+          onLogout={() => { setShowMenu(false); logout(); }}
+        />
       )}
 
       {showNotifs && (
