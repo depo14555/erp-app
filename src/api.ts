@@ -9,6 +9,7 @@
 
 import {
   OrdersResponse, OrderDetail, ChatThread, ChatMessage,
+  DashboardData, NotificationItem, SearchRow,
 } from './types';
 
 const WEB_APP_URL =
@@ -137,6 +138,42 @@ export const api = {
 
   setRowStatus(row: number, status: string): Promise<{ ok: boolean }> {
     return post('erp.setRowStatus', { row, status });
+  },
+
+  /** Зведення для головного екрана. */
+  async getDashboard(force = false): Promise<DashboardData> {
+    if (!force) {
+      const cached = cacheGet<DashboardData>('dashboard');
+      if (cached) return cached;
+    }
+    try {
+      const data = await post('erp.dashboard');
+      cacheSet('dashboard', data);
+      return data;
+    } catch (err) {
+      const stale = cacheGetStale<DashboardData>('dashboard');
+      if (stale) return stale;
+      throw err;
+    }
+  },
+
+  /** Останні події від виконавців. */
+  async getNotifications(): Promise<NotificationItem[]> {
+    try {
+      const data = await post('erp.notifications');
+      cacheSet('notifications', data.items || []);
+      return data.items || [];
+    } catch (err) {
+      const stale = cacheGetStale<NotificationItem[]>('notifications');
+      if (stale) return stale;
+      throw err;
+    }
+  },
+
+  /** Глобальний пошук деталі по всіх замовленнях. */
+  async search(q: string): Promise<SearchRow[]> {
+    const data = await post('erp.search', { q });
+    return data.rows || [];
   },
 
   async getChatThreads(): Promise<ChatThread[]> {

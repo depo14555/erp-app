@@ -4,7 +4,7 @@
 //  з підгрупами за типом файлу, статус рядка, посилання на креслення.
 // ================================================================
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ChevronLeft, RefreshCw, FolderOpen, FileText, Ruler, Box, Paperclip,
   ExternalLink, User, Search,
@@ -30,6 +30,8 @@ const GROUP_META = {
   other: { label: 'Інші позиції',       icon: Paperclip, color: '#455A64', bg: '#F5F5F5' },
 } as const;
 
+const PAGE = 40; // позицій на групу за раз — великі замовлення (400+) не вішають телефон
+
 export default function OrderPage({
   detail, orderStatusList, rowStatusList, loading,
   onBack, onRefresh, onSetOrderStatus, onSetRowStatus,
@@ -37,9 +39,13 @@ export default function OrderPage({
   const [q, setQ] = useState('');
   const [pickOrder, setPickOrder] = useState(false);
   const [pickRow, setPickRow] = useState<OrderItem | null>(null);
+  const [limits, setLimits] = useState<Record<string, number>>({});
 
   const { header, items } = detail;
   const st = statusStyle(header.status);
+
+  // Новий пошук або інше замовлення — показуємо знову з першої сторінки
+  useEffect(() => { setLimits({}); }, [q, header.headerRow]);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -139,7 +145,7 @@ export default function OrderPage({
               </div>
 
               <div className="space-y-2">
-                {list.map(item => {
+                {list.slice(0, limits[key] ?? PAGE).map(item => {
                   const rst = statusStyle(item.rowStatus);
                   return (
                     <div
@@ -207,6 +213,15 @@ export default function OrderPage({
                     </div>
                   );
                 })}
+
+                {list.length > (limits[key] ?? PAGE) && (
+                  <button
+                    onClick={() => setLimits(prev => ({ ...prev, [key]: (prev[key] ?? PAGE) + PAGE }))}
+                    className="w-full py-2.5 rounded-2xl bg-white ring-1 ring-gray-200 text-[12px] font-bold text-blue-600 active:bg-gray-50"
+                  >
+                    Показати ще {Math.min(PAGE, list.length - (limits[key] ?? PAGE))} з {list.length - (limits[key] ?? PAGE)}
+                  </button>
+                )}
               </div>
             </div>
           );

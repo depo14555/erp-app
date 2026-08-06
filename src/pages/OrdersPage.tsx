@@ -6,7 +6,7 @@
 import { useMemo, useState } from 'react';
 import { Search, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import OrderCard from '../components/OrderCard';
-import { Order, statusStyle } from '../types';
+import { Order, statusStyle, isClosed } from '../types';
 
 interface Props {
   orders: Order[];
@@ -36,7 +36,7 @@ export default function OrdersPage({ orders, updatedAt, loading, onRefresh, onOp
     });
   }, [orders, q, status]);
 
-  const active = orders.filter(o => !o.status.includes('Готово') && !o.status.includes('Відвантаж')).length;
+  const active = orders.filter(o => !isClosed(o.status)).length;
 
   return (
     <div className="flex flex-col h-full">

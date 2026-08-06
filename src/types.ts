@@ -76,12 +76,69 @@ export interface ChatMessage {
   itemName: string;
 }
 
-export type AppTab = 'orders' | 'chat';
+export type AppTab = 'dashboard' | 'orders' | 'search' | 'chat';
+
+/** Замовлення завершене: готове, здане або відвантажене. */
+export function isClosed(status: string): boolean {
+  const v = String(status || '');
+  return v.includes('Готово') || v.includes('Здано') || v.includes('Відвантаж');
+}
+
+export interface DashboardCounts {
+  orders: number;
+  activeOrders: number;
+  doneOrders: number;
+  positions: number;
+  positionsDone: number;
+}
+
+export interface StatusCount {
+  status: string;
+  count: number;
+}
+
+export interface ExecutorLoad {
+  name: string;
+  open: number;
+  done: number;
+}
+
+export interface DashboardData {
+  counts: DashboardCounts;
+  byStatus: StatusCount[];
+  executors: ExecutorLoad[];
+  deadlines: Order[];
+  updatedAt: string;
+}
+
+export interface NotificationItem {
+  time: string;
+  orderId: string;
+  executor: string;
+  type: string;
+  message: string;
+  row: number;
+}
+
+export interface SearchRow {
+  row: number;
+  id: string;
+  name: string;
+  headerRow: number;
+  orderNum: string;
+  client: string;
+  op: string;
+  executor: string;
+  status: string;
+  qty: string;
+  material: string;
+}
 
 /** Кольори статусів — та сама палітра, що на аркуші «Головна» в таблиці. */
 export function statusStyle(s: string): { bg: string; fg: string; solid: string } {
   const v = String(s || '');
   if (v.includes('Відвантаж')) return { bg: '#E0F2F1', fg: '#00695C', solid: '#00695C' };
+  if (v.includes('Здано'))     return { bg: '#E0F7FA', fg: '#00838F', solid: '#00838F' };
   if (v.includes('Готово'))    return { bg: '#E8F5E9', fg: '#2E7D32', solid: '#2E7D32' };
   if (v.includes('Відправ'))   return { bg: '#EDE7F6', fg: '#4527A0', solid: '#4527A0' };
   if (v.includes('робот') || v.includes('Виконуєт')) return { bg: '#FFF3E0', fg: '#E65100', solid: '#EF6C00' };
