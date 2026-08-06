@@ -1,0 +1,17 @@
+# Кешування для Cloudflare Pages / Netlify.
+# index.html і сервіс-воркер — завжди свіжі, щоб оновлення доходили
+# до всіх одразу; хешовані бандли можна кешувати назавжди.
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/sw.js
+  Cache-Control: no-cache
+/registerSW.js
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache
+/manifest.json
+  Cache-Control: no-cache
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
