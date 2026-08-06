@@ -1,0 +1,13 @@
+{
+  // Cloudflare Workers: публікація зібраного PWA як статичних ассетів.
+  // Без цього файлу wrangler намагається сам сконфігурувати Vite-плагін
+  // (потребує Vite 6+) і деплой падає.
+  "name": "erp-app",
+  "compatibility_date": "2025-06-01",
+  "assets": {
+    "directory": "./dist",
+    // SPA: будь-який маршрут віддає index.html (сервіс-воркер і ассети
+    // віддаються як звичайні файли, бо існують на диску)
+    "not_found_handling": "single-page-application"
+  }
+}

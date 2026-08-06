@@ -24,3 +24,6 @@ dist-ssr
 
 # PWA dev service worker
 dev-dist
+
+.wrangler/
+.wrangler-check/
