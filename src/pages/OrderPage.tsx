@@ -7,10 +7,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ChevronLeft, RefreshCw, FolderOpen, FileText, Ruler, Box, Paperclip,
-  ExternalLink, User, Search,
+  ExternalLink, User, Search, Printer, X,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
 import ItemsTable from '../components/ItemsTable';
+import PrintSheet from '../components/PrintSheet';
 import { OrderDetail, OrderItem, Lists, statusStyle, fileKind } from '../types';
 
 interface Props {
@@ -24,6 +25,7 @@ interface Props {
   onSetOrderStatus: (s: string) => void;
   onSetRowStatus: (row: number, s: string) => void;
   onUpdateRow: (row: number, field: string, value: string) => Promise<void>;
+  onToast: (msg: string, err?: boolean) => void;
 }
 
 const GROUP_META = {
@@ -37,11 +39,15 @@ const PAGE = 40; // позицій на групу за раз — великі 
 
 export default function OrderPage({
   detail, orderStatusList, rowStatusList, lists, loading,
-  onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow,
+  onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onToast,
 }: Props) {
   const [q, setQ] = useState('');
+  const [fOp, setFOp] = useState('');
+  const [fExec, setFExec] = useState('');
+  const [fStatus, setFStatus] = useState('');
   const [pickOrder, setPickOrder] = useState(false);
   const [pickRow, setPickRow] = useState<OrderItem | null>(null);
+  const [showPrint, setShowPrint] = useState(false);
   const [limits, setLimits] = useState<Record<string, number>>({});
   // На широкому екрані за замовчуванням таблиця, на телефоні — картки
   const [view, setView] = useState<'cards' | 'table'>(
@@ -51,16 +57,27 @@ export default function OrderPage({
   const { header, items } = detail;
   const st = statusStyle(header.status);
 
-  // Новий пошук або інше замовлення — показуємо знову з першої сторінки
-  useEffect(() => { setLimits({}); }, [q, header.headerRow]);
+  // Новий пошук/фільтр або інше замовлення — показуємо знову з першої сторінки
+  useEffect(() => { setLimits({}); }, [q, fOp, fExec, fStatus, header.headerRow]);
+  useEffect(() => { setFOp(''); setFExec(''); setFStatus(''); setQ(''); }, [header.headerRow]);
+
+  const real = useMemo(() => items.filter(i => !i.group), [items]);
+  const fOps = useMemo(() => distinct(real.map(i => i.op)), [real]);
+  const fExecs = useMemo(() => distinct(real.map(i => i.executor)), [real]);
+  const fStatuses = useMemo(() => distinct(real.map(i => i.rowStatus)), [real]);
+  const hasFilter = !!(q.trim() || fOp || fExec || fStatus);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
-    if (!query) return items;
-    return items.filter(i =>
-      [i.name, i.op, i.executor, i.material, i.note, i.assembly].join(' ').toLowerCase().includes(query)
-    );
-  }, [items, q]);
+    return items.filter(i => {
+      if (i.group) return !hasFilter;
+      if (fOp && i.op !== fOp) return false;
+      if (fExec && i.executor !== fExec) return false;
+      if (fStatus && i.rowStatus !== fStatus) return false;
+      if (query && ![i.name, i.id, i.op, i.executor, i.material, i.note, i.assembly].join(' ').toLowerCase().includes(query)) return false;
+      return true;
+    });
+  }, [items, q, fOp, fExec, fStatus, hasFilter]);
 
   const groups = useMemo(() => {
     const acc: Record<string, OrderItem[]> = { pdf: [], dxf: [], '3d': [], other: [] };
@@ -95,6 +112,9 @@ export default function OrderPage({
               <FolderOpen size={18} />
             </a>
           )}
+          <button onClick={() => setShowPrint(true)} className="p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Друк креслень">
+            <Printer size={18} />
+          </button>
           <button onClick={onRefresh} className="p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Оновити">
             <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -127,6 +147,38 @@ export default function OrderPage({
             ))}
           </div>
         </div>
+
+        {/* Фільтри: пошук + операція / виконавець / статус (обидва вигляди) */}
+        <div className="px-3 pb-2.5 flex items-center gap-1.5 flex-wrap">
+          <div className="relative flex-1 min-w-[150px]">
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              placeholder="Пошук деталі…"
+              className="w-full pl-7 pr-6 py-1.5 rounded-xl bg-gray-50 ring-1 ring-gray-200/80 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[12px]"
+            />
+            {q && (
+              <button onClick={() => setQ('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400" aria-label="Очистити">
+                <X size={13} />
+              </button>
+            )}
+          </div>
+          <FilterChip value={fOp} onChange={setFOp} label="Операція" options={fOps} />
+          <FilterChip value={fExec} onChange={setFExec} label="Виконавець" options={fExecs} />
+          <FilterChip value={fStatus} onChange={setFStatus} label="Статус" options={fStatuses} />
+          {hasFilter && (
+            <button onClick={() => { setQ(''); setFOp(''); setFExec(''); setFStatus(''); }}
+              className="text-[11px] font-bold px-2 py-1.5 rounded-xl press" style={{ color: 'var(--ink-3)' }}>
+              Скинути
+            </button>
+          )}
+          {hasFilter && (
+            <span className="text-[11px] font-semibold tabular-nums ml-auto" style={{ color: 'var(--ink-2)' }}>
+              {filtered.filter(i => !i.group).length} поз.
+            </span>
+          )}
+        </div>
       </div>
 
       {view === 'table' ? (
@@ -139,21 +191,8 @@ export default function OrderPage({
         </div>
       ) : (
       <>
-      {/* Пошук по позиціях */}
-      <div className="px-3 py-2">
-        <div className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            value={q}
-            onChange={e => setQ(e.target.value)}
-            placeholder="Пошук деталі, операції, виконавця…"
-            className="w-full pl-9 pr-3 py-2.5 rounded-2xl bg-white ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[13px]"
-          />
-        </div>
-      </div>
-
       {/* Позиції */}
-      <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-3 pt-2 pb-4 space-y-4">
         {total === 0 && (
           <p className="text-center text-gray-400 text-[13px] py-14">У замовленні немає позицій</p>
         )}
@@ -281,6 +320,35 @@ export default function OrderPage({
           onClose={() => setPickRow(null)}
         />
       )}
+
+      {showPrint && (
+        <PrintSheet detail={detail} onClose={() => setShowPrint(false)} onToast={onToast} />
+      )}
+    </div>
+  );
+}
+
+function distinct(arr: string[]): string[] {
+  return [...new Set(arr.map(s => String(s || '').trim()).filter(Boolean))].sort();
+}
+
+/** Фільтр-чіп: стилізований select — активний підсвічується акцентом. */
+function FilterChip({ value, onChange, label, options }: {
+  value: string; onChange: (v: string) => void; label: string; options: string[];
+}) {
+  if (!options.length) return null;
+  return (
+    <div className="relative">
+      <select value={value} onChange={e => onChange(e.target.value)}
+        className="appearance-none pl-2.5 pr-6 py-1.5 rounded-xl text-[11px] font-bold outline-none max-w-[130px] truncate transition-colors"
+        style={value
+          ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
+          : { background: '#F3F4F6', color: 'var(--ink-2)' }}>
+        <option value="">{label}</option>
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[8px]"
+        style={{ color: value ? 'var(--accent)' : 'var(--ink-3)' }}>▼</span>
     </div>
   );
 }

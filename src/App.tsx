@@ -16,6 +16,8 @@ import OrdersPage from './pages/OrdersPage';
 import SearchPage from './pages/SearchPage';
 import OrderPage from './pages/OrderPage';
 import ChatPage from './pages/ChatPage';
+import LogisticsPage from './pages/LogisticsPage';
+import PartPage from './pages/PartPage';
 import NotificationsSheet from './components/NotificationsSheet';
 import SideMenu from './components/SideMenu';
 import Toast from './components/Toast';
@@ -43,6 +45,18 @@ export default function App() {
   const isOnline = useOnlineStatus();
   const env = getEnv();
   const showToast = useCallback((msg: string, err?: boolean) => setToast({ msg, err }), []);
+
+  // QR-код з креслення веде на #p=<ID> — відкриваємо деталь поверх додатка
+  const [partId, setPartId] = useState<string>(() => readPartHash());
+  useEffect(() => {
+    const onHash = () => setPartId(readPartHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  const closePart = useCallback(() => {
+    if (readPartHash()) history.replaceState(null, '', location.pathname + location.search);
+    setPartId('');
+  }, []);
 
   const loadOrders = useCallback(async (force = false) => {
     setLoading(true);
@@ -158,6 +172,8 @@ export default function App() {
         activeRow={detail?.header.headerRow} />
     ) : tab === 'search' ? (
       <SearchPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} />
+    ) : tab === 'logistics' ? (
+      <LogisticsPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} />
     ) : (
       <ChatPage onToast={showToast} />
     )
@@ -175,6 +191,7 @@ export default function App() {
       onSetOrderStatus={setOrderStatus}
       onSetRowStatus={setRowStatus}
       onUpdateRow={updateRow}
+      onToast={showToast}
     />
   );
 
@@ -251,13 +268,31 @@ export default function App() {
           onSoon={label => { setShowMenu(false); showToast(`«${label}» — поки виконується в таблиці`); }}
           onLogout={() => { setShowMenu(false); logout(); }}
           onEnvChange={() => { setShowMenu(false); setAuthed(hasToken()); setDetail(null); }}
+          onToast={showToast}
         />
       )}
 
       {showNotifs && <NotificationsSheet onClose={() => setShowNotifs(false)} onToast={showToast} />}
+
+      {/* Деталь за QR-кодом — поверх усього */}
+      {partId && (
+        <PartPage
+          partId={partId}
+          onClose={closePart}
+          onOpenOrder={hr => { closePart(); setTab('orders'); openOrder(hr); }}
+          onToast={showToast}
+        />
+      )}
+
       {toast && <Toast message={toast.msg} isError={toast.err} onClose={() => setToast(null)} />}
       <InstallPrompt />
       <UpdatePrompt />
     </div>
   );
+}
+
+/** #p=<ID> з QR-коду на кресленні. */
+function readPartHash(): string {
+  const m = location.hash.match(/^#p=(.+)$/);
+  return m ? decodeURIComponent(m[1]) : '';
 }

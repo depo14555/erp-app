@@ -76,7 +76,65 @@ export interface ChatMessage {
   itemName: string;
 }
 
-export type AppTab = 'dashboard' | 'orders' | 'search' | 'chat';
+export type AppTab = 'dashboard' | 'orders' | 'search' | 'logistics' | 'chat';
+
+/** Вміст файлу Drive для друку. */
+export interface FileData {
+  name: string;
+  mime: string;
+  size: number;
+  base64: string;
+}
+
+/** Деталь, відкрита за QR-кодом (#p=ID). */
+export interface PartData {
+  header: {
+    headerRow: number;
+    orderNum: string;
+    client: string;
+    status: string;
+    projectId: string;
+    folderUrl: string;
+  };
+  item: {
+    row: number;
+    id: string;
+    name: string;
+    url: string;
+    material: string;
+    thickness: string;
+    qty: string;
+    op: string;
+    executor: string;
+    rowStatus: string;
+    note: string;
+    assembly: string;
+  };
+}
+
+/** Логістика: забрати від виконавця. */
+export interface PickupGroup {
+  executor: string;
+  count: number;
+  orders: Array<{ orderNum: string; count: number }>;
+  items: Array<{ row: number; id: string; name: string; qty: string; orderNum: string; headerRow: number }>;
+}
+
+export interface ShippingOrder {
+  headerRow: number;
+  orderNum: string;
+  client: string;
+  status: string;
+  total: number;
+  done: number;
+  date: string;
+}
+
+export interface LogisticsData {
+  pickup: PickupGroup[];
+  shipping: ShippingOrder[];
+  updatedAt: string;
+}
 
 /** Замовлення завершене: готове, здане або відвантажене. */
 export function isClosed(status: string): boolean {

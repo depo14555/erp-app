@@ -4,13 +4,14 @@
 //  Мінімалізм — тільки іконка + підпис, активний стан м'якою плашкою.
 // ================================================================
 
-import { LayoutDashboard, ClipboardList, Search, MessageSquare, Menu } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Search, MessageSquare, Menu, Truck } from 'lucide-react';
 import { AppTab } from '../types';
 
 export const TABS = [
   { key: 'dashboard' as AppTab, label: 'Огляд', Icon: LayoutDashboard },
   { key: 'orders' as AppTab, label: 'Замовлення', Icon: ClipboardList },
   { key: 'search' as AppTab, label: 'Пошук', Icon: Search },
+  { key: 'logistics' as AppTab, label: 'Логістика', Icon: Truck },
   { key: 'chat' as AppTab, label: 'Чат', Icon: MessageSquare },
 ];
 

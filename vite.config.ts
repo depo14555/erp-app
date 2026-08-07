@@ -114,6 +114,6 @@ export default defineConfig({
     chunkSizeWarningLimit: 600
   },
   publicDir: 'public',
-  assetsInclude: ['**/*.png', '**/*.jpg', '**/*.svg', '**/*.ico', '**/*.json']
+  assetsInclude: ['**/*.png', '**/*.jpg', '**/*.svg', '**/*.ico']
 });
 

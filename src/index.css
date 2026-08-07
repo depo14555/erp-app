@@ -73,6 +73,15 @@
     content-visibility: auto;
     contain-intrinsic-size: auto 150px;
   }
+
+  /* Горизонтальні стрічки чіпів — без видимого скролбара */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer utilities {

@@ -10,6 +10,7 @@
 import {
   OrdersResponse, OrderDetail, ChatThread, ChatMessage,
   DashboardData, NotificationItem, SearchRow, Lists,
+  PartData, LogisticsData, FileData,
 } from './types';
 
 /** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
@@ -236,6 +237,38 @@ export const api = {
 
   chatSend(executor: string, message: string): Promise<{ ok: boolean; delivered: boolean }> {
     return post('erp.chatSend', { executor, message });
+  },
+
+  /** Вміст файлу Drive (base64) — для друку креслень на клієнті. */
+  fileData(fileId: string): Promise<FileData> {
+    return post('erp.fileData', { fileId });
+  },
+
+  /** Деталь за ID рядка — лендінг QR-коду з креслення. */
+  byId(id: string): Promise<PartData> {
+    return post('erp.byId', { id });
+  },
+
+  /** Фото з цеху: у папку замовлення + позначка в примітці рядка. */
+  addPhoto(row: number, base64: string, mime: string, caption: string): Promise<{ ok: boolean; url: string }> {
+    return post('erp.addPhoto', { row, base64, mime, caption });
+  },
+
+  /** Логістика: забрати від виконавців + готове до відвантаження. */
+  async getLogistics(force = false): Promise<LogisticsData> {
+    if (!force) {
+      const cached = cacheGet<LogisticsData>('logistics');
+      if (cached) return cached;
+    }
+    try {
+      const data = await post('erp.logistics');
+      cacheSet('logistics', data);
+      return data;
+    } catch (err) {
+      const stale = cacheGetStale<LogisticsData>('logistics');
+      if (stale) return stale;
+      throw err;
+    }
   },
 
   /** Перевірка ключа при першому вході. */
