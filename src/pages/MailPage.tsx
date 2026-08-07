@@ -5,9 +5,9 @@
 //  створюються картки замовлень, як «Перевірити пошту» в таблиці.
 // ================================================================
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Mail, Paperclip, User, Loader2, Inbox, Zap, AlertTriangle } from 'lucide-react';
-import { api } from '../api';
+import { api, getEnv } from '../api';
 import { MailListData } from '../types';
 
 interface Props {
@@ -20,6 +20,9 @@ export default function MailPage({ onToast, onProcessed, refreshSignal }: Props)
   const [data, setData] = useState<MailListData | null>(null);
   const [loading, setLoading] = useState(false);
   const [working, setWorking] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const timerRef = useRef<number | null>(null);
+  const isTest = getEnv() === 'test';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -38,6 +41,8 @@ export default function MailPage({ onToast, onProcessed, refreshSignal }: Props)
   async function processAll() {
     if (!data?.threads.length) return;
     setWorking(true);
+    setElapsed(0);
+    timerRef.current = window.setInterval(() => setElapsed(s => s + 1), 1000);
     try {
       const res = await api.mailProcess();
       onToast(`Створено замовлень: ${res.processed}${res.remaining ? ` · лишилось листів: ${res.remaining}` : ''}`);
@@ -45,7 +50,9 @@ export default function MailPage({ onToast, onProcessed, refreshSignal }: Props)
       load();
     } catch (e: any) {
       onToast(e?.message || 'Не вдалося обробити пошту', true);
+      load(); // могло встигнути обробитись — показуємо актуальний стан
     } finally {
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
       setWorking(false);
     }
   }
@@ -61,9 +68,27 @@ export default function MailPage({ onToast, onProcessed, refreshSignal }: Props)
           className="ml-auto flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12px] font-bold text-white press disabled:opacity-40"
           style={{ background: 'var(--accent)' }}>
           {working ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} />}
-          {working ? 'Обробляю…' : `Створити замовлення (${data?.threads.length ?? 0})`}
+          {working ? `Обробляю… ${elapsed} с` : `Створити замовлення (${data?.threads.length ?? 0})`}
         </button>
       </div>
+
+      {working && (
+        <div className="flex-shrink-0 mx-3 lg:mx-5 mb-1 p-2.5 rounded-2xl bg-blue-50 text-blue-900/80 text-[11.5px] leading-relaxed">
+          ⏳ Вкладення викачуються на Диск і в таблицю вставляється картка — зазвичай
+          <b> 30–90 секунд на лист</b>. Не закривайте додаток, чекаємо до 4 хвилин.
+        </div>
+      )}
+
+      {isTest && !working && (data?.threads.length ?? 0) > 0 && (
+        <div className="flex-shrink-0 mx-3 lg:mx-5 mb-1 p-2.5 rounded-2xl bg-amber-50 text-amber-800 text-[11.5px] leading-relaxed flex gap-2">
+          <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+          <span>
+            Ви на <b>тестовій копії</b>, але пошта і Диск — спільні з робочою таблицею:
+            обробка тут <b>забере лист із черги</b> (мітка зніметься) і створить картку лише в копії.
+            Для реальних замовлень обробляйте з робочої таблиці.
+          </span>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto px-3 lg:px-5 pb-5">
         {data?.labelMissing && (
