@@ -136,6 +136,47 @@ export interface LogisticsData {
   updatedAt: string;
 }
 
+/** Рядок для відправки виконавцю (повний набір полів, як у діалозі таблиці). */
+export interface ExecRow {
+  row: number;
+  executor: string;
+  id: string;
+  num: string;
+  name: string;
+  link: string;
+  material: string;
+  type: string;
+  thickness: string;
+  length: string;
+  width: string;
+  totalQty: string;
+  assignedQty: string;
+  assembly: string;
+  note: string;
+  deadline: string;
+  status: string;
+  op: string;
+}
+
+export interface ExecInfo {
+  name: string;
+  count: number;
+  hasMapping: boolean;
+  hasTable: boolean;
+  position: 'top' | 'bottom';
+}
+
+export interface ExecRowsData {
+  rows: ExecRow[];
+  executors: ExecInfo[];
+}
+
+export interface ExecSendResult {
+  sent: number;
+  skipped: string[];
+  sheetUrl: string;
+}
+
 /** Замовлення завершене: готове, здане або відвантажене. */
 export function isClosed(status: string): boolean {
   const v = String(status || '');

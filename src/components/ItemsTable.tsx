@@ -7,7 +7,7 @@
 // ================================================================
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ExternalLink, Check, Loader2, Search } from 'lucide-react';
+import { ExternalLink, Check, Loader2, Search, CheckSquare, Square } from 'lucide-react';
 import { OrderItem, Lists, statusStyle } from '../types';
 
 type Field = 'op' | 'executor' | 'qty' | 'assignedQty' | 'material' | 'thickness' | 'note' | 'rowStatus';
@@ -16,6 +16,10 @@ interface Props {
   items: OrderItem[];
   lists: Lists | null;
   onSave: (row: number, field: Field, value: string) => Promise<void>;
+  /** Вибір рядків для масових дій (статус, відправка виконавцю). */
+  selected: Set<number>;
+  onToggleRow: (row: number) => void;
+  onToggleAll: () => void;
 }
 
 interface PopState {
@@ -26,7 +30,7 @@ interface PopState {
   current: string;
 }
 
-export default function ItemsTable({ items, lists, onSave }: Props) {
+export default function ItemsTable({ items, lists, onSave, selected, onToggleRow, onToggleAll }: Props) {
   const [edit, setEdit] = useState<{ row: number; field: Field } | null>(null);
   const [pop, setPop] = useState<PopState | null>(null);
   const [draft, setDraft] = useState('');
@@ -124,6 +128,13 @@ export default function ItemsTable({ items, lists, onSave }: Props) {
       <table className="w-full border-collapse text-[12.5px]">
         <thead className="sticky top-0 z-10">
           <tr className="bg-[#FAFBFC]">
+            <th className="w-[36px] px-2 py-2 border-b hairline">
+              <button onClick={onToggleAll} className="flex press" aria-label="Вибрати все">
+                {items.length > 0 && items.every(i => selected.has(i.row))
+                  ? <CheckSquare size={15} className="text-[var(--accent)]" />
+                  : <Square size={15} className="text-gray-300" />}
+              </button>
+            </th>
             {COLS.map(c => (
               <th key={c.key}
                 className={`${c.w} text-left font-semibold text-[11px] uppercase tracking-wide text-[var(--ink-3)] px-3 py-2 border-b hairline whitespace-nowrap`}>
@@ -134,7 +145,16 @@ export default function ItemsTable({ items, lists, onSave }: Props) {
         </thead>
         <tbody>
           {items.map(item => (
-            <tr key={item.row} className="border-b hairline hover:bg-[#FCFCFD] group">
+            <tr key={item.row}
+              className="border-b hairline hover:bg-[#FCFCFD] group"
+              style={selected.has(item.row) ? { background: 'var(--accent-soft)' } : undefined}>
+              <td className="px-2 py-1.5">
+                <button onClick={() => onToggleRow(item.row)} className="flex press" aria-label="Вибрати рядок">
+                  {selected.has(item.row)
+                    ? <CheckSquare size={15} className="text-[var(--accent)]" />
+                    : <Square size={15} className="text-gray-300" />}
+                </button>
+              </td>
               <td className="px-3 py-1.5 font-mono text-[11px] text-[var(--ink-3)] whitespace-nowrap">
                 {item.id}
               </td>

@@ -150,6 +150,22 @@ export default function App() {
     }
   }
 
+  /** Масова зміна статусу вибраних рядків (панель дій у таблиці позицій). */
+  async function bulkStatus(rows: number[], status: string) {
+    if (!detail) return;
+    const set = new Set(rows);
+    setDetail({
+      ...detail,
+      items: detail.items.map(i => (set.has(i.row) ? { ...i, rowStatus: status } : i)),
+    });
+    try {
+      await api.bulkUpdate(rows, { status });
+    } catch (err) {
+      openOrder(detail.header.headerRow, true);
+      throw err;
+    }
+  }
+
   function logout() {
     setToken('');
     setAuthed(false);
@@ -203,6 +219,7 @@ export default function App() {
       onSetOrderStatus={setOrderStatus}
       onSetRowStatus={setRowStatus}
       onUpdateRow={updateRow}
+      onBulkStatus={bulkStatus}
       onToast={showToast}
       printSignal={printTick}
     />

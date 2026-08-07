@@ -10,7 +10,7 @@
 import {
   OrdersResponse, OrderDetail, ChatThread, ChatMessage,
   DashboardData, NotificationItem, SearchRow, Lists,
-  PartData, LogisticsData, FileData,
+  PartData, LogisticsData, FileData, ExecRowsData, ExecSendResult, ExecRow,
 } from './types';
 
 /** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
@@ -69,7 +69,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /** Читання можна безпечно повторити; мутації — ні (щоб не задвоїти запис). */
 function isReadAction(action: string): boolean {
-  return !/^erp\.(set|chatSend)/.test(action);
+  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard)/.test(action);
 }
 
 function cacheGet<T>(key: string): T | null {
@@ -269,6 +269,21 @@ export const api = {
       if (stale) return stale;
       throw err;
     }
+  },
+
+  /** Рядки картки для відправки виконавцям + стан прив'язок. */
+  execRows(headerRow: number): Promise<ExecRowsData> {
+    return post('erp.execRows', { headerRow });
+  },
+
+  /** Відправка рядків у таблицю виконавця (як 📤 у таблиці). */
+  execSend(executor: string, rows: ExecRow[], position: 'top' | 'bottom'): Promise<ExecSendResult> {
+    return post('erp.execSend', { executor, rows, position });
+  },
+
+  /** Масове оновлення полів (наприклад статусу) для кількох рядків. */
+  bulkUpdate(rows: number[], fields: Record<string, string>): Promise<{ updated: number }> {
+    return post('erp.bulkUpdate', { rows, fields });
   },
 
   /** Перевірка ключа при першому вході. */

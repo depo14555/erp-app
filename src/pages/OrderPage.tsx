@@ -7,11 +7,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ChevronLeft, RefreshCw, FolderOpen, FileText, Ruler, Box, Paperclip,
-  ExternalLink, User, Search, Printer, X,
+  ExternalLink, User, Search, Printer, X, Send, Tags,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
 import ItemsTable from '../components/ItemsTable';
 import PrintSheet from '../components/PrintSheet';
+import SendSheet from '../components/SendSheet';
 import { OrderDetail, OrderItem, Lists, statusStyle, fileKind } from '../types';
 
 interface Props {
@@ -25,6 +26,7 @@ interface Props {
   onSetOrderStatus: (s: string) => void;
   onSetRowStatus: (row: number, s: string) => void;
   onUpdateRow: (row: number, field: string, value: string) => Promise<void>;
+  onBulkStatus: (rows: number[], status: string) => Promise<void>;
   onToast: (msg: string, err?: boolean) => void;
   printSignal?: number; // сайдбар «Друк креслень + QR» → відкрити вікно друку
 }
@@ -40,7 +42,7 @@ const PAGE = 40; // позицій на групу за раз — великі 
 
 export default function OrderPage({
   detail, orderStatusList, rowStatusList, lists, loading,
-  onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onToast, printSignal,
+  onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onBulkStatus, onToast, printSignal,
 }: Props) {
   const [q, setQ] = useState('');
   const [fOp, setFOp] = useState('');
@@ -49,6 +51,10 @@ export default function OrderPage({
   const [pickOrder, setPickOrder] = useState(false);
   const [pickRow, setPickRow] = useState<OrderItem | null>(null);
   const [showPrint, setShowPrint] = useState(false);
+  const [showSend, setShowSend] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [pickBulk, setPickBulk] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [limits, setLimits] = useState<Record<string, number>>({});
   // На широкому екрані за замовчуванням таблиця, на телефоні — картки
   const [view, setView] = useState<'cards' | 'table'>(
@@ -60,7 +66,7 @@ export default function OrderPage({
 
   // Новий пошук/фільтр або інше замовлення — показуємо знову з першої сторінки
   useEffect(() => { setLimits({}); }, [q, fOp, fExec, fStatus, header.headerRow]);
-  useEffect(() => { setFOp(''); setFExec(''); setFStatus(''); setQ(''); }, [header.headerRow]);
+  useEffect(() => { setFOp(''); setFExec(''); setFStatus(''); setQ(''); setSelected(new Set()); }, [header.headerRow]);
   // Кнопка «Друк креслень + QR» у сайдбарі відкриває вікно друку для цього замовлення
   useEffect(() => { if (printSignal) setShowPrint(true); }, [printSignal]);
 
@@ -91,10 +97,41 @@ export default function OrderPage({
   const done = items.filter(i => !i.group && String(i.rowStatus).includes('Готово')).length;
   const total = items.filter(i => !i.group).length;
 
+  // ── Вибір рядків для масових дій ──
+  const visibleRows = useMemo(() => filtered.filter(i => !i.group).map(i => i.row), [filtered]);
+
+  function toggleRow(row: number) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(row)) next.delete(row); else next.add(row);
+      return next;
+    });
+  }
+  function toggleAll() {
+    setSelected(prev => (visibleRows.some(r => !prev.has(r))
+      ? new Set([...prev, ...visibleRows])
+      : new Set([...prev].filter(r => !visibleRows.includes(r)))));
+  }
+
+  async function applyBulkStatus(status: string) {
+    setPickBulk(false);
+    const rows = [...selected];
+    setBulkBusy(true);
+    try {
+      await onBulkStatus(rows, status);
+      onToast(`Статус «${status}» → ${rows.length} поз.`);
+      setSelected(new Set());
+    } catch (e: any) {
+      onToast(e?.message || 'Не вдалося оновити статуси', true);
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   const pct = total > 0 ? Math.round((100 * done) / total) : 0;
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg)]">
+    <div className="relative flex flex-col h-full bg-[var(--bg)]">
       {/* Шапка замовлення — світла, мінімалістична */}
       <div className="flex-shrink-0 bg-white border-b hairline">
         <div className="flex items-center gap-1 px-2 pt-2">
@@ -115,6 +152,9 @@ export default function OrderPage({
               <FolderOpen size={18} />
             </a>
           )}
+          <button onClick={() => setShowSend(true)} className="p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Відправити виконавцю">
+            <Send size={17} />
+          </button>
           <button onClick={() => setShowPrint(true)} className="p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Друк креслень">
             <Printer size={18} />
           </button>
@@ -191,6 +231,9 @@ export default function OrderPage({
             items={filtered.filter(i => !i.group)}
             lists={lists}
             onSave={(row, field, value) => onUpdateRow(row, field, value)}
+            selected={selected}
+            onToggleRow={toggleRow}
+            onToggleAll={toggleAll}
           />
         </div>
       ) : (
@@ -322,6 +365,48 @@ export default function OrderPage({
           current={pickRow.rowStatus}
           onPick={s => { const r = pickRow.row; setPickRow(null); onSetRowStatus(r, s); }}
           onClose={() => setPickRow(null)}
+        />
+      )}
+
+      {/* Панель масових дій — з'являється, коли є вибрані рядки */}
+      {selected.size > 0 && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 bg-gray-900 text-white rounded-2xl shadow-2xl pl-4 pr-1.5 py-1.5 animate-sheet-up">
+          <span className="text-[12.5px] font-bold tabular-nums whitespace-nowrap">
+            {selected.size} вибрано
+          </span>
+          <button onClick={() => setPickBulk(true)} disabled={bulkBusy}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-bold bg-white/10 hover:bg-white/20 press whitespace-nowrap disabled:opacity-50">
+            <Tags size={13} /> {bulkBusy ? 'Зберігаю…' : 'Статус'}
+          </button>
+          <button onClick={() => setShowSend(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-bold bg-blue-500 hover:bg-blue-400 press whitespace-nowrap">
+            <Send size={13} /> Виконавцю
+          </button>
+          <button onClick={() => setSelected(new Set())}
+            className="p-2 rounded-xl hover:bg-white/10 press" aria-label="Зняти вибір">
+            <X size={15} />
+          </button>
+        </div>
+      )}
+
+      {pickBulk && (
+        <StatusPicker
+          title={`Статус для ${selected.size} позицій`}
+          subtitle={header.orderNum}
+          options={rowStatusList}
+          current=""
+          onPick={applyBulkStatus}
+          onClose={() => setPickBulk(false)}
+        />
+      )}
+
+      {showSend && (
+        <SendSheet
+          detail={detail}
+          preselect={selected.size ? [...selected] : undefined}
+          onClose={() => setShowSend(false)}
+          onToast={onToast}
+          onSent={() => { setSelected(new Set()); onRefresh(); }}
         />
       )}
 
