@@ -233,6 +233,76 @@ export interface SavePdfResult {
   newUrl: string;
 }
 
+/** Файл папки замовлення для Фотошопа. */
+export interface FolderFile {
+  id: string;
+  name: string;
+  folderName: string;
+  ext: string;
+  size: number;
+  processed: boolean;
+  row: number; // рядок картки з цим ім'ям (0 — немає)
+}
+
+/** Бухгалтерія: позиція з даними оплати. */
+export interface BillingItem {
+  row: number;
+  id: string;
+  name: string;
+  qty: string;
+  assignedQty: string;
+  op: string;
+  executor: string;
+  price: string;
+  sum: string;
+  payStatus: string;
+  invoiceNum: string;
+  invoiceUrl: string;
+  waybillNum: string;
+  waybillUrl: string;
+}
+
+export interface BillingData {
+  projectId: string;
+  client: string;
+  items: BillingItem[];
+}
+
+export type DocType = 'invoice' | 'salesInvoice' | 'act';
+
+export interface CommerceClient {
+  name: string;
+  edrpou: string;
+  address: string;
+  email: string;
+}
+
+export interface CommerceItem {
+  row: number;
+  num: string | number;
+  name: string;
+  qty: number;
+  qtyJ: number;
+  qtyM: number;
+  unit: string;
+  execPrice: number;
+  clientPrice: number;
+  currentPrice: number;
+  preselected: boolean;
+}
+
+export interface CommerceContext {
+  projectId: string;
+  client: CommerceClient;
+  items: CommerceItem[];
+}
+
+export interface CommerceResult {
+  success: boolean;
+  docUrl: string;
+  docNumber: string;
+}
+
 /** Замовлення завершене: готове, здане або відвантажене. */
 export function isClosed(status: string): boolean {
   const v = String(status || '');

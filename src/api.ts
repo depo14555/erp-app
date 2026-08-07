@@ -12,6 +12,7 @@ import {
   DashboardData, NotificationItem, SearchRow, Lists,
   PartData, LogisticsData, FileData, ExecRowsData, ExecSendResult, ExecRow,
   TechFilesData, TechLaunchItem, TechLaunchResult, MailListData, SavePdfResult,
+  FolderFile, BillingData, CommerceContext, CommerceResult, DocType,
 } from './types';
 
 /** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
@@ -78,7 +79,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /** Читання можна безпечно повторити; мутації — ні (щоб не задвоїти запис). */
 function isReadAction(action: string): boolean {
-  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf)/.test(action);
+  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate)/.test(action);
 }
 
 function cacheGet<T>(key: string): T | null {
@@ -330,6 +331,26 @@ export const api = {
   /** Фотошоп: зберегти оброблений PDF замість старого + оновити посилання. */
   savePdf(fileId: string, pdfBase64: string, newName: string, row?: number): Promise<SavePdfResult> {
     return post('erp.savePdf', { fileId, pdfBase64, newName, row });
+  },
+
+  /** Фотошоп: файли папки замовлення (PDF/JPG/PNG) з позначкою "оброблено". */
+  folderFiles(headerRow: number): Promise<{ files: FolderFile[]; folderUrl: string }> {
+    return post('erp.folderFiles', { headerRow });
+  },
+
+  /** Бухгалтерія: огляд рахунків/оплат по позиціях картки. */
+  billing(headerRow: number): Promise<BillingData> {
+    return post('erp.billing', { headerRow });
+  },
+
+  /** Дані для створення рахунку/видаткової/акта (клієнт, позиції, ціни). */
+  commerceContext(headerRow: number, docType: DocType): Promise<CommerceContext> {
+    return post('erp.commerceContext', { headerRow, docType });
+  },
+
+  /** Створення документа: копія шаблону Google Doc + запис №/посилання в картку. */
+  commerceCreate(formData: Record<string, unknown>): Promise<CommerceResult> {
+    return post('erp.commerceCreate', { formData });
   },
 
   /** Перевірка ключа при першому вході. */

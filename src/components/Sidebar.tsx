@@ -7,7 +7,7 @@
 
 import {
   LayoutDashboard, ClipboardList, Search, MessageSquare, Truck,
-  Printer, LogOut, FlaskConical, RefreshCw, Inbox,
+  Printer, LogOut, FlaskConical, RefreshCw, Inbox, Receipt,
 } from 'lucide-react';
 import { AppTab } from '../types';
 import { EnvKey } from '../api';
@@ -44,10 +44,11 @@ interface Props {
   env: EnvKey;
   onTab: (t: AppTab) => void;
   onPrint: () => void;
+  onBilling: () => void;
   onLogout: () => void;
 }
 
-export default function Sidebar({ tab, env, onTab, onPrint, onLogout }: Props) {
+export default function Sidebar({ tab, env, onTab, onPrint, onBilling, onLogout }: Props) {
   return (
     <aside className="hidden lg:flex flex-col w-[228px] flex-shrink-0 h-full bg-white border-r hairline">
       {/* Логотип */}
@@ -94,6 +95,19 @@ export default function Sidebar({ tab, env, onTab, onPrint, onLogout }: Props) {
             </div>
           </div>
         ))}
+
+        <div>
+          <p className="px-2 pb-1 text-[9.5px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--ink-3)' }}>
+            Бухгалтерія
+          </p>
+          <button onClick={onBilling}
+            className="w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-xl text-left press"
+            style={{ color: 'var(--ink-2)' }}>
+            <Receipt size={16.5} strokeWidth={2} className="flex-shrink-0" />
+            <span className="flex-1 text-[13px] font-medium truncate">Рахунки і оплати</span>
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-blue-600/10 text-blue-700">NEW</span>
+          </button>
+        </div>
 
         <div>
           <p className="px-2 pb-1 text-[9.5px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--ink-3)' }}>

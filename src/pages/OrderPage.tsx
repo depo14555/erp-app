@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ChevronLeft, RefreshCw, FolderOpen, FileText, Ruler, Box, Paperclip,
-  ExternalLink, User, Search, Printer, X, Send, Tags, Rocket, Paintbrush,
+  ExternalLink, User, Search, Printer, X, Send, Tags, Rocket, Paintbrush, Receipt,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
 import ItemsTable from '../components/ItemsTable';
@@ -15,6 +15,7 @@ import PrintSheet from '../components/PrintSheet';
 import SendSheet from '../components/SendSheet';
 import TechLaunchSheet from '../components/TechLaunchSheet';
 import PhotoSheet from '../components/PhotoSheet';
+import BillingSheet from '../components/BillingSheet';
 import { OrderDetail, OrderItem, Lists, statusStyle, fileKind } from '../types';
 
 interface Props {
@@ -30,7 +31,8 @@ interface Props {
   onUpdateRow: (row: number, field: string, value: string) => Promise<void>;
   onBulkStatus: (rows: number[], status: string) => Promise<void>;
   onToast: (msg: string, err?: boolean) => void;
-  printSignal?: number; // сайдбар «Друк креслень + QR» → відкрити вікно друку
+  printSignal?: number;   // сайдбар «Друк креслень + QR» → відкрити вікно друку
+  billingSignal?: number; // сайдбар «Рахунки і оплати» → відкрити бухгалтерію
 }
 
 const GROUP_META = {
@@ -44,7 +46,7 @@ const PAGE = 40; // позицій на групу за раз — великі 
 
 export default function OrderPage({
   detail, orderStatusList, rowStatusList, lists, loading,
-  onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onBulkStatus, onToast, printSignal,
+  onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onBulkStatus, onToast, printSignal, billingSignal,
 }: Props) {
   const [q, setQ] = useState('');
   const [fOp, setFOp] = useState('');
@@ -56,6 +58,7 @@ export default function OrderPage({
   const [showSend, setShowSend] = useState(false);
   const [showTech, setShowTech] = useState(false);
   const [showPhoto, setShowPhoto] = useState(false);
+  const [showBilling, setShowBilling] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [pickBulk, setPickBulk] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -73,6 +76,7 @@ export default function OrderPage({
   useEffect(() => { setFOp(''); setFExec(''); setFStatus(''); setQ(''); setSelected(new Set()); }, [header.headerRow]);
   // Кнопка «Друк креслень + QR» у сайдбарі відкриває вікно друку для цього замовлення
   useEffect(() => { if (printSignal) setShowPrint(true); }, [printSignal]);
+  useEffect(() => { if (billingSignal) setShowBilling(true); }, [billingSignal]);
 
   const real = useMemo(() => items.filter(i => !i.group), [items]);
   const fOps = useMemo(() => distinct(real.map(i => i.op)), [real]);
@@ -156,6 +160,9 @@ export default function OrderPage({
               <FolderOpen size={18} />
             </a>
           )}
+          <button onClick={() => setShowBilling(true)} className="p-1.5 lg:p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Рахунки і оплати" title="Рахунки і оплати">
+            <Receipt size={17} />
+          </button>
           <button onClick={() => setShowTech(true)} className="p-1.5 lg:p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Тех.запуск" title="Тех.запуск">
             <Rocket size={17} />
           </button>
@@ -439,6 +446,15 @@ export default function OrderPage({
           onClose={() => setShowPhoto(false)}
           onToast={onToast}
           onSaved={onRefresh}
+        />
+      )}
+
+      {showBilling && (
+        <BillingSheet
+          detail={detail}
+          onClose={() => setShowBilling(false)}
+          onToast={onToast}
+          onChanged={onRefresh}
         />
       )}
     </div>

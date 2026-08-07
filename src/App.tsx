@@ -44,6 +44,7 @@ export default function App() {
   const [showMenu, setShowMenu] = useState(false);
   const [toast, setToast] = useState<{ msg: string; err?: boolean } | null>(null);
   const [printTick, setPrintTick] = useState(0);       // сайдбар → відкрити друк у відкритому замовленні
+  const [billingTick, setBillingTick] = useState(0);   // сайдбар → рахунки і оплати замовлення
   const [logisticsTick, setLogisticsTick] = useState(0); // шапка → оновити логістику
   const [mailTick, setMailTick] = useState(0);           // шапка → оновити пошту
 
@@ -229,6 +230,7 @@ export default function App() {
       onBulkStatus={bulkStatus}
       onToast={showToast}
       printSignal={printTick}
+      billingSignal={billingTick}
     />
   );
 
@@ -244,6 +246,11 @@ export default function App() {
           if (detail) { setPrintTick(t => t + 1); return; }
           setTab('orders');
           showToast('Виберіть замовлення — і друк відкриється у ньому (🖨️ у шапці)');
+        }}
+        onBilling={() => {
+          if (detail) { setBillingTick(t => t + 1); return; }
+          setTab('orders');
+          showToast('Виберіть замовлення — рахунки відкриються у ньому (🧾 у шапці)');
         }}
         onLogout={logout}
       />
