@@ -9,8 +9,10 @@ import { PDFDocument, PDFFont, PDFPage, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import QRCode from 'qrcode';
 import { api } from '../api';
-import notoRegularUrl from '@fontsource/noto-sans/files/noto-sans-cyrillic-400-normal.woff?url';
-import notoBoldUrl from '@fontsource/noto-sans/files/noto-sans-cyrillic-700-normal.woff?url';
+// DejaVu Sans — ПОВНИЙ шрифт (кирилиця + латиниця + цифри). Підмножина
+// noto-sans-cyrillic не мала цифр і латиниці — у переліку були квадратики.
+import fontRegularUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans.ttf?url';
+import fontBoldUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf?url';
 
 export interface PrintItem {
   fileId: string;
@@ -53,7 +55,8 @@ async function loadFont(doc: PDFDocument, url: string): Promise<PDFFont | null> 
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
-    return await doc.embedFont(await res.arrayBuffer());
+    // subset: у PDF потрапляють лише використані гліфи, а не весь шрифт (~750KB)
+    return await doc.embedFont(await res.arrayBuffer(), { subset: true });
   } catch {
     return null;
   }
@@ -64,21 +67,21 @@ async function stampQr(doc: PDFDocument, pages: PDFPage[], id: string, font: PDF
   const link = `${location.origin}/#p=${encodeURIComponent(id)}`;
   const dataUrl = await QRCode.toDataURL(link, { margin: 0, width: 256, errorCorrectionLevel: 'M' });
   const png = await doc.embedPng(dataUrl);
-  const QR = 42;        // ~15 мм
-  const PAD = 4;
+  const QR = 57;        // ~20 мм — щоб упевнено читався сканером телефона
+  const PAD = 5;
   for (const page of pages) {
     const { width, height } = page.getSize();
     const x = width - QR - 26;
     const y = height - QR - 10;
     page.drawRectangle({
-      x: x - PAD, y: y - (font ? 11 : PAD),
-      width: QR + PAD * 2, height: QR + PAD * 2 + (font ? 8 : 0),
+      x: x - PAD, y: y - (font ? 13 : PAD),
+      width: QR + PAD * 2, height: QR + PAD * 2 + (font ? 10 : 0),
       color: rgb(1, 1, 1),
       borderColor: rgb(0.75, 0.75, 0.75), borderWidth: 0.6,
     });
     page.drawImage(png, { x, y, width: QR, height: QR });
     if (font) {
-      page.drawText(id, { x: x - PAD + 2, y: y - 8, size: 5.5, font, color: rgb(0.35, 0.35, 0.35) });
+      page.drawText(id, { x: x - PAD + 2, y: y - 9, size: 6.5, font, color: rgb(0.35, 0.35, 0.35) });
     }
   }
 }
@@ -144,8 +147,8 @@ export async function buildPrintPdf(opts: PrintOptions): Promise<PrintResult> {
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
 
-  let font = await loadFont(doc, notoRegularUrl);
-  let fontBold = await loadFont(doc, notoBoldUrl);
+  let font = await loadFont(doc, fontRegularUrl);
+  let fontBold = await loadFont(doc, fontBoldUrl);
   if (!font) font = await doc.embedFont(StandardFonts.Helvetica);
   if (!fontBold) fontBold = font;
   const cyrOk = !!font && font.getCharacterSet?.().includes('Я'.codePointAt(0)!);

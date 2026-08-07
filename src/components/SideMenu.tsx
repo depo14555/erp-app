@@ -7,9 +7,9 @@
 // ================================================================
 
 import { useState } from 'react';
-import { X, ChevronRight, LogOut, FlaskConical, Database, RefreshCw } from 'lucide-react';
+import { X, ChevronRight, LogOut, FlaskConical, RefreshCw } from 'lucide-react';
 import { AppTab } from '../types';
-import { EnvKey, ENVS, setEnv } from '../api';
+import { EnvKey, ENVS } from '../api';
 
 interface MenuItem {
   icon: string;
@@ -113,15 +113,9 @@ interface Props {
   onToast?: (msg: string) => void;
 }
 
-export default function SideMenu({ env, onClose, onNavigate, onSoon, onLogout, onEnvChange, onToast }: Props) {
+export default function SideMenu({ env, onClose, onNavigate, onSoon, onLogout, onToast }: Props) {
   const [dept, setDept] = useState('prod');
   const active = DEPTS.find(d => d.key === dept)!;
-
-  function switchEnv(next: EnvKey) {
-    if (next === env) return;
-    setEnv(next);
-    onEnvChange();
-  }
 
   function onItem(item: MenuItem) {
     if (item.tab) {
@@ -212,29 +206,8 @@ export default function SideMenu({ env, onClose, onNavigate, onSoon, onLogout, o
           </p>
         </div>
 
-        {/* Низ: середовище + вихід + версія */}
-        <div className="flex-shrink-0 bg-white border-t hairline p-3 space-y-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <div className="flex bg-gray-100 rounded-2xl p-1">
-            {(Object.keys(ENVS) as EnvKey[]).map(k => {
-              const on = env === k;
-              const Icon = k === 'test' ? FlaskConical : Database;
-              return (
-                <button key={k} onClick={() => switchEnv(k)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11.5px] font-bold transition-all press"
-                  style={on
-                    ? { background: '#fff', color: k === 'test' ? '#B45309' : 'var(--accent)', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }
-                    : { color: 'var(--ink-3)' }}>
-                  <Icon size={13} /> {ENVS[k].label}
-                </button>
-              );
-            })}
-          </div>
-          {env === 'test' && (
-            <p className="px-2 text-[10.5px] text-amber-700">
-              🧪 Працюєте з копією — реальні дані не змінюються.
-            </p>
-          )}
-
+        {/* Низ: вихід + версія (середовище видно бейджем; змінюється на екрані входу) */}
+        <div className="flex-shrink-0 bg-white border-t hairline p-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))]">
           <div className="flex items-center gap-1">
             <button
               onClick={onLogout}
@@ -243,6 +216,12 @@ export default function SideMenu({ env, onClose, onNavigate, onSoon, onLogout, o
               <LogOut size={14} />
               <span className="text-[12px] font-bold">Вийти</span>
             </button>
+            {env === 'test' && (
+              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-800"
+                title={ENVS[env].label}>
+                <FlaskConical size={10} /> ТЕСТ
+              </span>
+            )}
             <span className="ml-auto text-[10px]" style={{ color: 'var(--ink-3)' }}>Версія від {__BUILD_TIME__}</span>
             <button
               onClick={async () => {

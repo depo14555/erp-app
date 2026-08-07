@@ -197,21 +197,35 @@ export default function App() {
 
   return (
     <div className="h-[100dvh] flex bg-[var(--bg)]">
-      {/* Десктоп: бічна рейка */}
-      <NavRail desktop tab={tab} onTab={t => { setTab(t); setDetail(null); }} onMenu={() => setShowMenu(true)} />
-
       <div className="flex-1 min-w-0 flex flex-col">
-        {/* Шапка */}
+        {/* Шапка: гамбургер + назва + вкладки (десктоп) — без бічної рейки,
+            щоб не красти ширину в списку й таблиці */}
         {(!detail || window.innerWidth >= 1024) && (
-          <header className="flex-shrink-0 bg-white border-b hairline px-2 lg:px-4 h-[52px] flex items-center gap-2">
+          <header className="flex-shrink-0 bg-white border-b hairline px-2 lg:px-3 h-[52px] flex items-center gap-2">
             <button onClick={() => setShowMenu(true)}
-              className="lg:hidden p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Меню">
+              className="p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Меню">
               <Menu size={20} />
             </button>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 lg:flex-none lg:w-[210px]">
               <h1 className="text-[16px] font-bold truncate leading-tight tracking-tight">{title}</h1>
               <p className="text-[11px] truncate" style={{ color: 'var(--ink-3)' }}>{subtitle}</p>
             </div>
+
+            {/* Десктопні вкладки в шапці */}
+            <nav className="hidden lg:flex items-center gap-1 flex-1 min-w-0">
+              {TABS.map(({ key, label, Icon }) => {
+                const on = tab === key;
+                return (
+                  <button key={key} onClick={() => { setTab(key); setDetail(null); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12.5px] font-bold press transition-colors"
+                    style={on
+                      ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
+                      : { color: 'var(--ink-3)' }}>
+                    <Icon size={15} strokeWidth={on ? 2.4 : 2} /> {label}
+                  </button>
+                );
+              })}
+            </nav>
             {env === 'test' && (
               <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-800">
                 <FlaskConical size={11} /> ТЕСТ
