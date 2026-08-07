@@ -18,6 +18,7 @@ import SearchPage from './pages/SearchPage';
 import OrderPage from './pages/OrderPage';
 import ChatPage from './pages/ChatPage';
 import LogisticsPage from './pages/LogisticsPage';
+import MailPage from './pages/MailPage';
 import PartPage from './pages/PartPage';
 import NotificationsSheet from './components/NotificationsSheet';
 import SideMenu from './components/SideMenu';
@@ -44,6 +45,7 @@ export default function App() {
   const [toast, setToast] = useState<{ msg: string; err?: boolean } | null>(null);
   const [printTick, setPrintTick] = useState(0);       // сайдбар → відкрити друк у відкритому замовленні
   const [logisticsTick, setLogisticsTick] = useState(0); // шапка → оновити логістику
+  const [mailTick, setMailTick] = useState(0);           // шапка → оновити пошту
 
   const isOnline = useOnlineStatus();
   const env = getEnv();
@@ -180,15 +182,18 @@ export default function App() {
     if (tab === 'dashboard') loadDashboard(true);
     else if (tab === 'orders') loadOrders(true);
     else if (tab === 'logistics') setLogisticsTick(t => t + 1);
+    else if (tab === 'mail') setMailTick(t => t + 1);
     else { loadDashboard(true); loadOrders(true); }
   }
 
   if (!authed) return <TokenGate onSuccess={() => setAuthed(true)} />;
 
-  const title = TABS.find(t => t.key === tab)?.label ?? 'ERP';
-  const subtitle = tab === 'dashboard' && dashboard
-    ? `${dashboard.counts.activeOrders} в роботі · ${dashboard.counts.orders} всього`
-    : updatedAt ? `Оновлено ${updatedAt}` : 'ERP Металообробка';
+  const title = tab === 'mail' ? 'Вхідні (пошта)' : (TABS.find(t => t.key === tab)?.label ?? 'ERP');
+  const subtitle = tab === 'mail'
+    ? 'нові замовлення з Gmail'
+    : tab === 'dashboard' && dashboard
+      ? `${dashboard.counts.activeOrders} в роботі · ${dashboard.counts.orders} всього`
+      : updatedAt ? `Оновлено ${updatedAt}` : 'ERP Металообробка';
 
   const listPane = (
     tab === 'dashboard' ? (
@@ -202,6 +207,8 @@ export default function App() {
       <SearchPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} />
     ) : tab === 'logistics' ? (
       <LogisticsPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} refreshSignal={logisticsTick} />
+    ) : tab === 'mail' ? (
+      <MailPage onToast={showToast} onProcessed={() => { loadOrders(true); loadDashboard(true); }} refreshSignal={mailTick} />
     ) : (
       <ChatPage onToast={showToast} />
     )

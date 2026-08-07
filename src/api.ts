@@ -11,6 +11,7 @@ import {
   OrdersResponse, OrderDetail, ChatThread, ChatMessage,
   DashboardData, NotificationItem, SearchRow, Lists,
   PartData, LogisticsData, FileData, ExecRowsData, ExecSendResult, ExecRow,
+  TechFilesData, TechLaunchItem, TechLaunchResult, MailListData, SavePdfResult,
 } from './types';
 
 /** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
@@ -69,7 +70,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /** Читання можна безпечно повторити; мутації — ні (щоб не задвоїти запис). */
 function isReadAction(action: string): boolean {
-  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard)/.test(action);
+  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf)/.test(action);
 }
 
 function cacheGet<T>(key: string): T | null {
@@ -284,6 +285,31 @@ export const api = {
   /** Масове оновлення полів (наприклад статусу) для кількох рядків. */
   bulkUpdate(rows: number[], fields: Record<string, string>): Promise<{ updated: number }> {
     return post('erp.bulkUpdate', { rows, fields });
+  },
+
+  /** Тех.запуск: файли папки замовлення + список операцій + що вже в картці. */
+  techFiles(headerRow: number): Promise<TechFilesData> {
+    return post('erp.techFiles', { headerRow });
+  },
+
+  /** Тех.запуск: дописати рядки в картку (по рядку на операцію). */
+  techLaunch(headerRow: number, items: TechLaunchItem[]): Promise<TechLaunchResult> {
+    return post('erp.techLaunch', { headerRow, items });
+  },
+
+  /** Пошта: нові листи з міткою «Нове замовлення» (лише перегляд). */
+  mailList(): Promise<MailListData> {
+    return post('erp.mailList');
+  },
+
+  /** Пошта: обробити листи — створити картки замовлень (як у таблиці). */
+  mailProcess(): Promise<{ processed: number; remaining: number }> {
+    return post('erp.mailProcess');
+  },
+
+  /** Фотошоп: зберегти оброблений PDF замість старого + оновити посилання. */
+  savePdf(fileId: string, pdfBase64: string, newName: string, row?: number): Promise<SavePdfResult> {
+    return post('erp.savePdf', { fileId, pdfBase64, newName, row });
   },
 
   /** Перевірка ключа при першому вході. */

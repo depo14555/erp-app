@@ -7,12 +7,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ChevronLeft, RefreshCw, FolderOpen, FileText, Ruler, Box, Paperclip,
-  ExternalLink, User, Search, Printer, X, Send, Tags,
+  ExternalLink, User, Search, Printer, X, Send, Tags, Rocket, Paintbrush,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
 import ItemsTable from '../components/ItemsTable';
 import PrintSheet from '../components/PrintSheet';
 import SendSheet from '../components/SendSheet';
+import TechLaunchSheet from '../components/TechLaunchSheet';
+import PhotoSheet from '../components/PhotoSheet';
 import { OrderDetail, OrderItem, Lists, statusStyle, fileKind } from '../types';
 
 interface Props {
@@ -52,6 +54,8 @@ export default function OrderPage({
   const [pickRow, setPickRow] = useState<OrderItem | null>(null);
   const [showPrint, setShowPrint] = useState(false);
   const [showSend, setShowSend] = useState(false);
+  const [showTech, setShowTech] = useState(false);
+  const [showPhoto, setShowPhoto] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [pickBulk, setPickBulk] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -152,10 +156,16 @@ export default function OrderPage({
               <FolderOpen size={18} />
             </a>
           )}
-          <button onClick={() => setShowSend(true)} className="p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Відправити виконавцю">
+          <button onClick={() => setShowTech(true)} className="p-1.5 lg:p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Тех.запуск" title="Тех.запуск">
+            <Rocket size={17} />
+          </button>
+          <button onClick={() => setShowPhoto(true)} className="p-1.5 lg:p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Фотошоп креслень" title="Фотошоп: закрити конфіденційне">
+            <Paintbrush size={17} />
+          </button>
+          <button onClick={() => setShowSend(true)} className="p-1.5 lg:p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Відправити виконавцю" title="Відправити виконавцю">
             <Send size={17} />
           </button>
-          <button onClick={() => setShowPrint(true)} className="p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Друк креслень">
+          <button onClick={() => setShowPrint(true)} className="p-1.5 lg:p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Друк креслень" title="Друк креслень + QR">
             <Printer size={18} />
           </button>
           {/* На десктопі оновлення в шапці додатка — тут лише для телефона */}
@@ -412,6 +422,24 @@ export default function OrderPage({
 
       {showPrint && (
         <PrintSheet detail={detail} onClose={() => setShowPrint(false)} onToast={onToast} />
+      )}
+
+      {showTech && (
+        <TechLaunchSheet
+          detail={detail}
+          onClose={() => setShowTech(false)}
+          onToast={onToast}
+          onLaunched={onRefresh}
+        />
+      )}
+
+      {showPhoto && (
+        <PhotoSheet
+          detail={detail}
+          onClose={() => setShowPhoto(false)}
+          onToast={onToast}
+          onSaved={onRefresh}
+        />
       )}
     </div>
   );

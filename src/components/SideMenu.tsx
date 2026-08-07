@@ -22,6 +22,7 @@ const GROUPS: MenuGroup[] = [
     title: 'Виробництво',
     items: [
       { icon: '📊', label: 'Огляд', sub: 'зведення по замовленнях', tab: 'dashboard' },
+      { icon: '📨', label: 'Вхідні (пошта)', sub: 'нові замовлення з Gmail', tab: 'mail' },
       { icon: '📋', label: 'Замовлення', sub: 'картки і таблиця позицій', tab: 'orders' },
       { icon: '🔍', label: 'Пошук деталі', sub: 'по всіх замовленнях', tab: 'search' },
       { icon: '💬', label: 'Чат виконавців', tab: 'chat' },

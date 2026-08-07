@@ -7,7 +7,7 @@
 
 import {
   LayoutDashboard, ClipboardList, Search, MessageSquare, Truck,
-  Printer, LogOut, FlaskConical, RefreshCw,
+  Printer, LogOut, FlaskConical, RefreshCw, Inbox,
 } from 'lucide-react';
 import { AppTab } from '../types';
 import { EnvKey } from '../api';
@@ -25,6 +25,7 @@ const SECTIONS: NavSection[] = [
     title: 'Виробництво',
     items: [
       { key: 'dashboard', label: 'Огляд', Icon: LayoutDashboard },
+      { key: 'mail', label: 'Вхідні (пошта)', Icon: Inbox },
       { key: 'orders', label: 'Замовлення', Icon: ClipboardList },
       { key: 'search', label: 'Пошук деталі', Icon: Search },
       { key: 'chat', label: 'Чат виконавців', Icon: MessageSquare },

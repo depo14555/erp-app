@@ -76,7 +76,7 @@ export interface ChatMessage {
   itemName: string;
 }
 
-export type AppTab = 'dashboard' | 'orders' | 'search' | 'logistics' | 'chat';
+export type AppTab = 'dashboard' | 'orders' | 'search' | 'logistics' | 'chat' | 'mail';
 
 /** Вміст файлу Drive для друку. */
 export interface FileData {
@@ -175,6 +175,61 @@ export interface ExecSendResult {
   sent: number;
   skipped: string[];
   sheetUrl: string;
+}
+
+/** Файл з папки замовлення для Тех.запуску. */
+export interface TechFile {
+  id: string;
+  name: string;
+  folderName: string;
+  ext: string;
+}
+
+export interface TechFilesData {
+  files: TechFile[];
+  ops: string[];
+  existing: Array<{ name: string; op: string }>;
+  folderUrl: string;
+}
+
+export interface TechLaunchItem {
+  fileId: string;
+  name: string;
+  folderName: string;
+  ops: string[];
+  qty?: number;
+  mirror?: boolean;
+  note?: string;
+}
+
+export interface TechLaunchResult {
+  created: number;
+  skipped: string[];
+  startRow?: number;
+}
+
+/** Лист із міткою «Нове замовлення». */
+export interface MailThread {
+  from: string;
+  email: string;
+  client: string;
+  subject: string;
+  date: string;
+  attachments: number;
+  snippet: string;
+}
+
+export interface MailListData {
+  labelMissing: boolean;
+  labelName: string;
+  threads: MailThread[];
+}
+
+export interface SavePdfResult {
+  oldName: string;
+  newName: string;
+  newId: string;
+  newUrl: string;
 }
 
 /** Замовлення завершене: готове, здане або відвантажене. */
