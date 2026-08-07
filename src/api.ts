@@ -29,8 +29,16 @@ export const ENVS = {
 export type EnvKey = keyof typeof ENVS;
 
 const REQUEST_TIMEOUT = 30000;
+const LONG_TIMEOUT = 240000; // важкі операції: тех.запуск, пошта, відправка, збереження PDF
 const RETRY_DELAY = 1500;
 const CACHE_TTL = 5 * 60 * 1000;
+
+/** Скільки чекати на відповідь — залежить від дії. */
+function timeoutFor(action: string): number {
+  return /^erp\.(techLaunch|mailProcess|execSend|savePdf|bulkUpdate|groupCard|fillAssembly|fileData|techFiles)/.test(action)
+    ? LONG_TIMEOUT
+    : REQUEST_TIMEOUT;
+}
 
 const ENV_KEY = 'erp-env';
 const CACHE_PREFIX = 'erp-cache:';
@@ -98,7 +106,7 @@ function cacheGetStale<T>(key: string): T | null {
 
 async function fetchOnce(payload: Record<string, unknown>): Promise<any> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  const timer = setTimeout(() => controller.abort(), timeoutFor(String(payload.action || '')));
   try {
     const res = await fetch(webAppUrl(), {
       method: 'POST',
@@ -116,6 +124,13 @@ async function fetchOnce(payload: Record<string, unknown>): Promise<any> {
   }
 }
 
+/** Обрив по таймауту → зрозуміле повідомлення замість "signal is aborted". */
+function friendlyAbort(action: string): Error {
+  return new Error(isReadAction(action)
+    ? 'Таблиця довго не відповідає — спробуйте оновити ще раз'
+    : 'Не дочекалися відповіді від таблиці. Операція, ймовірно, завершилась — оновіть замовлення і перевірте, перш ніж повторювати.');
+}
+
 async function post(action: string, params: Record<string, unknown> = {}): Promise<any> {
   const payload = { action, ...params };
   try {
@@ -124,9 +139,13 @@ async function post(action: string, params: Record<string, unknown> = {}): Promi
     const isAbort = err?.name === 'AbortError';
     if (isReadAction(action) && (isAbort || !navigator.onLine || /Мережа|Failed to fetch/.test(err?.message || ''))) {
       await wait(RETRY_DELAY);
-      return fetchOnce(payload);
+      try {
+        return await fetchOnce(payload);
+      } catch (err2: any) {
+        throw err2?.name === 'AbortError' ? friendlyAbort(action) : err2;
+      }
     }
-    throw err;
+    throw isAbort ? friendlyAbort(action) : err;
   }
 }
 
