@@ -216,6 +216,7 @@ export interface MailThread {
   subject: string;
   date: string;
   attachments: number;
+  sizeTotal?: number;
   snippet: string;
 }
 

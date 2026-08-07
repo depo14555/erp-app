@@ -321,8 +321,8 @@ export const api = {
     return post('erp.mailList');
   },
 
-  /** Пошта: обробити листи — створити картки замовлень (як у таблиці). */
-  mailProcess(): Promise<{ processed: number; remaining: number }> {
+  /** Пошта: запустити ФОНОВУ обробку листів (тригер на сервері) — відповідає одразу. */
+  mailProcess(): Promise<{ started: boolean; queued: number }> {
     return post('erp.mailProcess');
   },
 

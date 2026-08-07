@@ -38,19 +38,40 @@ export default function MailPage({ onToast, onProcessed, refreshSignal }: Props)
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (refreshSignal) load(); }, [refreshSignal, load]);
 
+  /** Запускає ФОНОВУ обробку на сервері і полить чергу, поки вона не спорожніє. */
   async function processAll() {
     if (!data?.threads.length) return;
+    const initial = data.threads.length;
     setWorking(true);
     setElapsed(0);
     timerRef.current = window.setInterval(() => setElapsed(s => s + 1), 1000);
     try {
       const res = await api.mailProcess();
-      onToast(`Створено замовлень: ${res.processed}${res.remaining ? ` · лишилось листів: ${res.remaining}` : ''}`);
+      if (!res.started) { onToast('Черга вже порожня'); load(); return; }
+
+      // Полінг: сервер працює сам, ми лише дивимось, як тане черга
+      let remaining = initial;
+      const deadline = Date.now() + 6 * 60 * 1000;
+      while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 12000));
+        try {
+          const d = await api.mailList();
+          setData(d);
+          remaining = d.threads.length;
+          if (remaining === 0) break;
+        } catch { /* тимчасова помилка полінгу — пробуємо далі */ }
+      }
+
+      const processed = initial - remaining;
+      if (processed > 0) {
+        onToast(`Створено замовлень: ${processed}${remaining ? ` · у черзі ще ${remaining}` : ''}`);
+      } else {
+        onToast('Черга поки не зменшилась — фонова обробка може ще тривати, оновіть за хвилину', true);
+      }
       onProcessed();
-      load();
     } catch (e: any) {
-      onToast(e?.message || 'Не вдалося обробити пошту', true);
-      load(); // могло встигнути обробитись — показуємо актуальний стан
+      onToast(e?.message || 'Не вдалося запустити обробку', true);
+      load();
     } finally {
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
       setWorking(false);
@@ -74,8 +95,9 @@ export default function MailPage({ onToast, onProcessed, refreshSignal }: Props)
 
       {working && (
         <div className="flex-shrink-0 mx-3 lg:mx-5 mb-1 p-2.5 rounded-2xl bg-blue-50 text-blue-900/80 text-[11.5px] leading-relaxed">
-          ⏳ Вкладення викачуються на Диск і в таблицю вставляється картка — зазвичай
-          <b> 30–90 секунд на лист</b>. Не закривайте додаток, чекаємо до 4 хвилин.
+          ⏳ Обробка йде <b>у фоні на сервері</b> — вкладення на Диск, картка в таблицю
+          (~30–90 с на лист). Список нижче оновлюється сам; додаток можна навіть закрити,
+          обробка не зупиниться.
         </div>
       )}
 
@@ -142,6 +164,12 @@ export default function MailPage({ onToast, onProcessed, refreshSignal }: Props)
                     {t.attachments > 0 && (
                       <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-gray-100 inline-flex items-center gap-1" style={{ color: 'var(--ink-2)' }}>
                         <Paperclip size={9} /> {t.attachments} вклад.
+                        {!!t.sizeTotal && ` · ${(t.sizeTotal / 1024 / 1024).toFixed(1)} МБ`}
+                      </span>
+                    )}
+                    {(t.sizeTotal ?? 0) > 8 * 1024 * 1024 && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-orange-50 text-orange-700">
+                        великий архів — збережеться без розпакування
                       </span>
                     )}
                   </div>
