@@ -321,8 +321,9 @@ export const api = {
     return post('erp.mailList');
   },
 
-  /** Пошта: запустити ФОНОВУ обробку листів (тригер на сервері) — відповідає одразу. */
-  mailProcess(): Promise<{ started: boolean; queued: number }> {
+  /** Пошта: обробка листів. Дрібний одиночний лист — одразу (done:true),
+   *  більші/кілька — фоновий тригер на сервері, відповідь миттєва. */
+  mailProcess(): Promise<{ started: boolean; queued: number; done?: boolean; processed?: number }> {
     return post('erp.mailProcess');
   },
 

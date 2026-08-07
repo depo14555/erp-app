@@ -49,11 +49,19 @@ export default function MailPage({ onToast, onProcessed, refreshSignal }: Props)
       const res = await api.mailProcess();
       if (!res.started) { onToast('Черга вже порожня'); load(); return; }
 
+      // Дрібний одиночний лист сервер обробив одразу — без фонового тригера
+      if (res.done) {
+        onToast(`Створено замовлень: ${res.processed ?? 1}`);
+        onProcessed();
+        load();
+        return;
+      }
+
       // Полінг: сервер працює сам, ми лише дивимось, як тане черга
       let remaining = initial;
       const deadline = Date.now() + 6 * 60 * 1000;
       while (Date.now() < deadline) {
-        await new Promise(r => setTimeout(r, 12000));
+        await new Promise(r => setTimeout(r, 8000));
         try {
           const d = await api.mailList();
           setData(d);
