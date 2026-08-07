@@ -11,6 +11,7 @@ import { Order, OrderDetail, AppTab, DashboardData, Lists } from './types';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import TokenGate from './components/TokenGate';
 import NavRail, { TABS } from './components/NavRail';
+import Sidebar from './components/Sidebar';
 import DashboardPage from './pages/DashboardPage';
 import OrdersPage from './pages/OrdersPage';
 import SearchPage from './pages/SearchPage';
@@ -197,35 +198,27 @@ export default function App() {
 
   return (
     <div className="h-[100dvh] flex bg-[var(--bg)]">
+      {/* Постійна бічна навігація (десктоп) — сучасна CRM */}
+      <Sidebar
+        tab={tab}
+        env={env}
+        onTab={t => { setTab(t); setDetail(null); }}
+        onPrint={() => { setTab('orders'); setDetail(null); showToast('Відкрийте замовлення → 🖨️ у шапці'); }}
+        onLogout={logout}
+      />
+
       <div className="flex-1 min-w-0 flex flex-col">
-        {/* Шапка: гамбургер + назва + вкладки (десктоп) — без бічної рейки,
-            щоб не красти ширину в списку й таблиці */}
+        {/* Шапка: на телефоні — гамбургер, на десктопі — заголовок розділу */}
         {(!detail || window.innerWidth >= 1024) && (
-          <header className="flex-shrink-0 bg-white border-b hairline px-2 lg:px-3 h-[52px] flex items-center gap-2">
+          <header className="flex-shrink-0 bg-white border-b hairline px-2 lg:px-5 h-[52px] lg:h-[56px] flex items-center gap-2">
             <button onClick={() => setShowMenu(true)}
-              className="p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Меню">
+              className="lg:hidden p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Меню">
               <Menu size={20} />
             </button>
-            <div className="flex-1 min-w-0 lg:flex-none lg:w-[210px]">
+            <div className="flex-1 min-w-0">
               <h1 className="text-[16px] font-bold truncate leading-tight tracking-tight">{title}</h1>
               <p className="text-[11px] truncate" style={{ color: 'var(--ink-3)' }}>{subtitle}</p>
             </div>
-
-            {/* Десктопні вкладки в шапці */}
-            <nav className="hidden lg:flex items-center gap-1 flex-1 min-w-0">
-              {TABS.map(({ key, label, Icon }) => {
-                const on = tab === key;
-                return (
-                  <button key={key} onClick={() => { setTab(key); setDetail(null); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12.5px] font-bold press transition-colors"
-                    style={on
-                      ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
-                      : { color: 'var(--ink-3)' }}>
-                    <Icon size={15} strokeWidth={on ? 2.4 : 2} /> {label}
-                  </button>
-                );
-              })}
-            </nav>
             {env === 'test' && (
               <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-800">
                 <FlaskConical size={11} /> ТЕСТ
@@ -242,30 +235,11 @@ export default function App() {
           </header>
         )}
 
-        <div className="flex-1 min-h-0 flex">
-          {/* Список: на десктопі — ліва колонка, на мобільному — весь екран */}
-          <div className={`${detail ? 'hidden lg:flex' : 'flex'} flex-col min-h-0 flex-1 lg:flex-none lg:w-[380px] lg:border-r lg:hairline lg:bg-white`}>
-            {listPane}
-          </div>
-
-          {/* Деталі */}
-          {detail ? (
-            <div className="flex-1 min-w-0 flex flex-col">{detailPane}</div>
-          ) : (
-            <div className="hidden lg:flex flex-1 items-center justify-center text-center px-8">
-              <div>
-                <div className="w-14 h-14 rounded-2xl bg-white border hairline flex items-center justify-center mx-auto mb-3 text-[22px]">
-                  📋
-                </div>
-                <p className="text-[14px] font-semibold" style={{ color: 'var(--ink-2)' }}>
-                  Виберіть замовлення зі списку
-                </p>
-                <p className="text-[12px] mt-1" style={{ color: 'var(--ink-3)' }}>
-                  Позиції відкриються таблицею з редагуванням на місці
-                </p>
-              </div>
-            </div>
-          )}
+        {/* Вміст на всю ширину: замовлення відкривається замість списку */}
+        <div className="flex-1 min-h-0 flex flex-col">
+          {detail
+            ? <div className="flex-1 min-h-0 min-w-0 flex flex-col">{detailPane}</div>
+            : <div className="flex-1 min-h-0 min-w-0 flex flex-col">{listPane}</div>}
         </div>
 
         <OfflineBanner isOnline={isOnline} pendingCount={0} />
@@ -279,9 +253,7 @@ export default function App() {
           env={env}
           onClose={() => setShowMenu(false)}
           onNavigate={t => { setTab(t); setDetail(null); setShowMenu(false); }}
-          onSoon={label => { setShowMenu(false); showToast(`«${label}» — поки виконується в таблиці`); }}
           onLogout={() => { setShowMenu(false); logout(); }}
-          onEnvChange={() => { setShowMenu(false); setAuthed(hasToken()); setDetail(null); }}
           onToast={showToast}
         />
       )}

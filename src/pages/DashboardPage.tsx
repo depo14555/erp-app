@@ -76,7 +76,8 @@ export default function DashboardPage({ data, loading, onRefresh, onOpenOrder }:
   const maxOpen = Math.max(1, ...executors.map(e => e.open));
 
   return (
-    <div className="h-full overflow-y-auto px-3 pb-4 pt-3 space-y-3">
+    <div className="h-full overflow-y-auto px-3 lg:px-5 pb-5 pt-3">
+      <div className="max-w-[1240px] mx-auto w-full space-y-3">
       <div className="flex items-center justify-between px-0.5">
         <p className="text-[11px] text-gray-400">Оновлено {data.updatedAt}</p>
         <button onClick={onRefresh} className="p-1.5 text-blue-600" aria-label="Оновити">
@@ -84,17 +85,19 @@ export default function DashboardPage({ data, loading, onRefresh, onOpenOrder }:
         </button>
       </div>
 
-      {/* Головний показник */}
-      <ProgressRing pct={pct} done={counts.positionsDone} total={counts.positions} />
-
-      {/* Лічильники */}
-      <div className="grid grid-cols-2 gap-2.5">
+      {/* Верхній ряд: головний показник + лічильники (на десктопі в один ряд) */}
+      <div className="grid grid-cols-2 md:grid-cols-[1.5fr_1fr_1fr] gap-2.5">
+        <div className="col-span-2 md:col-span-1">
+          <ProgressRing pct={pct} done={counts.positionsDone} total={counts.positions} />
+        </div>
         <Tile label="Замовлень в роботі" value={counts.activeOrders} sub={`з ${counts.orders} усього`}
           Icon={TrendingUp} color="#EF6C00" />
         <Tile label="Завершено" value={counts.doneOrders} sub="готові, здані, відвантажені"
           Icon={CheckCircle2} color="#2E7D32" />
       </div>
 
+      {/* Дві колонки на широких екранах */}
+      <div className="grid lg:grid-cols-2 gap-3 items-start">
       {/* Розподіл за статусами */}
       {byStatus.length > 0 && (
         <section className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(16,24,40,0.06)] ring-1 ring-gray-900/5 p-3.5">
@@ -146,6 +149,7 @@ export default function DashboardPage({ data, loading, onRefresh, onOpenOrder }:
           <p className="text-[10px] text-gray-400 mt-2">в роботі / виконано</p>
         </section>
       )}
+      </div>
 
       {/* Найближчі терміни */}
       {deadlines.length > 0 && (
@@ -153,7 +157,7 @@ export default function DashboardPage({ data, loading, onRefresh, onOpenOrder }:
           <h2 className="text-[12px] font-bold text-gray-500 mb-2 flex items-center gap-1.5">
             <Clock size={13} /> Терміни
           </h2>
-          <div className="space-y-1.5">
+          <div className="grid lg:grid-cols-2 gap-x-4 gap-y-1.5">
             {deadlines.map(o => {
               const st = statusStyle(o.status);
               return (
@@ -171,6 +175,7 @@ export default function DashboardPage({ data, loading, onRefresh, onOpenOrder }:
           </div>
         </section>
       )}
+      </div>
     </div>
   );
 }

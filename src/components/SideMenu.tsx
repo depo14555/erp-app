@@ -1,212 +1,110 @@
 // ================================================================
-//  src/components/SideMenu.tsx
-//  Бокове меню — пульт керування, як у таблиці: відділи
-//  (Виробництво / Бухгалтерія / Логістика / Склад) з інструментами.
-//  Реалізовані пункти ведуть на екрани додатка, решта — «скоро».
-//  Дизайн: світла шапка, сегменти відділів, групи-картки.
+//  src/components/SideMenu.tsx — мобільне меню (гамбургер).
+//  Тільки робочий функціонал додатка — без пунктів-заглушок:
+//  розділи + інструменти, знизу вихід/версія/оновлення.
 // ================================================================
 
-import { useState } from 'react';
 import { X, ChevronRight, LogOut, FlaskConical, RefreshCw } from 'lucide-react';
 import { AppTab } from '../types';
-import { EnvKey, ENVS } from '../api';
+import { EnvKey } from '../api';
 
 interface MenuItem {
   icon: string;
   label: string;
-  badge?: 'NEW' | 'AI' | 'скоро';
-  tab?: AppTab;      // якщо пункт уже працює в додатку
-  hint?: string;     // підказка-тост після переходу
+  sub?: string;
+  tab?: AppTab;
+  hint?: string;
 }
 interface MenuGroup { title: string; items: MenuItem[] }
-interface Dept { key: string; icon: string; label: string; groups: MenuGroup[] }
 
-const DEPTS: Dept[] = [
+const GROUPS: MenuGroup[] = [
   {
-    key: 'prod', icon: '🏭', label: 'Виробництво',
-    groups: [
-      { title: 'У додатку', items: [
-        { icon: '📊', label: 'Огляд', tab: 'dashboard' },
-        { icon: '📋', label: 'Замовлення', tab: 'orders' },
-        { icon: '🔍', label: 'Пошук деталі', tab: 'search' },
-        { icon: '🖨️', label: 'Друк креслень + QR', tab: 'orders', badge: 'NEW',
-          hint: 'Відкрийте замовлення → 🖨️ у шапці' },
-      ]},
-      { title: 'Вхідні', items: [
-        { icon: '📨', label: 'Перевірити пошту', badge: 'скоро' },
-      ]},
-      { title: 'Операції', items: [
-        { icon: '📋', label: 'Додати операцію', badge: 'скоро' },
-        { icon: '🚀', label: 'Тех.запуск', badge: 'NEW' },
-        { icon: '📁', label: 'Групувати по СК', badge: 'NEW' },
-        { icon: '📦', label: 'Покупні вироби', badge: 'скоро' },
-        { icon: '📊', label: 'Діаграма Ганта', badge: 'скоро' },
-      ]},
-      { title: 'Файли', items: [
-        { icon: '📐', label: 'Специфікація', badge: 'скоро' },
-        { icon: '📥', label: 'Імпорт переліку', badge: 'AI' },
-        { icon: '✂️', label: 'Розкрій DXF', badge: 'NEW' },
-        { icon: '🎨', label: 'Photoshop', badge: 'скоро' },
-        { icon: '🔄', label: 'Заміна файлів', badge: 'NEW' },
-      ]},
-      { title: 'AI', items: [
-        { icon: '📦', label: 'Специфікація зі збірок', badge: 'AI' },
-        { icon: '🤖', label: 'AI Помічник', badge: 'AI' },
-      ]},
-      { title: 'Workflow', items: [
-        { icon: '📁', label: 'Розподіл КД', badge: 'скоро' },
-        { icon: '📤', label: 'Відправити виконавцю', badge: 'NEW' },
-        { icon: '🔌', label: 'Підключити контрагента', badge: 'NEW' },
-      ]},
+    title: 'Виробництво',
+    items: [
+      { icon: '📊', label: 'Огляд', sub: 'зведення по замовленнях', tab: 'dashboard' },
+      { icon: '📋', label: 'Замовлення', sub: 'картки і таблиця позицій', tab: 'orders' },
+      { icon: '🔍', label: 'Пошук деталі', sub: 'по всіх замовленнях', tab: 'search' },
+      { icon: '💬', label: 'Чат виконавців', tab: 'chat' },
     ],
   },
   {
-    key: 'acc', icon: '💰', label: 'Бухгалтерія',
-    groups: [
-      { title: 'Документи', items: [
-        { icon: '📄', label: 'Договір', badge: 'скоро' },
-        { icon: '🧾', label: 'Рахунок клієнту', badge: 'скоро' },
-        { icon: '📋', label: 'Видаткова', badge: 'скоро' },
-      ]},
-      { title: 'Аналітика', items: [
-        { icon: '📊', label: 'Прибуток', badge: 'скоро' },
-        { icon: '📈', label: 'Графіки', badge: 'скоро' },
-      ]},
+    title: 'Логістика',
+    items: [
+      { icon: '🚚', label: 'Відвантаження', sub: 'забрати від виконавців · відвезти клієнту', tab: 'logistics' },
     ],
   },
   {
-    key: 'log', icon: '🚛', label: 'Логістика',
-    groups: [
-      { title: 'У додатку', items: [
-        { icon: '🚚', label: 'Забрати / відвантажити', tab: 'logistics', badge: 'NEW' },
-      ]},
-      { title: 'Нова Пошта', items: [
-        { icon: '📮', label: 'Створити ТТН', badge: 'скоро' },
-        { icon: '🔍', label: 'Трекінг', badge: 'скоро' },
-      ]},
-    ],
-  },
-  {
-    key: 'wh', icon: '📦', label: 'Склад',
-    groups: [
-      { title: 'Склад', items: [
-        { icon: '📥', label: 'Прийняти', badge: 'скоро' },
-        { icon: '📤', label: 'Видати', badge: 'скоро' },
-      ]},
+    title: 'Інструменти',
+    items: [
+      { icon: '🖨️', label: 'Друк креслень + QR', sub: 'пакет PDF з QR-кодами для цеху',
+        tab: 'orders', hint: 'Відкрийте замовлення → 🖨️ у шапці' },
     ],
   },
 ];
-
-const BADGE_STYLE: Record<string, string> = {
-  NEW: 'bg-blue-600/10 text-blue-700',
-  AI: 'bg-violet-600/10 text-violet-700',
-  'скоро': 'bg-gray-100 text-gray-400',
-};
 
 interface Props {
   env: EnvKey;
   onClose: () => void;
   onNavigate: (tab: AppTab) => void;
-  onSoon: (label: string) => void;
   onLogout: () => void;
-  onEnvChange: () => void;
   onToast?: (msg: string) => void;
 }
 
-export default function SideMenu({ env, onClose, onNavigate, onSoon, onLogout, onToast }: Props) {
-  const [dept, setDept] = useState('prod');
-  const active = DEPTS.find(d => d.key === dept)!;
-
-  function onItem(item: MenuItem) {
-    if (item.tab) {
-      onNavigate(item.tab);
-      if (item.hint) onToast?.(item.hint);
-    } else {
-      onSoon(item.label);
-    }
-  }
-
+export default function SideMenu({ env, onClose, onNavigate, onLogout, onToast }: Props) {
   return (
     <div className="fixed inset-0 z-[70] flex">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] animate-fade-in" onClick={onClose} />
 
-      <aside className="relative w-[88%] max-w-[350px] h-full flex flex-col shadow-2xl animate-slide-in-left bg-[var(--bg)]">
+      <aside className="relative w-[86%] max-w-[330px] h-full flex flex-col shadow-2xl animate-slide-in-left bg-[var(--bg)]">
         {/* Шапка */}
-        <div className="flex-shrink-0 bg-white px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-0 border-b hairline">
-          <div className="flex items-center gap-2.5 pb-3">
-            <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center text-[17px] shadow-md shadow-blue-600/25">
-              ⚙️
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-[15.5px] leading-tight tracking-tight">ERP Металообробка</p>
-              <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>Пульт керування</p>
-            </div>
-            <button onClick={onClose} className="p-2 rounded-xl press hover:bg-gray-50" style={{ color: 'var(--ink-3)' }} aria-label="Закрити">
-              <X size={19} />
-            </button>
+        <div className="flex-shrink-0 bg-white px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3 border-b hairline flex items-center gap-2.5">
+          <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center text-[17px] shadow-md shadow-blue-600/25">
+            ⚙️
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-[15.5px] leading-tight tracking-tight">ERP Металообробка</p>
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>система керування</p>
           </div>
-
-          {/* Відділи — сегменти */}
-          <div className="flex gap-1 -mx-1 px-1 overflow-x-auto pb-2.5 no-scrollbar">
-            {DEPTS.map(d => {
-              const on = dept === d.key;
-              return (
-                <button
-                  key={d.key}
-                  onClick={() => setDept(d.key)}
-                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold transition-all press"
-                  style={on
-                    ? { background: 'var(--ink)', color: '#fff' }
-                    : { background: '#F3F4F6', color: 'var(--ink-2)' }}
-                >
-                  <span className="text-[13px]">{d.icon}</span> {d.label}
-                </button>
-              );
-            })}
-          </div>
+          <button onClick={onClose} className="p-2 rounded-xl press hover:bg-gray-50" style={{ color: 'var(--ink-3)' }} aria-label="Закрити">
+            <X size={19} />
+          </button>
         </div>
 
-        {/* Пункти — групи-картки */}
-        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
-          {active.groups.map(group => (
+        {/* Пункти */}
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3.5">
+          {GROUPS.map(group => (
             <div key={group.title}>
               <p className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--ink-3)' }}>
                 {group.title}
               </p>
               <div className="bg-white rounded-2xl ring-1 ring-gray-200/60 overflow-hidden divide-y divide-gray-50">
-                {group.items.map(item => {
-                  const soon = item.badge === 'скоро';
-                  return (
-                    <button
-                      key={item.label}
-                      onClick={() => onItem(item)}
-                      className="w-full flex items-center gap-2.5 pl-2.5 pr-3 py-2.5 text-left press hover:bg-gray-50/80 active:bg-gray-100"
-                    >
-                      <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-[15px] flex-shrink-0 ${soon ? 'bg-gray-50' : 'bg-[var(--accent-soft)]'}`}>
-                        {item.icon}
-                      </span>
-                      <span className={`flex-1 text-[13px] truncate ${soon ? 'font-medium text-gray-400' : 'font-semibold text-gray-800'}`}>
-                        {item.label}
-                      </span>
-                      {item.badge && (
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0 ${BADGE_STYLE[item.badge]}`}>
-                          {item.badge}
-                        </span>
+                {group.items.map(item => (
+                  <button
+                    key={item.label}
+                    onClick={() => {
+                      if (item.tab) onNavigate(item.tab);
+                      if (item.hint) onToast?.(item.hint);
+                    }}
+                    className="w-full flex items-center gap-2.5 pl-2.5 pr-3 py-2.5 text-left press hover:bg-gray-50/80 active:bg-gray-100"
+                  >
+                    <span className="w-9 h-9 rounded-xl flex items-center justify-center text-[16px] flex-shrink-0 bg-[var(--accent-soft)]">
+                      {item.icon}
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[13.5px] font-semibold text-gray-800 truncate">{item.label}</span>
+                      {item.sub && (
+                        <span className="block text-[10.5px] truncate" style={{ color: 'var(--ink-3)' }}>{item.sub}</span>
                       )}
-                      {item.tab && <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />}
-                    </button>
-                  );
-                })}
+                    </span>
+                    <ChevronRight size={15} className="text-gray-300 flex-shrink-0" />
+                  </button>
+                ))}
               </div>
             </div>
           ))}
-
-          <p className="px-2 text-[10.5px] leading-relaxed" style={{ color: 'var(--ink-3)' }}>
-            Пункти «скоро» поки виконуються в таблиці — тут вони як план розвитку додатка.
-          </p>
         </div>
 
-        {/* Низ: вихід + версія (середовище видно бейджем; змінюється на екрані входу) */}
+        {/* Низ */}
         <div className="flex-shrink-0 bg-white border-t hairline p-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))]">
           <div className="flex items-center gap-1">
             <button
@@ -217,8 +115,7 @@ export default function SideMenu({ env, onClose, onNavigate, onSoon, onLogout, o
               <span className="text-[12px] font-bold">Вийти</span>
             </button>
             {env === 'test' && (
-              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-800"
-                title={ENVS[env].label}>
+              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-800">
                 <FlaskConical size={10} /> ТЕСТ
               </span>
             )}
@@ -235,8 +132,7 @@ export default function SideMenu({ env, onClose, onNavigate, onSoon, onLogout, o
               }}
               className="p-1.5 rounded-lg press hover:bg-gray-50"
               style={{ color: 'var(--ink-3)' }}
-              aria-label="Оновити додаток"
-              title="Оновити додаток"
+              aria-label="Оновити додаток" title="Оновити додаток"
             >
               <RefreshCw size={13} />
             </button>
