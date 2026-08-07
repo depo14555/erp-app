@@ -229,6 +229,25 @@ export default function SideMenu({ env, onClose, onNavigate, onSoon, onLogout, o
             <LogOut size={16} />
             <span className="text-[13.5px] font-semibold">Вийти з додатка</span>
           </button>
+
+          <div className="flex items-center justify-between px-3 pb-1 pt-0.5">
+            <span className="text-[10px] text-gray-400">Версія від {__BUILD_TIME__}</span>
+            <button
+              onClick={async () => {
+                // Жорстке оновлення: скидаємо сервіс-воркер і кеші
+                try {
+                  const regs = await navigator.serviceWorker?.getRegistrations?.() ?? [];
+                  await Promise.all(regs.map(r => r.unregister()));
+                  const keys = await caches?.keys?.() ?? [];
+                  await Promise.all(keys.map(k => caches.delete(k)));
+                } catch { /* не критично */ }
+                location.reload();
+              }}
+              className="text-[10px] font-bold text-gray-400 hover:text-gray-600 px-2 py-1 rounded-lg"
+            >
+              Оновити додаток
+            </button>
+          </div>
         </div>
       </aside>
     </div>

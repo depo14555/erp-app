@@ -4,14 +4,25 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Мітка збірки — видно в меню, щоб одразу розуміти, яка версія завантажена
+  define: {
+    __BUILD_TIME__: JSON.stringify(
+      new Date().toLocaleString('uk-UA', {
+        timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit',
+        hour: '2-digit', minute: '2-digit',
+      })
+    ),
+  },
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      // autoUpdate: нова версія застосовується сама при наступному відкритті.
+      // З 'prompt' користувач лишався на старій, доки не натисне «Оновити».
+      registerType: 'autoUpdate',
       includeAssets: ['icon-192.png', 'icon-512.png'],
       manifest: {
         name: 'ERP Металообробка',
-        short_name: 'ERP Металообробка',
+        short_name: 'ERP',
         description: 'Мобільний доступ до ERP-системи металообробки',
         theme_color: '#3b82f6',
         background_color: '#ffffff',
