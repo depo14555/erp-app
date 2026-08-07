@@ -4,7 +4,7 @@
 //  виконавців, найближчі терміни.
 // ================================================================
 
-import { RefreshCw, Package, CheckCircle2, Clock, Users, TrendingUp } from 'lucide-react';
+import { Package, CheckCircle2, Clock, Users, TrendingUp } from 'lucide-react';
 import { DashboardData, Order, statusStyle } from '../types';
 
 interface Props {
@@ -78,12 +78,9 @@ export default function DashboardPage({ data, loading, onRefresh, onOpenOrder }:
   return (
     <div className="h-full overflow-y-auto px-3 lg:px-5 pb-5 pt-3">
       <div className="max-w-[1240px] mx-auto w-full space-y-3">
-      <div className="flex items-center justify-between px-0.5">
-        <p className="text-[11px] text-gray-400">Оновлено {data.updatedAt}</p>
-        <button onClick={onRefresh} className="p-1.5 text-blue-600" aria-label="Оновити">
-          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-        </button>
-      </div>
+      <p className="text-[11px] text-gray-400 px-0.5">
+        Оновлено {data.updatedAt}{loading ? ' · завантаження…' : ''}
+      </p>
 
       {/* Верхній ряд: головний показник + лічильники (на десктопі в один ряд) */}
       <div className="grid grid-cols-2 md:grid-cols-[1.5fr_1fr_1fr] gap-2.5">

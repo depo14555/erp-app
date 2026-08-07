@@ -26,6 +26,7 @@ interface Props {
   onSetRowStatus: (row: number, s: string) => void;
   onUpdateRow: (row: number, field: string, value: string) => Promise<void>;
   onToast: (msg: string, err?: boolean) => void;
+  printSignal?: number; // сайдбар «Друк креслень + QR» → відкрити вікно друку
 }
 
 const GROUP_META = {
@@ -39,7 +40,7 @@ const PAGE = 40; // позицій на групу за раз — великі 
 
 export default function OrderPage({
   detail, orderStatusList, rowStatusList, lists, loading,
-  onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onToast,
+  onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onToast, printSignal,
 }: Props) {
   const [q, setQ] = useState('');
   const [fOp, setFOp] = useState('');
@@ -60,6 +61,8 @@ export default function OrderPage({
   // Новий пошук/фільтр або інше замовлення — показуємо знову з першої сторінки
   useEffect(() => { setLimits({}); }, [q, fOp, fExec, fStatus, header.headerRow]);
   useEffect(() => { setFOp(''); setFExec(''); setFStatus(''); setQ(''); }, [header.headerRow]);
+  // Кнопка «Друк креслень + QR» у сайдбарі відкриває вікно друку для цього замовлення
+  useEffect(() => { if (printSignal) setShowPrint(true); }, [printSignal]);
 
   const real = useMemo(() => items.filter(i => !i.group), [items]);
   const fOps = useMemo(() => distinct(real.map(i => i.op)), [real]);
@@ -115,7 +118,8 @@ export default function OrderPage({
           <button onClick={() => setShowPrint(true)} className="p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Друк креслень">
             <Printer size={18} />
           </button>
-          <button onClick={onRefresh} className="p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Оновити">
+          {/* На десктопі оновлення в шапці додатка — тут лише для телефона */}
+          <button onClick={onRefresh} className="lg:hidden p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Оновити">
             <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>

@@ -6,16 +6,17 @@
 // ================================================================
 
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshCw, Truck, PackageCheck, ChevronDown, ChevronRight, MapPin, Loader2 } from 'lucide-react';
+import { Truck, PackageCheck, ChevronDown, ChevronRight, MapPin, Loader2 } from 'lucide-react';
 import { api } from '../api';
 import { LogisticsData, statusStyle } from '../types';
 
 interface Props {
   onOpenOrder: (headerRow: number) => void;
   onToast: (msg: string, err?: boolean) => void;
+  refreshSignal?: number; // кнопка оновлення в шапці додатка
 }
 
-export default function LogisticsPage({ onOpenOrder, onToast }: Props) {
+export default function LogisticsPage({ onOpenOrder, onToast, refreshSignal }: Props) {
   const [data, setData] = useState<LogisticsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState<Record<string, boolean>>({});
@@ -32,18 +33,16 @@ export default function LogisticsPage({ onOpenOrder, onToast }: Props) {
   }, [onToast]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (refreshSignal) load(true); }, [refreshSignal, load]);
 
   const pickupTotal = data?.pickup.reduce((s, g) => s + g.count, 0) ?? 0;
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-shrink-0 px-3 pt-2.5 pb-1.5 flex items-center gap-2">
+      <div className="flex-shrink-0 px-3 lg:px-5 pt-2.5 pb-1.5">
         <p className="text-[11.5px] font-semibold" style={{ color: 'var(--ink-3)' }}>
-          {data ? `Оновлено ${data.updatedAt}` : 'Завантаження…'}
+          {data ? `Оновлено ${data.updatedAt}${loading ? ' · завантаження…' : ''}` : 'Завантаження…'}
         </p>
-        <button onClick={() => load(true)} className="ml-auto p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Оновити">
-          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-4">

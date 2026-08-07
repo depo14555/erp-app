@@ -42,6 +42,8 @@ export default function App() {
   const [showNotifs, setShowNotifs] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [toast, setToast] = useState<{ msg: string; err?: boolean } | null>(null);
+  const [printTick, setPrintTick] = useState(0);       // сайдбар → відкрити друк у відкритому замовленні
+  const [logisticsTick, setLogisticsTick] = useState(0); // шапка → оновити логістику
 
   const isOnline = useOnlineStatus();
   const env = getEnv();
@@ -156,6 +158,15 @@ export default function App() {
     setDetail(null);
   }
 
+  /** Одна кнопка оновлення в шапці — оновлює те, що зараз на екрані. */
+  function refreshCurrent() {
+    if (detail) { openOrder(detail.header.headerRow, true); return; }
+    if (tab === 'dashboard') loadDashboard(true);
+    else if (tab === 'orders') loadOrders(true);
+    else if (tab === 'logistics') setLogisticsTick(t => t + 1);
+    else { loadDashboard(true); loadOrders(true); }
+  }
+
   if (!authed) return <TokenGate onSuccess={() => setAuthed(true)} />;
 
   const title = TABS.find(t => t.key === tab)?.label ?? 'ERP';
@@ -174,7 +185,7 @@ export default function App() {
     ) : tab === 'search' ? (
       <SearchPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} />
     ) : tab === 'logistics' ? (
-      <LogisticsPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} />
+      <LogisticsPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} refreshSignal={logisticsTick} />
     ) : (
       <ChatPage onToast={showToast} />
     )
@@ -193,6 +204,7 @@ export default function App() {
       onSetRowStatus={setRowStatus}
       onUpdateRow={updateRow}
       onToast={showToast}
+      printSignal={printTick}
     />
   );
 
@@ -203,7 +215,12 @@ export default function App() {
         tab={tab}
         env={env}
         onTab={t => { setTab(t); setDetail(null); }}
-        onPrint={() => { setTab('orders'); setDetail(null); showToast('Відкрийте замовлення → 🖨️ у шапці'); }}
+        onPrint={() => {
+          // Замовлення відкрите — одразу відкриваємо вікно друку для нього
+          if (detail) { setPrintTick(t => t + 1); return; }
+          setTab('orders');
+          showToast('Виберіть замовлення — і друк відкриється у ньому (🖨️ у шапці)');
+        }}
         onLogout={logout}
       />
 
@@ -224,8 +241,8 @@ export default function App() {
                 <FlaskConical size={11} /> ТЕСТ
               </span>
             )}
-            <button onClick={() => { loadDashboard(true); loadOrders(true); }}
-              className="hidden lg:block p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Оновити">
+            <button onClick={refreshCurrent}
+              className="p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Оновити">
               <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
             </button>
             <button onClick={() => setShowNotifs(true)}

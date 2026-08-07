@@ -5,7 +5,7 @@
 // ================================================================
 
 import { useMemo, useState } from 'react';
-import { Search, RefreshCw, SlidersHorizontal, Clock } from 'lucide-react';
+import { Search, SlidersHorizontal, Clock } from 'lucide-react';
 import OrderCard from '../components/OrderCard';
 import { Order, statusStyle, isClosed } from '../types';
 
@@ -62,7 +62,7 @@ export default function OrdersPage({ orders, updatedAt, loading, onRefresh, onOp
             {updatedAt && ` · ${updatedAt}`}
           </p>
           <div className="ml-auto flex items-center gap-2">
-            {/* Перемикач вигляду */}
+            {/* Перемикач вигляду (оновлення — однією кнопкою в шапці додатка) */}
             <div className="hidden md:flex bg-gray-100 rounded-full p-0.5">
               {(['table', 'cards'] as const).map(v => (
                 <button key={v} onClick={() => setView(v)}
@@ -72,13 +72,6 @@ export default function OrdersPage({ orders, updatedAt, loading, onRefresh, onOp
                 </button>
               ))}
             </div>
-            <button
-              onClick={onRefresh}
-              className="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-white ring-1 ring-gray-200 rounded-xl text-blue-600 press"
-              aria-label="Оновити"
-            >
-              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            </button>
           </div>
         </div>
 
