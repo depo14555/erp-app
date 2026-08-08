@@ -195,6 +195,42 @@ export interface DistributeResult {
   warning?: string;
 }
 
+/** Розкрій DXF: позиція картки з кресленням різу. */
+export interface NestItem {
+  row: number;
+  id: string;
+  fileId: string;
+  fileName: string;
+  url: string;
+  material: string;
+  thickness: string;
+  assembly: string;
+  operation: string;
+  executor: string;
+  /** К-сть із колонки «К-сть» (J), «Призн.» (M) і з назви файлу. */
+  qtyJ: number;
+  qtyM: number;
+  qtyName: number;
+}
+
+export interface NestItemsData {
+  projectId: string;
+  orderNum: string;
+  folderUrl: string;
+  items: NestItem[];
+  /** Скільки DXF-рядків без посилання на файл. */
+  noLink: number;
+}
+
+/** Тарифи різу для групи «матеріал · товщина». */
+export interface NestPrice {
+  perM?: number;
+  perPierce?: number;
+  perSheet?: number;
+  speed?: number;
+  pierceSec?: number;
+}
+
 /** Вміст файлу Drive для друку. */
 export interface FileData {
   name: string;

@@ -54,6 +54,7 @@ export default function App() {
   const [sendTick, setSendTick] = useState(0);         // сайдбар → відправити виконавцю
   const [distrTick, setDistrTick] = useState(0);       // сайдбар → розподіл КД
   const [calcTick, setCalcTick] = useState(0);         // сайдбар → прорахунок
+  const [nestTick, setNestTick] = useState(0);         // сайдбар → розкрій DXF
   /** Інструменти замовлень поверх списку: пошук деталі / вхідна пошта. */
   const [overlay, setOverlay] = useState<'search' | 'mail' | null>(null);
   const [mailHidden, setMailHidden] = useState(false);   // пошта згорнута в плашку
@@ -277,6 +278,7 @@ export default function App() {
       sendSignal={sendTick}
       distrSignal={distrTick}
       calcSignal={calcTick}
+      nestSignal={nestTick}
     />
   );
 
@@ -305,6 +307,7 @@ export default function App() {
           else if (t === 'print') setPrintTick(v => v + 1);
           else if (t === 'distr') setDistrTick(v => v + 1);
           else if (t === 'calc') setCalcTick(v => v + 1);
+          else if (t === 'nest') setNestTick(v => v + 1);
         }}
         onLogout={logout}
       />

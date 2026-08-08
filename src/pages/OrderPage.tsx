@@ -21,6 +21,7 @@ import PhotoSheet from '../components/PhotoSheet';
 import BillingSheet from '../components/BillingSheet';
 import DistributionSheet from '../components/DistributionSheet';
 import CalcSheet from '../components/CalcSheet';
+import NestingSheet from '../components/NestingSheet';
 import { OrderDetail, OrderItem, Lists, statusStyle, fileKind } from '../types';
 
 interface Props {
@@ -43,6 +44,7 @@ interface Props {
   sendSignal?: number;
   distrSignal?: number;
   calcSignal?: number;
+  nestSignal?: number;
 }
 
 const GROUP_META = {
@@ -63,7 +65,7 @@ const ZONES: Array<{ key: TableMode; label: string; short: string; icon: string 
 ];
 
 /** Вікна інструментів, які можна згорнути (робота продовжується у фоні). */
-type SheetKey = 'print' | 'send' | 'tech' | 'photo' | 'distr' | 'calc';
+type SheetKey = 'print' | 'send' | 'tech' | 'photo' | 'distr' | 'calc' | 'nest';
 const SHEET_META: Record<SheetKey, { label: string; emoji: string }> = {
   print: { label: 'Друк креслень', emoji: '🖨️' },
   send:  { label: 'Відправка виконавцю', emoji: '📤' },
@@ -71,6 +73,7 @@ const SHEET_META: Record<SheetKey, { label: string; emoji: string }> = {
   photo: { label: 'Фотошоп креслень', emoji: '🎨' },
   distr: { label: 'Розподіл КД', emoji: '📂' },
   calc:  { label: 'Прорахунок', emoji: '🧮' },
+  nest:  { label: 'Розкрій DXF', emoji: '✂️' },
 };
 
 /** Відкриває вікно лише при ЗМІНІ сигналу, ігноруючи значення на монтуванні. */
@@ -86,7 +89,7 @@ function useOpenSignal(signal: number | undefined, open: () => void) {
 export default function OrderPage({
   detail, orderStatusList, rowStatusList, lists, loading,
   onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onBulkStatus, onToast,
-  printSignal, billingSignal, techSignal, photoSignal, sendSignal, distrSignal, calcSignal,
+  printSignal, billingSignal, techSignal, photoSignal, sendSignal, distrSignal, calcSignal, nestSignal,
 }: Props) {
   const [q, setQ] = useState('');
   const [fOp, setFOp] = useState('');
@@ -102,6 +105,7 @@ export default function OrderPage({
   const [showBilling, setShowBilling] = useState(false);
   const [showDistr, setShowDistr] = useState(false);
   const [showCalc, setShowCalc] = useState(false);
+  const [showNest, setShowNest] = useState(false);
   const [tableMode, setTableMode] = useState<TableMode>('prod');
   const [addOpItem, setAddOpItem] = useState<OrderItem | null>(null);
   const [showDelivery, setShowDelivery] = useState(false);
@@ -133,6 +137,7 @@ export default function OrderPage({
   useOpenSignal(sendSignal, () => setShowSend(true));
   useOpenSignal(distrSignal, () => setShowDistr(true));
   useOpenSignal(calcSignal, () => setShowCalc(true));
+  useOpenSignal(nestSignal, () => setShowNest(true));
 
   const real = useMemo(() => items.filter(i => !i.group), [items]);
   const fOps = useMemo(() => distinct(real.map(i => i.op)), [real]);
@@ -629,6 +634,17 @@ export default function OrderPage({
             onMinimize={() => minimize('calc')}
             onToast={onToast}
             onApplied={() => { markFinished('calc'); onRefresh(); }}
+          />
+        </div>
+      )}
+
+      {showNest && (
+        <div className={hide('nest')}>
+          <NestingSheet
+            detail={detail}
+            onClose={() => setShowNest(false)}
+            onMinimize={() => minimize('nest')}
+            onToast={onToast}
           />
         </div>
       )}

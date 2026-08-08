@@ -14,6 +14,7 @@ import {
   TechFilesData, TechLaunchItem, TechLaunchResult, MailListData, SavePdfResult,
   FolderFile, BillingData, CommerceContext, CommerceResult, DocType, CreateOrderResult,
   BillingOverview, DistributionData, DistributeParams, DistributeResult, CalcData,
+  NestItemsData, NestPrice,
 } from './types';
 
 /** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
@@ -37,7 +38,7 @@ const CACHE_TTL = 5 * 60 * 1000;
 
 /** Скільки чекати на відповідь — залежить від дії. */
 function timeoutFor(action: string): number {
-  return /^erp\.(techLaunch|mailProcess|execSend|savePdf|bulkUpdate|groupCard|fillAssembly|fileData|techFiles|distribut)/.test(action)
+  return /^erp\.(techLaunch|mailProcess|execSend|savePdf|bulkUpdate|groupCard|fillAssembly|fileData|techFiles|distribut|nest)/.test(action)
     ? LONG_TIMEOUT
     : REQUEST_TIMEOUT;
 }
@@ -382,6 +383,36 @@ export const api = {
   /** Панель бухгалтерії: всі рахунки + що треба виставити + шаблони. */
   billingOverview(): Promise<BillingOverview> {
     return post('erp.billingOverview');
+  },
+
+  /** Розкрій: позиції картки з DXF (файл + матеріал/товщина/кількості). */
+  nestItems(headerRow: number): Promise<NestItemsData> {
+    return post('erp.nestItems', { headerRow });
+  },
+
+  /** Розкрій: вміст DXF-файлів (пачками — Apps Script читає їх послідовно). */
+  nestDxf(fileIds: string[]): Promise<{ files: Array<{ fileId: string; text?: string; error?: string }> }> {
+    return post('erp.nestDxf', { fileIds });
+  },
+
+  nestPrices(): Promise<{ prices: Record<string, NestPrice> }> {
+    return post('erp.nestPrices');
+  },
+
+  nestSavePrices(prices: Record<string, NestPrice>): Promise<{ ok: boolean }> {
+    return post('erp.nestSavePrices', { prices });
+  },
+
+  /** Розкрій: зберегти розкладки (DXF) і текстовий звіт у папку замовлення. */
+  nestSave(payload: { folderUrl: string; baseName: string; files: Array<{ name: string; content: string }>; report: string }):
+    Promise<{ folderUrl: string; files: Array<{ name: string; url: string }> }> {
+    return post('erp.nestSave', payload);
+  },
+
+  /** Розкрій: пакет для ProNest — DXF по товщинах + Перелік.csv. */
+  nestPronest(payload: { folderUrl: string; baseName: string; groups: Array<{ key: string; items: any[] }> }):
+    Promise<{ folderUrl: string; groups: Array<{ name: string; files: number }> }> {
+    return post('erp.nestPronest', payload);
   },
 
   /** Прорахунок: збережені групи позицій і витрати по замовленню. */
