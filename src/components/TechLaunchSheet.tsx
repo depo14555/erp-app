@@ -12,6 +12,7 @@ import {
   FileText, Ruler, Box, FlipHorizontal2, Eye,
 } from 'lucide-react';
 import { MinimizeButton } from './PageSheet';
+import { useBusy } from '../lib/busy';
 import { api } from '../api';
 import { OrderDetail, TechFile, TechFilesData, TechLaunchItem, TechLaunchResult } from '../types';
 
@@ -50,6 +51,9 @@ export default function TechLaunchSheet({ detail, onClose, onMinimize, onToast, 
   const [fExt, setFExt] = useState('');
   const [q, setQ] = useState('');
   const [result, setResult] = useState<TechLaunchResult | null>(null);
+  // Поки триває операція — сторінку не можна оновити (робота б загубилась)
+  useBusy(phase === 'work', 'Тех.запуск');
+
 
   // ── Перегляд креслення ──
   const [preview, setPreview] = useState<TechFile | null>(null);

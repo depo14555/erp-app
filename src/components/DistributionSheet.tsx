@@ -12,6 +12,7 @@ import {
   FileText, Eye, User, Wrench, AlertTriangle, CheckSquare, Square,
 } from 'lucide-react';
 import { MinimizeButton } from './PageSheet';
+import { useBusy } from '../lib/busy';
 import { api } from '../api';
 import {
   OrderDetail, DistributionData, DistributionGroup, DistributionItem,
@@ -48,6 +49,9 @@ export default function DistributionSheet({ detail, onClose, onMinimize, onToast
   const [sendToExecutor, setSendToExecutor] = useState(true);
   const [open, setOpen] = useState('');
   const [result, setResult] = useState<DistributeResult | null>(null);
+  // Поки триває операція — сторінку не можна оновити (робота б загубилась)
+  useBusy(phase === 'work', 'Розподіл КД');
+
 
   // ── Перегляд креслення ──
   const [preview, setPreview] = useState<DistributionItem | null>(null);

@@ -12,6 +12,7 @@ import {
   X, Scissors, Loader2, Save, FolderOpen, Calculator, Package, AlertTriangle, Settings2,
 } from 'lucide-react';
 import { MinimizeButton } from './PageSheet';
+import { useBusy } from '../lib/busy';
 import { api } from '../api';
 import { OrderDetail, NestItem, NestPrice, CalcBundle } from '../types';
 import {
@@ -43,6 +44,9 @@ function money(n: number): string {
   return n.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+/** Розібрані DXF живуть поза компонентом: закрив вікно — повторно не читаємо. */
+const parsedCache = new Map<string, any>();
+
 export default function NestingSheet({ detail, onClose, onMinimize, onToast }: Props) {
   const [phase, setPhase] = useState<Phase>('load');
   const [items, setItems] = useState<NestItem[]>([]);
@@ -64,7 +68,10 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast }: P
   const [results, setResults] = useState<any[]>([]);
   const [problems, setProblems] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  const parsedRef = useRef<Map<string, any>>(new Map());
+  const parsedRef = useRef<Map<string, any>>(parsedCache);
+
+  // Поки читаємо файли / рахуємо / зберігаємо — сторінку не можна втратити
+  useBusy(phase === 'work' || saving, 'Розкрій DXF');
 
   useEffect(() => {
     Promise.all([api.nestItems(detail.header.headerRow), api.nestPrices().catch(() => ({ prices: {} }))])

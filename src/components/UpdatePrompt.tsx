@@ -9,10 +9,12 @@
 import { useEffect } from 'react';
 import { RefreshCw, X } from 'lucide-react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { useBusyLabels } from '../lib/busy';
 
 const CHECK_INTERVAL = 15 * 60 * 1000; // перевірка нової версії кожні 15 хв
 
 export default function UpdatePrompt() {
+  const busy = useBusyLabels();
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
@@ -39,7 +41,8 @@ export default function UpdatePrompt() {
     return () => document.removeEventListener('keydown', handler);
   }, [needRefresh, setNeedRefresh]);
 
-  if (!needRefresh) return null;
+  // Поки йде довга операція — навіть не пропонуємо оновлюватись
+  if (!needRefresh || busy.length) return null;
 
   return (
     <div className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-[70] animate-slide-up">

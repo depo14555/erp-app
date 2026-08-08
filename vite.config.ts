@@ -16,8 +16,10 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // autoUpdate: нова версія застосовується сама при наступному відкритті
-      registerType: 'autoUpdate',
+      // prompt: нова версія НЕ застосовується сама. autoUpdate перезавантажував
+      // сторінку прямо посеред роботи (розкрій, тех.запуск) — усе втрачалось.
+      // Тепер оновлення пропонує UpdatePrompt, і тільки коли робота не йде.
+      registerType: 'prompt',
       includeAssets: ['icon-192.png', 'icon-512.png', 'logo.svg'],
       manifest: {
         name: 'ERP Металообробка',

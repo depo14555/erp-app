@@ -11,6 +11,7 @@ import {
   AlertTriangle, ArrowDownToLine, ArrowUpToLine,
 } from 'lucide-react';
 import { MinimizeButton } from './PageSheet';
+import { useBusy } from '../lib/busy';
 import { api } from '../api';
 import { OrderDetail, ExecRowsData, ExecSendResult } from '../types';
 
@@ -32,6 +33,9 @@ export default function SendSheet({ detail, preselect, onClose, onMinimize, onTo
   const [position, setPosition] = useState<'top' | 'bottom'>('bottom');
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
   const [result, setResult] = useState<ExecSendResult | null>(null);
+  // Поки триває операція — сторінку не можна оновити (робота б загубилась)
+  useBusy(phase === 'work', 'Відправка виконавцю');
+
 
   useEffect(() => {
     api.execRows(detail.header.headerRow)

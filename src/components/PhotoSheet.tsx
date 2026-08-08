@@ -13,6 +13,7 @@ import {
   ExternalLink, ArrowLeft, ArrowRight, Search,
 } from 'lucide-react';
 import { MinimizeButton } from './PageSheet';
+import { useBusy } from '../lib/busy';
 import { api } from '../api';
 import { OrderDetail, FolderFile } from '../types';
 import { Rect, RenderedPage } from '../lib/photoPdf';
@@ -43,6 +44,9 @@ export default function PhotoSheet({ detail, onClose, onMinimize, onToast, onSav
   const [color, setColor] = useState<'black' | 'white'>('black');
   const [savedUrl, setSavedUrl] = useState('');
   const prefetching = useRef<Set<string>>(new Set());
+  // Поки триває операція — сторінку не можна оновити (робота б загубилась)
+  useBusy(phase === 'save', 'Фотошоп креслень');
+
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drag = useRef<{ x: number; y: number } | null>(null);

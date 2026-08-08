@@ -6,6 +6,7 @@
 // ================================================================
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useBusy } from '../lib/busy';
 import { Mail, Paperclip, User, Loader2, Inbox, Zap, AlertTriangle } from 'lucide-react';
 import { api, getEnv } from '../api';
 import { MailListData } from '../types';
@@ -21,6 +22,9 @@ export default function MailPage({ onToast, onProcessed, refreshSignal }: Props)
   const [loading, setLoading] = useState(false);
   const [working, setWorking] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+
+  // Обробка пошти триває на сервері — сторінку не оновлюємо
+  useBusy(working, 'Перевірка пошти');
   const timerRef = useRef<number | null>(null);
   const isTest = getEnv() === 'test';
 

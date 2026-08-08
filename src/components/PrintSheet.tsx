@@ -8,6 +8,7 @@
 import { useMemo, useState } from 'react';
 import { X, Printer, QrCode, Download, ExternalLink, Loader2, CheckSquare, Square } from 'lucide-react';
 import { MinimizeButton } from './PageSheet';
+import { useBusy } from '../lib/busy';
 import { OrderDetail, fileKind } from '../types';
 import type { PrintItem } from '../lib/printPdf';
 
@@ -28,6 +29,9 @@ type Phase = 'pick' | 'work' | 'done';
 
 export default function PrintSheet({ detail, onClose, onMinimize, onToast }: Props) {
   const { header, items } = detail;
+  // Поки триває операція — сторінку не можна оновити (робота б загубилась)
+  useBusy(phase === 'work', 'Друк креслень');
+
 
   // Друкуємо лише PDF з посиланням на файл
   const printable = useMemo(() =>
