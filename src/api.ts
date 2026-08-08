@@ -13,7 +13,7 @@ import {
   PartData, LogisticsData, FileData, ExecRowsData, ExecSendResult, ExecRow,
   TechFilesData, TechLaunchItem, TechLaunchResult, MailListData, SavePdfResult,
   FolderFile, BillingData, CommerceContext, CommerceResult, DocType, CreateOrderResult,
-  BillingOverview, DistributionData, DistributeParams, DistributeResult,
+  BillingOverview, DistributionData, DistributeParams, DistributeResult, CalcData,
 } from './types';
 
 /** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
@@ -80,7 +80,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /** Читання можна безпечно повторити; мутації — ні (щоб не задвоїти запис). */
 function isReadAction(action: string): boolean {
-  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute)/.test(action);
+  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute|calcSave)/.test(action);
 }
 
 function cacheGet<T>(key: string): T | null {
@@ -382,6 +382,15 @@ export const api = {
   /** Панель бухгалтерії: всі рахунки + що треба виставити + шаблони. */
   billingOverview(): Promise<BillingOverview> {
     return post('erp.billingOverview');
+  },
+
+  /** Прорахунок: збережені групи позицій і витрати по замовленню. */
+  calcGet(headerRow: number): Promise<{ projectId: string; data: CalcData }> {
+    return post('erp.calcGet', { headerRow });
+  },
+
+  calcSave(headerRow: number, data: CalcData): Promise<{ ok: boolean; updatedAt: string; bundles: number }> {
+    return post('erp.calcSave', { headerRow, data });
   },
 
   /** Розподіл КД: що буде розподілено — виконавець → операція → файли. */

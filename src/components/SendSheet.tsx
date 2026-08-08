@@ -10,6 +10,7 @@ import {
   X, Send, Loader2, CheckSquare, Square, ExternalLink,
   AlertTriangle, ArrowDownToLine, ArrowUpToLine,
 } from 'lucide-react';
+import { MinimizeButton } from './PageSheet';
 import { api } from '../api';
 import { OrderDetail, ExecRowsData, ExecSendResult } from '../types';
 
@@ -17,13 +18,14 @@ interface Props {
   detail: OrderDetail;
   preselect?: number[];   // рядки, вибрані в таблиці позицій
   onClose: () => void;
+  onMinimize?: () => void;
   onToast: (msg: string, err?: boolean) => void;
   onSent: () => void;     // оновити замовлення після відправки
 }
 
 type Phase = 'load' | 'pick' | 'work' | 'done';
 
-export default function SendSheet({ detail, preselect, onClose, onToast, onSent }: Props) {
+export default function SendSheet({ detail, preselect, onClose, onMinimize, onToast, onSent }: Props) {
   const [data, setData] = useState<ExecRowsData | null>(null);
   const [phase, setPhase] = useState<Phase>('load');
   const [exec, setExec] = useState('');
@@ -107,6 +109,7 @@ export default function SendSheet({ detail, preselect, onClose, onToast, onSent 
               {detail.header.orderNum || detail.header.projectId} · рядки летять у таблицю виконавця
             </p>
           </div>
+          {onMinimize && <MinimizeButton onClick={onMinimize} />}
           {phase !== 'work' && (
             <button onClick={onClose} className="p-2 rounded-xl press" style={{ color: 'var(--ink-3)' }} aria-label="Закрити">
               <X size={18} />

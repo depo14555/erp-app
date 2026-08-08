@@ -12,6 +12,7 @@ import {
   X, Paintbrush, Loader2, Undo2, ChevronLeft, ChevronRight, Save, Square,
   ExternalLink, ArrowLeft, ArrowRight, Search,
 } from 'lucide-react';
+import { MinimizeButton } from './PageSheet';
 import { api } from '../api';
 import { OrderDetail, FolderFile } from '../types';
 import { Rect, RenderedPage } from '../lib/photoPdf';
@@ -19,6 +20,7 @@ import { Rect, RenderedPage } from '../lib/photoPdf';
 interface Props {
   detail: OrderDetail;
   onClose: () => void;
+  onMinimize?: () => void;
   onToast: (msg: string, err?: boolean) => void;
   onSaved: () => void;
 }
@@ -29,7 +31,7 @@ type Filter = '' | 'todo' | 'done';
 // Кеш рендерів ЖИВЕ поза компонентом — повторне відкриття шторки миттєве
 const renderCache = new Map<string, RenderedPage[]>();
 
-export default function PhotoSheet({ detail, onClose, onToast, onSaved }: Props) {
+export default function PhotoSheet({ detail, onClose, onMinimize, onToast, onSaved }: Props) {
   const [files, setFiles] = useState<FolderFile[]>([]);
   const [phase, setPhase] = useState<Phase>('load');
   const [filter, setFilter] = useState<Filter>('todo');
@@ -235,6 +237,7 @@ export default function PhotoSheet({ detail, onClose, onToast, onSaved }: Props)
                 : `${detail.header.orderNum || detail.header.projectId} · з папки замовлення`}
             </p>
           </div>
+          {onMinimize && <MinimizeButton onClick={onMinimize} />}
           {phase !== 'save' && (
             <button onClick={onClose} className="p-2 rounded-xl press" style={{ color: 'var(--ink-3)' }} aria-label="Закрити">
               <X size={18} />

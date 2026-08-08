@@ -8,7 +8,7 @@
 import {
   LayoutDashboard, ClipboardList, MessageSquare, Truck,
   Printer, LogOut, RefreshCw, Receipt,
-  FolderOpen, Rocket, Paintbrush, Send, FolderTree,
+  FolderOpen, Rocket, Paintbrush, Send, FolderTree, Calculator,
 } from 'lucide-react';
 import { AppTab } from '../types';
 import { EnvKey } from '../api';
@@ -38,7 +38,7 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
-export type OrderTool = 'billing' | 'tech' | 'photo' | 'send' | 'print' | 'distr';
+export type OrderTool = 'billing' | 'tech' | 'photo' | 'send' | 'print' | 'distr' | 'calc';
 
 interface Props {
   tab: AppTab;
@@ -54,6 +54,7 @@ interface Props {
 const ORDER_TOOLS: Array<{ key: OrderTool; label: string; Icon: typeof Receipt; color: string }> = [
   { key: 'tech', label: 'Тех.запуск', Icon: Rocket, color: '#EA580C' },
   { key: 'distr', label: 'Розподіл КД', Icon: FolderTree, color: '#7C3AED' },
+  { key: 'calc', label: 'Прорахунок', Icon: Calculator, color: '#0D9488' },
   { key: 'photo', label: 'Фотошоп креслень', Icon: Paintbrush, color: '#DB2777' },
   { key: 'send', label: 'Відправити виконавцю', Icon: Send, color: '#4F46E5' },
   { key: 'print', label: 'Друк креслень + QR', Icon: Printer, color: '#0891B2' },

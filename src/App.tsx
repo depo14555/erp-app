@@ -53,8 +53,10 @@ export default function App() {
   const [photoTick, setPhotoTick] = useState(0);       // сайдбар → фотошоп
   const [sendTick, setSendTick] = useState(0);         // сайдбар → відправити виконавцю
   const [distrTick, setDistrTick] = useState(0);       // сайдбар → розподіл КД
+  const [calcTick, setCalcTick] = useState(0);         // сайдбар → прорахунок
   /** Інструменти замовлень поверх списку: пошук деталі / вхідна пошта. */
   const [overlay, setOverlay] = useState<'search' | 'mail' | null>(null);
+  const [mailHidden, setMailHidden] = useState(false);   // пошта згорнута в плашку
   const [showCreate, setShowCreate] = useState(false); // ➕ нове замовлення
   const [logisticsTick, setLogisticsTick] = useState(0); // шапка → оновити логістику
   const [mailTick, setMailTick] = useState(0);           // шапка → оновити пошту
@@ -274,6 +276,7 @@ export default function App() {
       photoSignal={photoTick}
       sendSignal={sendTick}
       distrSignal={distrTick}
+      calcSignal={calcTick}
     />
   );
 
@@ -301,6 +304,7 @@ export default function App() {
           else if (t === 'send') setSendTick(v => v + 1);
           else if (t === 'print') setPrintTick(v => v + 1);
           else if (t === 'distr') setDistrTick(v => v + 1);
+          else if (t === 'calc') setCalcTick(v => v + 1);
         }}
         onLogout={logout}
       />
@@ -366,13 +370,27 @@ export default function App() {
         </PageSheet>
       )}
 
+      {/* Пошта живе, поки згорнута — обробка листів триває у фоні */}
       {overlay === 'mail' && (
-        <PageSheet title="Вхідні (пошта)" subtitle="нові замовлення з Gmail"
-          icon={<Inbox size={16} />} onClose={() => setOverlay(null)}>
-          <MailPage onToast={showToast}
-            onProcessed={() => { loadOrders(true); loadDashboard(true); }}
-            refreshSignal={mailTick} />
-        </PageSheet>
+        <div className={mailHidden ? 'hidden' : ''}>
+          <PageSheet title="Вхідні (пошта)" subtitle="нові замовлення з Gmail"
+            icon={<Inbox size={16} />}
+            onMinimize={() => { setMailHidden(true); showToast('📨 Пошта згорнута — обробка триває'); }}
+            onClose={() => { setOverlay(null); setMailHidden(false); }}>
+            <MailPage onToast={showToast}
+              onProcessed={() => { loadOrders(true); loadDashboard(true); if (mailHidden) showToast('✅ Пошта оброблена — відкрийте вікно'); }}
+              refreshSignal={mailTick} />
+          </PageSheet>
+        </div>
+      )}
+
+      {overlay === 'mail' && mailHidden && (
+        <button onClick={() => setMailHidden(false)}
+          className="fixed bottom-3 left-3 z-[78] flex items-center gap-2 pl-3 pr-2.5 py-2 rounded-2xl shadow-lg press bg-white ring-1 ring-gray-200 hover:bg-gray-50"
+          title="Повернути вікно">
+          <span className="text-[14px] leading-none">📨</span>
+          <span className="text-[12.5px] font-bold">Вхідні (пошта)</span>
+        </button>
       )}
 
       {/* Деталь за QR-кодом — поверх усього */}

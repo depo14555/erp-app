@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft, RefreshCw, FolderOpen, FileText, Ruler, Box, Paperclip,
   ExternalLink, User, Search, Printer, X, Send, Tags, Rocket, Paintbrush, Receipt,
-  FolderTree,
+  FolderTree, Calculator,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
 import ItemsTable, { TableMode } from '../components/ItemsTable';
@@ -20,6 +20,7 @@ import TechLaunchSheet from '../components/TechLaunchSheet';
 import PhotoSheet from '../components/PhotoSheet';
 import BillingSheet from '../components/BillingSheet';
 import DistributionSheet from '../components/DistributionSheet';
+import CalcSheet from '../components/CalcSheet';
 import { OrderDetail, OrderItem, Lists, statusStyle, fileKind } from '../types';
 
 interface Props {
@@ -41,6 +42,7 @@ interface Props {
   photoSignal?: number;
   sendSignal?: number;
   distrSignal?: number;
+  calcSignal?: number;
 }
 
 const GROUP_META = {
@@ -51,6 +53,25 @@ const GROUP_META = {
 } as const;
 
 const PAGE = 40; // позицій на групу за раз — великі замовлення (400+) не вішають телефон
+
+/** Зони таблиці позицій — під різні ролі в одному замовленні. */
+const ZONES: Array<{ key: TableMode; label: string; short: string; icon: string }> = [
+  { key: 'prod', label: 'Виробництво', short: 'Вироб.', icon: '🏭' },
+  { key: 'calc', label: 'Прорахунок', short: 'Прорах.', icon: '🧮' },
+  { key: 'buh',  label: 'Бухгалтерія', short: 'Бухг.', icon: '💰' },
+  { key: 'log',  label: 'Логістика', short: 'Логіст.', icon: '🚚' },
+];
+
+/** Вікна інструментів, які можна згорнути (робота продовжується у фоні). */
+type SheetKey = 'print' | 'send' | 'tech' | 'photo' | 'distr' | 'calc';
+const SHEET_META: Record<SheetKey, { label: string; emoji: string }> = {
+  print: { label: 'Друк креслень', emoji: '🖨️' },
+  send:  { label: 'Відправка виконавцю', emoji: '📤' },
+  tech:  { label: 'Тех.запуск', emoji: '🚀' },
+  photo: { label: 'Фотошоп креслень', emoji: '🎨' },
+  distr: { label: 'Розподіл КД', emoji: '📂' },
+  calc:  { label: 'Прорахунок', emoji: '🧮' },
+};
 
 /** Відкриває вікно лише при ЗМІНІ сигналу, ігноруючи значення на монтуванні. */
 function useOpenSignal(signal: number | undefined, open: () => void) {
@@ -65,7 +86,7 @@ function useOpenSignal(signal: number | undefined, open: () => void) {
 export default function OrderPage({
   detail, orderStatusList, rowStatusList, lists, loading,
   onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onBulkStatus, onToast,
-  printSignal, billingSignal, techSignal, photoSignal, sendSignal, distrSignal,
+  printSignal, billingSignal, techSignal, photoSignal, sendSignal, distrSignal, calcSignal,
 }: Props) {
   const [q, setQ] = useState('');
   const [fOp, setFOp] = useState('');
@@ -80,10 +101,14 @@ export default function OrderPage({
   const [showPhoto, setShowPhoto] = useState(false);
   const [showBilling, setShowBilling] = useState(false);
   const [showDistr, setShowDistr] = useState(false);
+  const [showCalc, setShowCalc] = useState(false);
   const [tableMode, setTableMode] = useState<TableMode>('prod');
   const [addOpItem, setAddOpItem] = useState<OrderItem | null>(null);
   const [showDelivery, setShowDelivery] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  // Згорнуті вікна — як на ПК: робота триває, знизу з'являється плашка
+  const [minimized, setMinimized] = useState<Set<SheetKey>>(new Set());
+  const [finished, setFinished] = useState<Set<SheetKey>>(new Set());
   const [pickBulk, setPickBulk] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [limits, setLimits] = useState<Record<string, number>>({});
@@ -107,6 +132,7 @@ export default function OrderPage({
   useOpenSignal(photoSignal, () => setShowPhoto(true));
   useOpenSignal(sendSignal, () => setShowSend(true));
   useOpenSignal(distrSignal, () => setShowDistr(true));
+  useOpenSignal(calcSignal, () => setShowCalc(true));
 
   const real = useMemo(() => items.filter(i => !i.group), [items]);
   const fOps = useMemo(() => distinct(real.map(i => i.op)), [real]);
@@ -159,6 +185,14 @@ export default function OrderPage({
       ? new Set([...prev, ...visibleRows])
       : new Set([...prev].filter(r => !visibleRows.includes(r)))));
   }
+  /** Набір рядків одразу: шапка таблиці, Shift-діапазон. */
+  function selectRows(rows: number[], on: boolean) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      rows.forEach(r => (on ? next.add(r) : next.delete(r)));
+      return next;
+    });
+  }
 
   async function applyBulkStatus(status: string) {
     setPickBulk(false);
@@ -176,6 +210,22 @@ export default function OrderPage({
   }
 
   const pct = total > 0 ? Math.round((100 * done) / total) : 0;
+
+  // ── Згортання вікон ──
+  function minimize(key: SheetKey) {
+    setMinimized(prev => new Set(prev).add(key));
+    onToast(`${SHEET_META[key].emoji} ${SHEET_META[key].label} — згорнуто, плашка внизу`);
+  }
+  function restore(key: SheetKey) {
+    setMinimized(prev => { const n = new Set(prev); n.delete(key); return n; });
+    setFinished(prev => { const n = new Set(prev); n.delete(key); return n; });
+  }
+  /** Операція завершилась, поки вікно було згорнуте — підсвічуємо плашку. */
+  function markFinished(key: SheetKey) {
+    setFinished(prev => (minimized.has(key) ? new Set(prev).add(key) : prev));
+    if (minimized.has(key)) onToast(`✅ ${SHEET_META[key].label}: готово — відкрийте вікно`);
+  }
+  const hide = (key: SheetKey) => (minimized.has(key) ? 'hidden' : '');
 
   return (
     <div className="relative flex flex-col h-full bg-[var(--bg)]">
@@ -209,6 +259,9 @@ export default function OrderPage({
           <button onClick={() => setShowDistr(true)} className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Розподіл КД" title="Розподіл КД по виконавцях і операціях">
             <FolderTree size={17} />
           </button>
+          <button onClick={() => setShowCalc(true)} className="p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Прорахунок" title="Прорахунок: час, ціни, групи для рахунку">
+            <Calculator size={17} />
+          </button>
           <button onClick={() => setShowPhoto(true)} className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Фотошоп креслень" title="Фотошоп: закрити конфіденційне">
             <Paintbrush size={17} />
           </button>
@@ -224,45 +277,56 @@ export default function OrderPage({
           </button>
         </div>
 
-        <div className="px-3 pb-2.5 pt-1.5 flex items-center gap-2 flex-wrap">
-          <button onClick={() => setPickOrder(true)}
-            className="px-3 py-1.5 rounded-full text-[12px] font-bold press"
-            style={{ background: st.bg, color: st.fg }}>
-            {header.status || 'без статусу'} ▾
-          </button>
-
-          <div className="flex items-center gap-2 flex-1 min-w-[140px]">
-            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full rounded-full grow-x" style={{ width: `${pct}%`, background: st.solid }} />
+        <div className="px-3 pb-2.5 pt-1 flex items-center gap-2 flex-wrap">
+          {/* Статус + готовність — один блок, читається як стан замовлення */}
+          <div className="flex items-center gap-2.5 pl-1 pr-3 py-1 rounded-2xl bg-[#F7F8FA] ring-1 ring-gray-200/70">
+            <button onClick={() => setPickOrder(true)}
+              className="px-2.5 py-1 rounded-xl text-[11.5px] font-bold press whitespace-nowrap"
+              style={{ background: st.bg, color: st.fg }}>
+              {header.status || 'без статусу'} ▾
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-[110px] sm:w-[150px] h-1.5 bg-gray-200/80 rounded-full overflow-hidden">
+                <div className="h-full rounded-full grow-x" style={{ width: `${pct}%`, background: st.solid }} />
+              </div>
+              <span className="text-[11.5px] font-bold tabular-nums whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
+                {done}<span style={{ color: 'var(--ink-3)' }}>/{total}</span>
+              </span>
             </div>
-            <span className="text-[11px] font-semibold tabular-nums" style={{ color: 'var(--ink-2)' }}>
-              {done}/{total}
-            </span>
           </div>
 
-          {/* Перемикач вигляду: картки / таблиця */}
-          <div className="flex bg-gray-100 rounded-full p-0.5">
+          {/* Зони таблиці — головний перемикач роботи */}
+          {view === 'table' && (
+            <div className="flex items-center gap-0.5 p-0.5 rounded-2xl bg-[#F7F8FA] ring-1 ring-gray-200/70">
+              {ZONES.map(({ key, label, short, icon }) => {
+                const on = tableMode === key;
+                return (
+                  <button key={key} onClick={() => setTableMode(key)} title={label}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold transition-all whitespace-nowrap"
+                    style={on
+                      ? { background: '#fff', color: 'var(--ink)', boxShadow: '0 1px 2px rgba(16,24,40,.08)' }
+                      : { color: 'var(--ink-3)' }}>
+                    <span className="text-[12px] leading-none">{icon}</span>
+                    <span className="hidden sm:inline">{label}</span>
+                    <span className="sm:hidden">{short}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Вигляд: картки / таблиця */}
+          <div className="ml-auto flex items-center gap-0.5 p-0.5 rounded-2xl bg-[#F7F8FA] ring-1 ring-gray-200/70">
             {(['cards', 'table'] as const).map(v => (
               <button key={v} onClick={() => setView(v)}
-                className="px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors"
-                style={view === v ? { background: '#fff', color: 'var(--ink)' } : { color: 'var(--ink-3)' }}>
+                className="px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold transition-all"
+                style={view === v
+                  ? { background: '#fff', color: 'var(--ink)', boxShadow: '0 1px 2px rgba(16,24,40,.08)' }
+                  : { color: 'var(--ink-3)' }}>
                 {v === 'cards' ? 'Картки' : 'Таблиця'}
               </button>
             ))}
           </div>
-
-          {/* Зона: виробництво / бухгалтерія / логістика (колонки таблиці) */}
-          {view === 'table' && (
-            <div className="flex bg-gray-100 rounded-full p-0.5">
-              {([['prod', '🏭 Виробництво'], ['buh', '💰 Бухгалтерія'], ['log', '🚚 Логістика']] as const).map(([v, label]) => (
-                <button key={v} onClick={() => setTableMode(v)}
-                  className="px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors"
-                  style={tableMode === v ? { background: '#fff', color: 'var(--ink)' } : { color: 'var(--ink-3)' }}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Фільтри: пошук + операція / виконавець / статус (обидва вигляди) */}
@@ -321,7 +385,7 @@ export default function OrderPage({
             onAddOp={setAddOpItem}
             selected={selected}
             onToggleRow={toggleRow}
-            onToggleAll={toggleAll}
+            onSelectRows={selectRows}
           />
         </div>
       ) : (
@@ -493,35 +557,47 @@ export default function OrderPage({
       )}
 
       {showSend && (
-        <SendSheet
-          detail={detail}
-          preselect={selected.size ? [...selected] : undefined}
-          onClose={() => setShowSend(false)}
-          onToast={onToast}
-          onSent={() => { setSelected(new Set()); onRefresh(); }}
-        />
+        <div className={hide('send')}>
+          <SendSheet
+            detail={detail}
+            preselect={selected.size ? [...selected] : undefined}
+            onClose={() => setShowSend(false)}
+            onMinimize={() => minimize('send')}
+            onToast={onToast}
+            onSent={() => { setSelected(new Set()); markFinished('send'); onRefresh(); }}
+          />
+        </div>
       )}
 
       {showPrint && (
-        <PrintSheet detail={detail} onClose={() => setShowPrint(false)} onToast={onToast} />
+        <div className={hide('print')}>
+          <PrintSheet detail={detail} onClose={() => setShowPrint(false)}
+            onMinimize={() => minimize('print')} onToast={onToast} />
+        </div>
       )}
 
       {showTech && (
-        <TechLaunchSheet
-          detail={detail}
-          onClose={() => setShowTech(false)}
-          onToast={onToast}
-          onLaunched={onRefresh}
-        />
+        <div className={hide('tech')}>
+          <TechLaunchSheet
+            detail={detail}
+            onClose={() => setShowTech(false)}
+            onMinimize={() => minimize('tech')}
+            onToast={onToast}
+            onLaunched={() => { markFinished('tech'); onRefresh(); }}
+          />
+        </div>
       )}
 
       {showPhoto && (
-        <PhotoSheet
-          detail={detail}
-          onClose={() => setShowPhoto(false)}
-          onToast={onToast}
-          onSaved={onRefresh}
-        />
+        <div className={hide('photo')}>
+          <PhotoSheet
+            detail={detail}
+            onClose={() => setShowPhoto(false)}
+            onMinimize={() => minimize('photo')}
+            onToast={onToast}
+            onSaved={() => { markFinished('photo'); onRefresh(); }}
+          />
+        </div>
       )}
 
       {showBilling && (
@@ -534,12 +610,47 @@ export default function OrderPage({
       )}
 
       {showDistr && (
-        <DistributionSheet
-          detail={detail}
-          onClose={() => setShowDistr(false)}
-          onToast={onToast}
-          onDone={onRefresh}
-        />
+        <div className={hide('distr')}>
+          <DistributionSheet
+            detail={detail}
+            onClose={() => setShowDistr(false)}
+            onMinimize={() => minimize('distr')}
+            onToast={onToast}
+            onDone={() => { markFinished('distr'); onRefresh(); }}
+          />
+        </div>
+      )}
+
+      {showCalc && (
+        <div className={hide('calc')}>
+          <CalcSheet
+            detail={detail}
+            onClose={() => setShowCalc(false)}
+            onMinimize={() => minimize('calc')}
+            onToast={onToast}
+            onApplied={() => { markFinished('calc'); onRefresh(); }}
+          />
+        </div>
+      )}
+
+      {/* Плашки згорнутих вікон — як панель задач */}
+      {minimized.size > 0 && (
+        <div className="fixed bottom-3 left-3 z-[78] flex flex-col-reverse gap-1.5 max-w-[70vw]">
+          {[...minimized].map(k => {
+            const done = finished.has(k);
+            return (
+              <button key={k} onClick={() => restore(k)}
+                className="flex items-center gap-2 pl-3 pr-2.5 py-2 rounded-2xl shadow-lg press bg-white ring-1 ring-gray-200 hover:bg-gray-50 animate-sheet-up"
+                title="Повернути вікно">
+                <span className="text-[14px] leading-none">{SHEET_META[k].emoji}</span>
+                <span className="text-[12.5px] font-bold truncate">{SHEET_META[k].label}</span>
+                {done
+                  ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700">готово</span>
+                  : <span className="w-3.5 h-3.5 rounded-full border-2 border-gray-300 border-t-[var(--accent)] animate-spin" />}
+              </button>
+            );
+          })}
+        </div>
       )}
 
       {/* Додати операцію деталі — рядок-дубль під нею (маршрут) */}

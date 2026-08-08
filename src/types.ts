@@ -46,6 +46,37 @@ export interface OrderItem {
   payStatus: string;
   invoiceNum: string;
   invoiceUrl: string;
+  /** Прорахунок: ціна/сума виконавця, час на 1 шт (колонка «Час на виконання»). */
+  execSum?: string;
+  time?: string;
+  deadline?: string;
+  length?: string;
+  width?: string;
+}
+
+/** Прорахунок: група позицій — рядок майбутнього рахунку. */
+export interface CalcExtra {
+  label: string;
+  sum: number;
+}
+
+export interface CalcBundle {
+  id: string;
+  /** Класифікація: «Порізка металу», «Токарні роботи»… */
+  kind: string;
+  /** Як це піде в рахунок: «Порізка комплект металу 3мм». */
+  invoiceName: string;
+  /** Кому належить оплата: клієнт платить нам / ми платимо виконавцю. */
+  payTo: 'client' | 'executor';
+  rows: number[];
+  extras: CalcExtra[];
+  note: string;
+}
+
+export interface CalcData {
+  bundles: CalcBundle[];
+  updatedAt?: string;
+  updatedBy?: string;
 }
 
 export interface OrderHeader {

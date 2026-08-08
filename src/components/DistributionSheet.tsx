@@ -11,6 +11,7 @@ import {
   X, FolderTree, Loader2, ExternalLink, ChevronDown, ChevronRight,
   FileText, Eye, User, Wrench, AlertTriangle, CheckSquare, Square,
 } from 'lucide-react';
+import { MinimizeButton } from './PageSheet';
 import { api } from '../api';
 import {
   OrderDetail, DistributionData, DistributionGroup, DistributionItem,
@@ -20,6 +21,7 @@ import {
 interface Props {
   detail: OrderDetail;
   onClose: () => void;
+  onMinimize?: () => void;
   onToast: (msg: string, err?: boolean) => void;
   onDone: () => void;
 }
@@ -37,7 +39,7 @@ function keyOf(g: DistributionGroup): string {
   return g.executor + '||' + g.operation;
 }
 
-export default function DistributionSheet({ detail, onClose, onToast, onDone }: Props) {
+export default function DistributionSheet({ detail, onClose, onMinimize, onToast, onDone }: Props) {
   const [data, setData] = useState<DistributionData | null>(null);
   const [phase, setPhase] = useState<Phase>('load');
   const [mode, setMode] = useState<DistributeMode>('full');
@@ -151,6 +153,7 @@ export default function DistributionSheet({ detail, onClose, onToast, onDone }: 
               {data ? ` · груп: ${data.groups.length} · позицій: ${data.groups.reduce((s, g) => s + g.items.length, 0)}` : ''}
             </p>
           </div>
+          {onMinimize && <MinimizeButton onClick={onMinimize} />}
           {phase !== 'work' && (
             <button onClick={onClose} className="p-2 rounded-xl press" style={{ color: 'var(--ink-3)' }} aria-label="Закрити">
               <X size={18} />

@@ -11,12 +11,14 @@ import {
   X, Rocket, Loader2, ExternalLink, ChevronDown, ChevronRight,
   FileText, Ruler, Box, FlipHorizontal2, Eye,
 } from 'lucide-react';
+import { MinimizeButton } from './PageSheet';
 import { api } from '../api';
 import { OrderDetail, TechFile, TechFilesData, TechLaunchItem, TechLaunchResult } from '../types';
 
 interface Props {
   detail: OrderDetail;
   onClose: () => void;
+  onMinimize?: () => void;
   onToast: (msg: string, err?: boolean) => void;
   onLaunched: () => void; // оновити замовлення
 }
@@ -40,7 +42,7 @@ const EXT_META: Record<string, { Icon: typeof FileText; color: string }> = {
   iges: { Icon: Box, color: '#1B5E20' },
 };
 
-export default function TechLaunchSheet({ detail, onClose, onToast, onLaunched }: Props) {
+export default function TechLaunchSheet({ detail, onClose, onMinimize, onToast, onLaunched }: Props) {
   const [data, setData] = useState<TechFilesData | null>(null);
   const [phase, setPhase] = useState<Phase>('load');
   const [state, setState] = useState<Record<string, FileState>>({});
@@ -176,6 +178,7 @@ export default function TechLaunchSheet({ detail, onClose, onToast, onLaunched }
               {data ? ` · файлів у папці: ${data.files.length}` : ''}
             </p>
           </div>
+          {onMinimize && <MinimizeButton onClick={onMinimize} />}
           {phase !== 'work' && (
             <button onClick={onClose} className="p-2 rounded-xl press" style={{ color: 'var(--ink-3)' }} aria-label="Закрити">
               <X size={18} />

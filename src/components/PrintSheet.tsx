@@ -7,6 +7,7 @@
 
 import { useMemo, useState } from 'react';
 import { X, Printer, QrCode, Download, ExternalLink, Loader2, CheckSquare, Square } from 'lucide-react';
+import { MinimizeButton } from './PageSheet';
 import { OrderDetail, fileKind } from '../types';
 import type { PrintItem } from '../lib/printPdf';
 
@@ -19,12 +20,13 @@ function driveFileId(url: string): string | null {
 interface Props {
   detail: OrderDetail;
   onClose: () => void;
+  onMinimize?: () => void;
   onToast: (msg: string, err?: boolean) => void;
 }
 
 type Phase = 'pick' | 'work' | 'done';
 
-export default function PrintSheet({ detail, onClose, onToast }: Props) {
+export default function PrintSheet({ detail, onClose, onMinimize, onToast }: Props) {
   const { header, items } = detail;
 
   // Друкуємо лише PDF з посиланням на файл
@@ -117,6 +119,7 @@ export default function PrintSheet({ detail, onClose, onToast }: Props) {
               {header.orderNum || header.projectId} · PDF з посиланням: {printable.length}
             </p>
           </div>
+          {onMinimize && <MinimizeButton onClick={onMinimize} />}
           {phase !== 'work' && (
             <button onClick={onClose} className="p-2 rounded-xl press" style={{ color: 'var(--ink-3)' }} aria-label="Закрити">
               <X size={18} />

@@ -7,13 +7,27 @@
 // ================================================================
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ExternalLink, Check, Loader2, Search, CheckSquare, Square, Pencil, Plus } from 'lucide-react';
+import { ExternalLink, Check, Loader2, Search, CheckSquare, Square, Pencil, Plus, Filter } from 'lucide-react';
 import { OrderItem, Lists, statusStyle } from '../types';
 
 type Field = 'op' | 'executor' | 'qty' | 'assignedQty' | 'material' | 'thickness' | 'note' | 'rowStatus'
-  | 'name' | 'clientPrice' | 'payStatus';
+  | 'name' | 'clientPrice' | 'payStatus' | 'assembly' | 'time' | 'execPrice';
 
-export type TableMode = 'prod' | 'buh' | 'log';
+export type TableMode = 'prod' | 'buh' | 'log' | 'calc';
+
+/** Число з клітинки таблиці («1 200,00» → 1200). */
+export function num(v: unknown): number {
+  const f = parseFloat(String(v ?? '').replace(/\s/g, '').replace(',', '.'));
+  return isNaN(f) ? 0 : f;
+}
+/** Скільки штук рахуємо: призначено, а якщо порожньо — загальна к-сть. */
+export function qtyOf(i: OrderItem): number {
+  return num(i.assignedQty) || num(i.qty);
+}
+/** Час на всі призначені штуки, год. */
+export function timeAllOf(i: OrderItem): number {
+  return num(i.time) * qtyOf(i);
+}
 
 /** Мітка доставки з примітки: рядок, що починається з 🚚. */
 export function deliveryOf(note: string): string {
@@ -40,7 +54,8 @@ interface Props {
   /** Вибір рядків для масових дій (статус, відправка виконавцю). */
   selected: Set<number>;
   onToggleRow: (row: number) => void;
-  onToggleAll: () => void;
+  /** Вибрати/зняти одразу набір рядків (шапка, Shift-діапазон). */
+  onSelectRows: (rows: number[], on: boolean) => void;
 }
 
 interface PopState {
@@ -51,12 +66,19 @@ interface PopState {
   current: string;
 }
 
-export default function ItemsTable({ items, lists, mode, onSave, onAddOp, selected, onToggleRow, onToggleAll }: Props) {
+export default function ItemsTable({ items, lists, mode, onSave, onAddOp, selected, onToggleRow, onSelectRows }: Props) {
   const [edit, setEdit] = useState<{ row: number; field: Field } | null>(null);
   const [pop, setPop] = useState<PopState | null>(null);
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  /** Фільтри колонок: поле → вибрані значення (порожньо = без фільтра). */
+  const [colFilters, setColFilters] = useState<Record<string, Set<string>>>({});
+  const [filterPop, setFilterPop] = useState<{ field: string; label: string; rect: { left: number; top: number; bottom: number } } | null>(null);
+  const lastRow = useRef<number | null>(null);
+
+  // Інше замовлення або інша зона — фільтри колонок скидаємо
+  useEffect(() => { setColFilters({}); setFilterPop(null); }, [mode, items.length]);
 
   useEffect(() => { if (edit) inputRef.current?.focus(); }, [edit]);
 
@@ -218,7 +240,45 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
 
   const buh = mode === 'buh';
   const log = mode === 'log';
-  const cols = buh ? COLS_BUH : log ? COLS_LOG : COLS_PROD;
+  const calc = mode === 'calc';
+  const cols = buh ? COLS_BUH : log ? COLS_LOG : calc ? COLS_CALC : COLS_PROD;
+
+  // ── Фільтри прямо в шапці колонок ──
+  const shown = useMemo(() => {
+    const active = Object.entries(colFilters).filter(([, v]) => v.size);
+    if (!active.length) return items;
+    return items.filter(i => active.every(([f, set]) => set.has(String((i as any)[f] ?? '').trim() || '—')));
+  }, [items, colFilters]);
+
+  /** Значення колонки з кількістю — для списку фільтра. */
+  function valuesOf(field: string): Array<{ v: string; n: number }> {
+    const map = new Map<string, number>();
+    items.forEach(i => {
+      const v = String((i as any)[field] ?? '').trim() || '—';
+      map.set(v, (map.get(v) || 0) + 1);
+    });
+    return [...map.entries()].map(([v, n]) => ({ v, n }))
+      .sort((a, b) => a.v.localeCompare(b.v, undefined, { numeric: true }));
+  }
+
+  const allShownSelected = shown.length > 0 && shown.every(i => selected.has(i.row));
+  const filterCount = Object.values(colFilters).filter(s => s.size).length;
+
+  /** Клік по галочці: Shift — діапазон від попередньої вибраної. */
+  function clickRow(e: React.MouseEvent, row: number) {
+    if (e.shiftKey && lastRow.current !== null) {
+      const a = shown.findIndex(i => i.row === lastRow.current);
+      const b = shown.findIndex(i => i.row === row);
+      if (a >= 0 && b >= 0) {
+        const [from, to] = a < b ? [a, b] : [b, a];
+        onSelectRows(shown.slice(from, to + 1).map(i => i.row), !selected.has(row));
+        lastRow.current = row;
+        return;
+      }
+    }
+    lastRow.current = row;
+    onToggleRow(row);
+  }
 
   return (
     <div className="overflow-auto thin-scrollbar h-full">
@@ -226,29 +286,54 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
         <thead className="sticky top-0 z-10">
           <tr className="bg-[#FAFBFC]">
             <th className="w-[36px] px-2 py-2 border-b hairline">
-              <button onClick={onToggleAll} className="flex press" aria-label="Вибрати все">
-                {items.length > 0 && items.every(i => selected.has(i.row))
+              <button onClick={() => onSelectRows(shown.map(i => i.row), !allShownSelected)}
+                className="flex press" aria-label="Вибрати все видиме"
+                title={allShownSelected ? 'Зняти вибір' : 'Вибрати всі видимі рядки'}>
+                {allShownSelected
                   ? <CheckSquare size={15} className="text-[var(--accent)]" />
                   : <Square size={15} className="text-gray-300" />}
               </button>
             </th>
-            {cols.map(c => (
-              <th key={c.key}
-                className={`${c.w} text-left font-semibold text-[11px] uppercase tracking-wide text-[var(--ink-3)] px-3 py-2 border-b hairline whitespace-nowrap`}>
-                {c.label}
-              </th>
-            ))}
+            {cols.map(c => {
+              const on = !!colFilters[c.key]?.size;
+              return (
+                <th key={c.key}
+                  className={`${c.w} text-left font-semibold text-[11px] uppercase tracking-wide text-[var(--ink-3)] px-3 py-2 border-b hairline whitespace-nowrap`}>
+                  <span className="inline-flex items-center gap-1">
+                    {c.label}
+                    {c.filter && (
+                      <button
+                        onClick={e => {
+                          const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                          setFilterPop({ field: c.key, label: c.label, rect: { left: r.left, top: r.top, bottom: r.bottom } });
+                        }}
+                        className={`p-0.5 rounded press ${on ? '' : 'opacity-30 hover:opacity-70'}`}
+                        style={{ color: on ? 'var(--accent)' : 'var(--ink-3)' }}
+                        title="Фільтр колонки">
+                        <Filter size={11} fill={on ? 'currentColor' : 'none'} />
+                      </button>
+                    )}
+                    {on && (
+                      <span className="text-[9px] font-bold px-1 rounded bg-[var(--accent-soft)] text-[var(--accent)] normal-case">
+                        {colFilters[c.key].size}
+                      </span>
+                    )}
+                  </span>
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
-          {items.map(item => {
+          {shown.map(item => {
             const route = routes.get(item.row);
             return (
             <tr key={item.row}
               className="border-b hairline hover:bg-[#FCFCFD] group"
               style={selected.has(item.row) ? { background: 'var(--accent-soft)' } : undefined}>
               <td className="px-2 py-1.5" style={route ? { boxShadow: `inset 3px 0 0 ${route.color}` } : undefined}>
-                <button onClick={() => onToggleRow(item.row)} className="flex press" aria-label="Вибрати рядок">
+                <button onClick={e => clickRow(e, item.row)} className="flex press" aria-label="Вибрати рядок"
+                  title="Shift+клік — вибрати діапазон">
                   {selected.has(item.row)
                     ? <CheckSquare size={15} className="text-[var(--accent)]" />
                     : <Square size={15} className="text-gray-300" />}
@@ -272,6 +357,24 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
                   </td>
                   <td className="px-3 py-1.5 text-[12px]" style={{ color: 'var(--ink-2)' }}>
                     {noteWithoutDelivery(item.note) || '—'}
+                  </td>
+                </>
+              ) : calc ? (
+                <>
+                  <td className="px-1 py-1">{cell(item, 'assembly')}</td>
+                  <td className="px-1 py-1">{cell(item, 'op')}</td>
+                  <td className="px-1 py-1 tabular-nums">{cell(item, 'qty')}</td>
+                  <td className="px-1 py-1 tabular-nums">{cell(item, 'assignedQty')}</td>
+                  <td className="px-1 py-1 tabular-nums">{cell(item, 'time')}</td>
+                  <td className="px-3 py-1.5 tabular-nums text-[12px] whitespace-nowrap"
+                    style={{ color: timeAllOf(item) ? 'var(--ink)' : 'var(--ink-3)' }}>
+                    {timeAllOf(item) ? `${timeAllOf(item).toFixed(2)} год` : '—'}
+                  </td>
+                  <td className="px-1 py-1 tabular-nums">{cell(item, 'clientPrice')}</td>
+                  <td className="px-3 py-1.5 tabular-nums text-[12px] font-semibold whitespace-nowrap">
+                    {item.clientSum || (qtyOf(item) && num(item.clientPrice)
+                      ? (qtyOf(item) * num(item.clientPrice)).toFixed(2)
+                      : '—')}
                   </td>
                 </>
               ) : buh ? (
@@ -325,8 +428,21 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
         <p className="text-center text-[var(--ink-3)] text-[13px] py-14">Позицій немає</p>
       )}
 
-      <div className="flex items-center gap-1.5 px-3 py-2 text-[11px] text-[var(--ink-3)]">
-        <Check size={12} /> Клік по клітинці — редагування · ✏️ — перейменувати · ➕ — додати операцію (маршрут)
+      <div className="flex items-center gap-1.5 px-3 py-2 text-[11px] text-[var(--ink-3)] flex-wrap">
+        <Check size={12} /> Клік по клітинці — редагування · ✏️ — перейменувати · ➕ — додати операцію ·
+        <Filter size={11} className="inline" /> у шапці — фільтр колонки · Shift+клік — діапазон
+        {filterCount > 0 && (
+          <>
+            <span className="ml-2 font-bold" style={{ color: 'var(--ink-2)' }}>
+              Показано {shown.length} з {items.length}
+            </span>
+            <button onClick={() => setColFilters({})}
+              className="px-2 py-0.5 rounded-lg font-bold press"
+              style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
+              скинути фільтри ({filterCount})
+            </button>
+          </>
+        )}
       </div>
 
       {pop && (
@@ -336,44 +452,71 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
           onClose={() => setPop(null)}
         />
       )}
+
+      {filterPop && (
+        <ColumnFilterPopover
+          label={filterPop.label}
+          rect={filterPop.rect}
+          values={valuesOf(filterPop.field)}
+          selected={colFilters[filterPop.field] || new Set()}
+          onChange={set => setColFilters(prev => ({ ...prev, [filterPop.field]: set }))}
+          onClose={() => setFilterPop(null)}
+        />
+      )}
     </div>
   );
 }
 
-const COLS_PROD: Array<{ key: string; label: string; w: string }> = [
+interface Col { key: string; label: string; w: string; filter?: boolean }
+
+const COLS_PROD: Col[] = [
   { key: 'id', label: 'ID', w: 'w-[110px]' },
   { key: 'name', label: 'Найменування', w: 'min-w-[280px]' },
-  { key: 'material', label: 'Матеріал', w: 'w-[110px]' },
-  { key: 'thickness', label: 'S', w: 'w-[60px]' },
+  { key: 'material', label: 'Матеріал', w: 'w-[110px]', filter: true },
+  { key: 'thickness', label: 'S', w: 'w-[60px]', filter: true },
   { key: 'qty', label: 'К-сть', w: 'w-[70px]' },
-  { key: 'op', label: 'Операція', w: 'w-[150px]' },
-  { key: 'executor', label: 'Виконавець', w: 'w-[160px]' },
-  { key: 'rowStatus', label: 'Статус', w: 'w-[150px]' },
+  { key: 'op', label: 'Операція', w: 'w-[150px]', filter: true },
+  { key: 'executor', label: 'Виконавець', w: 'w-[160px]', filter: true },
+  { key: 'rowStatus', label: 'Статус', w: 'w-[150px]', filter: true },
   { key: 'note', label: 'Примітка', w: 'min-w-[160px]' },
   { key: 'add', label: '', w: 'w-[34px]' },
 ];
 
-const COLS_LOG: Array<{ key: string; label: string; w: string }> = [
+const COLS_LOG: Col[] = [
   { key: 'id', label: 'ID', w: 'w-[110px]' },
   { key: 'name', label: 'Найменування', w: 'min-w-[280px]' },
   { key: 'qty', label: 'К-сть', w: 'w-[70px]' },
-  { key: 'executor', label: 'Виконавець', w: 'w-[150px]' },
-  { key: 'status', label: 'Статус', w: 'w-[140px]' },
+  { key: 'executor', label: 'Виконавець', w: 'w-[150px]', filter: true },
+  { key: 'rowStatus', label: 'Статус', w: 'w-[140px]', filter: true },
   { key: 'delivery', label: 'Доставка', w: 'min-w-[200px]' },
   { key: 'note', label: 'Примітка', w: 'min-w-[130px]' },
 ];
 
-const COLS_BUH: Array<{ key: string; label: string; w: string }> = [
+const COLS_BUH: Col[] = [
   { key: 'id', label: 'ID', w: 'w-[110px]' },
   { key: 'name', label: 'Найменування', w: 'min-w-[240px]' },
-  { key: 'op', label: 'Операція', w: 'w-[130px]' },
-  { key: 'executor', label: 'Виконавець', w: 'w-[150px]' },
+  { key: 'op', label: 'Операція', w: 'w-[130px]', filter: true },
+  { key: 'executor', label: 'Виконавець', w: 'w-[150px]', filter: true },
   { key: 'qty', label: 'К-сть', w: 'w-[70px]' },
   { key: 'clientPrice', label: 'Ціна', w: 'w-[90px]' },
   { key: 'clientSum', label: 'Сума', w: 'w-[100px]' },
-  { key: 'payStatus', label: 'Оплата', w: 'w-[160px]' },
+  { key: 'payStatus', label: 'Оплата', w: 'w-[160px]', filter: true },
   { key: 'invoice', label: 'Рахунок', w: 'w-[110px]' },
   { key: 'note', label: 'Примітка', w: 'min-w-[140px]' },
+];
+
+/** Зона «Прорахунок»: те, з чого рахується вартість роботи. */
+const COLS_CALC: Col[] = [
+  { key: 'id', label: 'ID', w: 'w-[110px]' },
+  { key: 'name', label: 'Найменування', w: 'min-w-[230px]' },
+  { key: 'assembly', label: 'Збірка', w: 'w-[150px]', filter: true },
+  { key: 'op', label: 'Операція', w: 'w-[130px]', filter: true },
+  { key: 'qty', label: 'К-сть', w: 'w-[70px]' },
+  { key: 'assignedQty', label: 'Призн.', w: 'w-[80px]' },
+  { key: 'time', label: 'Час/шт, год', w: 'w-[95px]' },
+  { key: 'timeAll', label: 'Час всього', w: 'w-[100px]' },
+  { key: 'clientPrice', label: 'Ціна/шт', w: 'w-[90px]' },
+  { key: 'clientSum', label: 'Сума', w: 'w-[100px]' },
 ];
 
 /** Попап-список: фіксована позиція біля клітинки, пошук, чек на поточному. */
@@ -472,6 +615,90 @@ function ListPopover({ state, onPick, onClose }: {
           {!options.length && !showCustom && (
             <p className="text-center text-[11.5px] py-3" style={{ color: 'var(--ink-3)' }}>Нічого не знайдено</p>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Фільтр колонки: значення з кількостями, мультивибір, пошук. */
+function ColumnFilterPopover({ label, rect, values, selected, onChange, onClose }: {
+  label: string;
+  rect: { left: number; top: number; bottom: number };
+  values: Array<{ v: string; n: number }>;
+  selected: Set<string>;
+  onChange: (s: Set<string>) => void;
+  onClose: () => void;
+}) {
+  const [q, setQ] = useState('');
+  const list = useMemo(() => {
+    const query = q.trim().toLowerCase();
+    return query ? values.filter(x => x.v.toLowerCase().includes(query)) : values;
+  }, [values, q]);
+
+  const H = Math.min(340, 120 + list.length * 30);
+  const below = rect.bottom + H + 8 < window.innerHeight;
+  const top = below ? rect.bottom + 4 : Math.max(8, rect.top - H - 4);
+  const left = Math.min(rect.left, window.innerWidth - 268);
+
+  function toggle(v: string) {
+    const next = new Set(selected);
+    if (next.has(v)) next.delete(v); else next.add(v);
+    onChange(next);
+  }
+
+  return (
+    <div className="fixed inset-0 z-[75]" onMouseDown={onClose}>
+      <div
+        onMouseDown={e => e.stopPropagation()}
+        className="absolute w-[260px] bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden animate-pop-in flex flex-col"
+        style={{ left, top, maxHeight: 340 }}
+      >
+        <div className="flex-shrink-0 px-2.5 pt-2 pb-1.5 border-b hairline">
+          <p className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: 'var(--ink-3)' }}>
+            Фільтр · {label}
+          </p>
+          <div className="relative">
+            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input value={q} onChange={e => setQ(e.target.value)} autoFocus
+              onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
+              placeholder="Пошук значення…"
+              className="w-full pl-7 pr-2 py-1.5 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-400 text-[12px]" />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto thin-scrollbar p-1">
+          {list.map(({ v, n }) => {
+            const on = selected.has(v);
+            return (
+              <button key={v} onClick={() => toggle(v)}
+                className="w-full flex items-center gap-2 text-left px-2 py-1.5 rounded-xl text-[12.5px] hover:bg-gray-50 press">
+                {on
+                  ? <CheckSquare size={14} className="flex-shrink-0 text-[var(--accent)]" />
+                  : <Square size={14} className="flex-shrink-0 text-gray-300" />}
+                <span className="flex-1 truncate" style={{ color: v === '—' ? 'var(--ink-3)' : 'var(--ink)' }}>{v}</span>
+                <span className="text-[10.5px] tabular-nums flex-shrink-0" style={{ color: 'var(--ink-3)' }}>{n}</span>
+              </button>
+            );
+          })}
+          {!list.length && (
+            <p className="text-center text-[11.5px] py-3" style={{ color: 'var(--ink-3)' }}>Нічого не знайдено</p>
+          )}
+        </div>
+
+        <div className="flex-shrink-0 flex gap-1 p-1.5 border-t hairline">
+          <button onClick={() => onChange(new Set(list.map(x => x.v)))}
+            className="flex-1 py-1.5 rounded-xl text-[11.5px] font-bold press" style={{ background: '#F3F4F6', color: 'var(--ink-2)' }}>
+            Всі видимі
+          </button>
+          <button onClick={() => onChange(new Set())}
+            className="flex-1 py-1.5 rounded-xl text-[11.5px] font-bold press" style={{ background: '#F3F4F6', color: 'var(--ink-2)' }}>
+            Очистити
+          </button>
+          <button onClick={onClose}
+            className="px-3 py-1.5 rounded-xl text-[11.5px] font-bold text-white press" style={{ background: 'var(--accent)' }}>
+            Готово
+          </button>
         </div>
       </div>
     </div>
