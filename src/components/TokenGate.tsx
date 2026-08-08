@@ -5,7 +5,7 @@
 // ================================================================
 
 import { useState } from 'react';
-import { KeyRound, Loader2, FlaskConical, Database } from 'lucide-react';
+import { Loader2, FlaskConical, Database } from 'lucide-react';
 import { api, setToken, getEnv, setEnv, ENVS, EnvKey } from '../api';
 
 interface Props {
@@ -44,9 +44,7 @@ export default function TokenGate({ onSuccess }: Props) {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <form onSubmit={submit} className="w-full max-w-sm bg-white rounded-3xl shadow-sm ring-1 ring-gray-200 p-6">
-        <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-4">
-          <KeyRound size={26} />
-        </div>
+        <img src="/icon-192.png" alt="" className="w-14 h-14 rounded-2xl shadow-md shadow-blue-600/25 mx-auto mb-4 block" />
         <h1 className="text-[18px] font-bold text-gray-900 text-center">ERP Металообробка</h1>
         <p className="text-[13px] text-gray-500 text-center mt-1 mb-5">
           Введіть ключ доступу, щоб підключитися до вашої таблиці

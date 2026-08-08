@@ -67,18 +67,13 @@ export default function Sidebar({ tab, env, onTab, onPrint, onBilling, order, on
     <aside className="hidden lg:flex flex-col w-[228px] flex-shrink-0 h-full bg-white border-r hairline">
       {/* Логотип */}
       <div className="flex items-center gap-2.5 px-4 h-[56px] flex-shrink-0 border-b hairline">
-        <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center text-[14px] shadow-sm shadow-blue-600/30">
-          ⚙️
-        </span>
+        <img src="/icon-192.png" alt="" className="w-8 h-8 rounded-xl shadow-sm shadow-blue-600/30 flex-shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="font-bold text-[13.5px] leading-tight tracking-tight truncate">ERP Металообробка</p>
-          <p className="text-[10px] leading-tight" style={{ color: 'var(--ink-3)' }}>система керування</p>
+          <p className="font-bold text-[12.5px] leading-tight tracking-tight whitespace-nowrap">ERP Металообробка</p>
+          <p className="text-[10px] leading-tight" style={{ color: 'var(--ink-3)' }}>
+            система керування{env === 'test' ? ' · 🧪 тест' : ''}
+          </p>
         </div>
-        {env === 'test' && (
-          <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 flex-shrink-0">
-            <FlaskConical size={9} /> ТЕСТ
-          </span>
-        )}
       </div>
 
       {/* Навігація */}

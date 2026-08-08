@@ -66,9 +66,7 @@ export default function SideMenu({ env, onClose, onNavigate, onLogout, onToast }
       <aside className="relative w-[86%] max-w-[330px] h-full flex flex-col shadow-2xl animate-slide-in-left bg-[var(--bg)]">
         {/* Шапка */}
         <div className="flex-shrink-0 bg-white px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3 border-b hairline flex items-center gap-2.5">
-          <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center text-[17px] shadow-md shadow-blue-600/25">
-            ⚙️
-          </span>
+          <img src="/icon-192.png" alt="" className="w-10 h-10 rounded-2xl shadow-md shadow-blue-600/25 flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="font-bold text-[15.5px] leading-tight tracking-tight">ERP Металообробка</p>
             <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>система керування</p>

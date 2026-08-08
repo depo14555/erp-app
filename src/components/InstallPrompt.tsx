@@ -55,21 +55,19 @@ const InstallPrompt = () => {
       <div className="bg-white border-t border-gray-200 shadow-2xl mx-auto max-w-md">
         <div className="flex items-start gap-4 p-4">
           <div className="flex-shrink-0">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
-              <img
-                src="/icon-192.png"
-                alt="QR-Pulse"
-                className="w-10 h-10 rounded-lg"
-              />
-            </div>
+            <img
+              src="/icon-192.png"
+              alt="ERP Металообробка"
+              className="w-12 h-12 rounded-xl shadow-lg"
+            />
           </div>
 
           <div className="flex-1 min-w-0">
             <h3 className="text-base font-semibold text-gray-900">
-              Встановити QR-Pulse
+              Встановити ERP Металообробка
             </h3>
             <p className="text-sm text-gray-600 mt-0.5">
-              Встановіть додаток для швидкого доступу
+              Додаток на головному екрані — швидкий доступ із цеху й дороги
             </p>
           </div>
 
