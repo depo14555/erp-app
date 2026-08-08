@@ -455,6 +455,24 @@ export default function OrderPage({
                             {item.qty} шт
                           </span>
                         )}
+                        {item.assignedQty && (
+                          <span className="text-[11px] font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-lg tabular-nums"
+                            title="Призначено виконавцю (колонка «Призн.»)">
+                            призн. {item.assignedQty}
+                          </span>
+                        )}
+                        {item.assembly && (
+                          <span className="text-[11px] font-semibold bg-violet-50 text-violet-700 px-2 py-0.5 rounded-lg"
+                            title="Збірка (вихідна папка)">
+                            📦 {item.assembly}
+                          </span>
+                        )}
+                        {item.time && (
+                          <span className="text-[11px] font-semibold bg-teal-50 text-teal-700 px-2 py-0.5 rounded-lg tabular-nums"
+                            title="Час на виконання, год на 1 шт">
+                            ⏱ {item.time}
+                          </span>
+                        )}
                         {item.material && (
                           <span className="text-[11px] text-gray-500">{item.material}</span>
                         )}
