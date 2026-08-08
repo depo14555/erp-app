@@ -13,7 +13,7 @@ import {
   PartData, LogisticsData, FileData, ExecRowsData, ExecSendResult, ExecRow,
   TechFilesData, TechLaunchItem, TechLaunchResult, MailListData, SavePdfResult,
   FolderFile, BillingData, CommerceContext, CommerceResult, DocType, CreateOrderResult,
-  BillingOverview,
+  BillingOverview, DistributionData, DistributeParams, DistributeResult,
 } from './types';
 
 /** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
@@ -37,7 +37,7 @@ const CACHE_TTL = 5 * 60 * 1000;
 
 /** Скільки чекати на відповідь — залежить від дії. */
 function timeoutFor(action: string): number {
-  return /^erp\.(techLaunch|mailProcess|execSend|savePdf|bulkUpdate|groupCard|fillAssembly|fileData|techFiles)/.test(action)
+  return /^erp\.(techLaunch|mailProcess|execSend|savePdf|bulkUpdate|groupCard|fillAssembly|fileData|techFiles|distribut)/.test(action)
     ? LONG_TIMEOUT
     : REQUEST_TIMEOUT;
 }
@@ -80,7 +80,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /** Читання можна безпечно повторити; мутації — ні (щоб не задвоїти запис). */
 function isReadAction(action: string): boolean {
-  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin)/.test(action);
+  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute)/.test(action);
 }
 
 function cacheGet<T>(key: string): T | null {
@@ -196,7 +196,7 @@ export const api = {
   },
 
   /** Редагування полів рядка (десктопна таблиця). */
-  updateRow(row: number, fields: Record<string, string>): Promise<{ ok: boolean; changed: string[] }> {
+  updateRow(row: number, fields: Record<string, string>): Promise<{ ok: boolean; changed: string[]; clientSum?: string }> {
     return post('erp.updateRow', { row, fields });
   },
 
@@ -382,6 +382,16 @@ export const api = {
   /** Панель бухгалтерії: всі рахунки + що треба виставити + шаблони. */
   billingOverview(): Promise<BillingOverview> {
     return post('erp.billingOverview');
+  },
+
+  /** Розподіл КД: що буде розподілено — виконавець → операція → файли. */
+  distribution(headerRow: number): Promise<DistributionData> {
+    return post('erp.distribution', { headerRow });
+  },
+
+  /** Розподіл КД: копіювання файлів у папки + наряди + (опційно) відправка. */
+  distribute(headerRow: number, params: DistributeParams): Promise<DistributeResult> {
+    return post('erp.distribute', { headerRow, ...params });
   },
 
   /** Перевірка ключа при першому вході. */

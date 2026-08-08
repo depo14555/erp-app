@@ -3,7 +3,8 @@
 //  Нижня шторка вибору статусу (замовлення або рядка).
 // ================================================================
 
-import { X, Check } from 'lucide-react';
+import { useState } from 'react';
+import { X, Check, Plus } from 'lucide-react';
 import { statusStyle } from '../types';
 
 interface Props {
@@ -13,9 +14,18 @@ interface Props {
   current: string;
   onPick: (s: string) => void;
   onClose: () => void;
+  /** Дозволити вписати свій варіант (типово так). */
+  allowCustom?: boolean;
 }
 
-export default function StatusPicker({ title, subtitle, options, current, onPick, onClose }: Props) {
+export default function StatusPicker({ title, subtitle, options, current, onPick, onClose, allowCustom = true }: Props) {
+  const [custom, setCustom] = useState('');
+  const typed = custom.trim();
+  const isNew = !!typed && !options.some(o => o.toLowerCase() === typed.toLowerCase());
+  const shown = typed
+    ? options.filter(o => o.toLowerCase().includes(typed.toLowerCase()))
+    : options;
+
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/40 animate-fade-in" onClick={onClose} />
@@ -30,11 +40,33 @@ export default function StatusPicker({ title, subtitle, options, current, onPick
           </button>
         </div>
 
+        {allowCustom && (
+          <div className="px-3 pt-2.5 flex-shrink-0">
+            <input
+              value={custom}
+              onChange={e => setCustom(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && typed) onPick(typed); }}
+              placeholder="Знайти або вписати свій варіант…"
+              className="w-full px-3 py-2 rounded-xl bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[13px]"
+            />
+          </div>
+        )}
+
         <div className="p-2 overflow-y-auto">
-          {options.length === 0 && (
-            <p className="text-[13px] text-gray-500 p-4 text-center">Список статусів порожній</p>
+          {isNew && (
+            <button
+              onClick={() => onPick(typed)}
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-left mb-1"
+              style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
+            >
+              <Plus size={16} className="flex-shrink-0" />
+              <span className="flex-1 text-[14px] font-bold truncate">Вписати «{typed}»</span>
+            </button>
           )}
-          {options.map(opt => {
+          {options.length === 0 && !isNew && (
+            <p className="text-[13px] text-gray-500 p-4 text-center">Список порожній — впишіть свій варіант вище</p>
+          )}
+          {shown.map(opt => {
             const st = statusStyle(opt);
             const active = opt === current;
             return (

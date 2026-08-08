@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft, RefreshCw, FolderOpen, FileText, Ruler, Box, Paperclip,
   ExternalLink, User, Search, Printer, X, Send, Tags, Rocket, Paintbrush, Receipt,
+  FolderTree,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
 import ItemsTable, { TableMode } from '../components/ItemsTable';
@@ -18,6 +19,7 @@ import SendSheet from '../components/SendSheet';
 import TechLaunchSheet from '../components/TechLaunchSheet';
 import PhotoSheet from '../components/PhotoSheet';
 import BillingSheet from '../components/BillingSheet';
+import DistributionSheet from '../components/DistributionSheet';
 import { OrderDetail, OrderItem, Lists, statusStyle, fileKind } from '../types';
 
 interface Props {
@@ -38,6 +40,7 @@ interface Props {
   techSignal?: number;
   photoSignal?: number;
   sendSignal?: number;
+  distrSignal?: number;
 }
 
 const GROUP_META = {
@@ -62,12 +65,13 @@ function useOpenSignal(signal: number | undefined, open: () => void) {
 export default function OrderPage({
   detail, orderStatusList, rowStatusList, lists, loading,
   onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onBulkStatus, onToast,
-  printSignal, billingSignal, techSignal, photoSignal, sendSignal,
+  printSignal, billingSignal, techSignal, photoSignal, sendSignal, distrSignal,
 }: Props) {
   const [q, setQ] = useState('');
   const [fOp, setFOp] = useState('');
   const [fExec, setFExec] = useState('');
   const [fStatus, setFStatus] = useState('');
+  const [fKind, setFKind] = useState('');   // тип файлу: pdf / dxf / 3d / other
   const [pickOrder, setPickOrder] = useState(false);
   const [pickRow, setPickRow] = useState<OrderItem | null>(null);
   const [showPrint, setShowPrint] = useState(false);
@@ -75,6 +79,7 @@ export default function OrderPage({
   const [showTech, setShowTech] = useState(false);
   const [showPhoto, setShowPhoto] = useState(false);
   const [showBilling, setShowBilling] = useState(false);
+  const [showDistr, setShowDistr] = useState(false);
   const [tableMode, setTableMode] = useState<TableMode>('prod');
   const [addOpItem, setAddOpItem] = useState<OrderItem | null>(null);
   const [showDelivery, setShowDelivery] = useState(false);
@@ -91,8 +96,8 @@ export default function OrderPage({
   const st = statusStyle(header.status);
 
   // Новий пошук/фільтр або інше замовлення — показуємо знову з першої сторінки
-  useEffect(() => { setLimits({}); }, [q, fOp, fExec, fStatus, header.headerRow]);
-  useEffect(() => { setFOp(''); setFExec(''); setFStatus(''); setQ(''); setSelected(new Set()); }, [header.headerRow]);
+  useEffect(() => { setLimits({}); }, [q, fOp, fExec, fStatus, fKind, header.headerRow]);
+  useEffect(() => { setFOp(''); setFExec(''); setFStatus(''); setFKind(''); setQ(''); setSelected(new Set()); }, [header.headerRow]);
   // Кнопка «Друк креслень + QR» у сайдбарі відкриває вікно друку для цього замовлення
   // Сигнали спрацьовують лише при ЗМІНІ (не при монтуванні компонента —
   // інакше вікна самі відкривались при повторному відкритті замовлення)
@@ -101,12 +106,21 @@ export default function OrderPage({
   useOpenSignal(techSignal, () => setShowTech(true));
   useOpenSignal(photoSignal, () => setShowPhoto(true));
   useOpenSignal(sendSignal, () => setShowSend(true));
+  useOpenSignal(distrSignal, () => setShowDistr(true));
 
   const real = useMemo(() => items.filter(i => !i.group), [items]);
   const fOps = useMemo(() => distinct(real.map(i => i.op)), [real]);
   const fExecs = useMemo(() => distinct(real.map(i => i.executor)), [real]);
   const fStatuses = useMemo(() => distinct(real.map(i => i.rowStatus)), [real]);
-  const hasFilter = !!(q.trim() || fOp || fExec || fStatus);
+  /** Типи файлів, які реально є в замовленні — чіпи фільтра. */
+  const fKinds = useMemo(() => {
+    const counts: Record<string, number> = {};
+    real.forEach(i => { const k = fileKind(i.name); counts[k] = (counts[k] || 0) + 1; });
+    return (Object.keys(GROUP_META) as Array<keyof typeof GROUP_META>)
+      .filter(k => counts[k])
+      .map(k => ({ key: k as string, count: counts[k] }));
+  }, [real]);
+  const hasFilter = !!(q.trim() || fOp || fExec || fStatus || fKind);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -115,10 +129,11 @@ export default function OrderPage({
       if (fOp && i.op !== fOp) return false;
       if (fExec && i.executor !== fExec) return false;
       if (fStatus && i.rowStatus !== fStatus) return false;
+      if (fKind && fileKind(i.name) !== fKind) return false;
       if (query && ![i.name, i.id, i.op, i.executor, i.material, i.note, i.assembly].join(' ').toLowerCase().includes(query)) return false;
       return true;
     });
-  }, [items, q, fOp, fExec, fStatus, hasFilter]);
+  }, [items, q, fOp, fExec, fStatus, fKind, hasFilter]);
 
   const groups = useMemo(() => {
     const acc: Record<string, OrderItem[]> = { pdf: [], dxf: [], '3d': [], other: [] };
@@ -190,6 +205,9 @@ export default function OrderPage({
           </button>
           <button onClick={() => setShowTech(true)} className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Тех.запуск" title="Тех.запуск">
             <Rocket size={17} />
+          </button>
+          <button onClick={() => setShowDistr(true)} className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Розподіл КД" title="Розподіл КД по виконавцях і операціях">
+            <FolderTree size={17} />
           </button>
           <button onClick={() => setShowPhoto(true)} className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Фотошоп креслень" title="Фотошоп: закрити конфіденційне">
             <Paintbrush size={17} />
@@ -266,8 +284,21 @@ export default function OrderPage({
           <FilterChip value={fOp} onChange={setFOp} label="Операція" options={fOps} />
           <FilterChip value={fExec} onChange={setFExec} label="Виконавець" options={fExecs} />
           <FilterChip value={fStatus} onChange={setFStatus} label="Статус" options={fStatuses} />
+          {/* Тип файлу: PDF / DXF / 3D / інші — лише ті, що є в замовленні */}
+          {fKinds.length > 1 && fKinds.map(({ key, count }) => {
+            const meta = GROUP_META[key as keyof typeof GROUP_META];
+            const on = fKind === key;
+            return (
+              <button key={key} onClick={() => setFKind(on ? '' : key)}
+                className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-colors whitespace-nowrap"
+                style={on ? { background: meta.color, color: '#fff' } : { background: meta.bg, color: meta.color }}
+                title={meta.label}>
+                {key === 'pdf' ? 'PDF' : key === 'dxf' ? 'DXF' : key === '3d' ? '3D' : 'Інші'} · {count}
+              </button>
+            );
+          })}
           {hasFilter && (
-            <button onClick={() => { setQ(''); setFOp(''); setFExec(''); setFStatus(''); }}
+            <button onClick={() => { setQ(''); setFOp(''); setFExec(''); setFStatus(''); setFKind(''); }}
               className="text-[11px] font-bold px-2 py-1.5 rounded-xl press" style={{ color: 'var(--ink-3)' }}>
               Скинути
             </button>
@@ -499,6 +530,15 @@ export default function OrderPage({
           onClose={() => setShowBilling(false)}
           onToast={onToast}
           onChanged={onRefresh}
+        />
+      )}
+
+      {showDistr && (
+        <DistributionSheet
+          detail={detail}
+          onClose={() => setShowDistr(false)}
+          onToast={onToast}
+          onDone={onRefresh}
         />
       )}
 

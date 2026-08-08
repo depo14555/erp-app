@@ -5,7 +5,7 @@
 // ================================================================
 
 import { useMemo, useState } from 'react';
-import { Search, SlidersHorizontal, Clock, Plus, Pin } from 'lucide-react';
+import { Search, SlidersHorizontal, Clock, Plus, Pin, Inbox, ScanSearch } from 'lucide-react';
 import OrderCard from '../components/OrderCard';
 import { Order, statusStyle, isClosed } from '../types';
 
@@ -19,10 +19,16 @@ interface Props {
   /** Закріплені (спільні для всіх) — projectId. */
   pinned: string[];
   onTogglePin: (projectId: string, on: boolean) => void;
+  /** Інструменти замовлень: пошук деталі й вхідна пошта (панелі поверх). */
+  onSearch: () => void;
+  onMail: () => void;
   activeRow?: number;
 }
 
-export default function OrdersPage({ orders, updatedAt, loading, onRefresh, onOpen, onCreate, pinned, onTogglePin, activeRow }: Props) {
+export default function OrdersPage({
+  orders, updatedAt, loading, onRefresh, onOpen, onCreate,
+  pinned, onTogglePin, onSearch, onMail, activeRow,
+}: Props) {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
   const [view, setView] = useState<'table' | 'cards'>(
@@ -71,6 +77,16 @@ export default function OrdersPage({ orders, updatedAt, loading, onRefresh, onOp
             {updatedAt && ` · ${updatedAt}`}
           </p>
           <div className="ml-auto flex items-center gap-2">
+            <button onClick={onMail}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-bold press bg-white ring-1 ring-gray-200"
+              style={{ color: 'var(--ink-2)' }} title="Нові замовлення з пошти">
+              <Inbox size={14} /> <span className="hidden sm:inline">Перевірити пошту</span>
+            </button>
+            <button onClick={onSearch}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-bold press bg-white ring-1 ring-gray-200"
+              style={{ color: 'var(--ink-2)' }} title="Пошук деталі по всіх замовленнях">
+              <ScanSearch size={14} /> <span className="hidden sm:inline">Пошук деталі</span>
+            </button>
             <button onClick={onCreate}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12px] font-bold text-white press"
               style={{ background: 'var(--accent)' }}>

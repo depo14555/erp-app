@@ -115,7 +115,11 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
     }
   }
 
-  function Cell({ item, field }: { item: OrderItem; field: Field }) {
+  // ВАЖЛИВО: це звичайні функції, що повертають JSX, а не вкладені компоненти.
+  // Вкладений компонент має нову ідентичність на кожен рендер — React
+  // перемонтовував би <input> після кожної літери, і поле губило б фокус
+  // (саме через це не вписувалась ціна та інші значення).
+  function cell(item: OrderItem, field: Field) {
     const value = String((item as any)[field] ?? '');
     const isEditing = edit?.row === item.row && edit.field === field;
     const key = `${item.row}:${field}`;
@@ -166,7 +170,7 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
   }
 
   /** Клітинка найменування: посилання + ✏️ редагування (лінк зберігається) + маршрут. */
-  function NameCell({ item }: { item: OrderItem }) {
+  function nameCell(item: OrderItem) {
     const isEditing = edit?.row === item.row && edit.field === 'name';
     const route = routes.get(item.row);
     if (isEditing) {
@@ -253,12 +257,12 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
               <td className="px-3 py-1.5 font-mono text-[11px] text-[var(--ink-3)] whitespace-nowrap">
                 {item.id}
               </td>
-              <td className="px-3 py-1.5"><NameCell item={item} /></td>
+              <td className="px-3 py-1.5">{nameCell(item)}</td>
               {log ? (
                 <>
-                  <td className="px-1 py-1 tabular-nums"><Cell item={item} field="qty" /></td>
-                  <td className="px-1 py-1"><Cell item={item} field="executor" /></td>
-                  <td className="px-1 py-1"><Cell item={item} field="rowStatus" /></td>
+                  <td className="px-1 py-1 tabular-nums">{cell(item, 'qty')}</td>
+                  <td className="px-1 py-1">{cell(item, 'executor')}</td>
+                  <td className="px-1 py-1">{cell(item, 'rowStatus')}</td>
                   <td className="px-3 py-1.5">
                     {deliveryOf(item.note)
                       ? <span className="inline-block text-[11px] font-bold px-2 py-1 rounded-lg bg-orange-50 text-orange-700 whitespace-nowrap">
@@ -272,12 +276,14 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
                 </>
               ) : buh ? (
                 <>
-                  <td className="px-1 py-1 tabular-nums"><Cell item={item} field="qty" /></td>
-                  <td className="px-1 py-1 tabular-nums"><Cell item={item} field="clientPrice" /></td>
+                  <td className="px-1 py-1">{cell(item, 'op')}</td>
+                  <td className="px-1 py-1">{cell(item, 'executor')}</td>
+                  <td className="px-1 py-1 tabular-nums">{cell(item, 'qty')}</td>
+                  <td className="px-1 py-1 tabular-nums">{cell(item, 'clientPrice')}</td>
                   <td className="px-3 py-1.5 tabular-nums text-[12px] font-semibold whitespace-nowrap">
                     {item.clientSum || '—'}
                   </td>
-                  <td className="px-1 py-1"><Cell item={item} field="payStatus" /></td>
+                  <td className="px-1 py-1">{cell(item, 'payStatus')}</td>
                   <td className="px-3 py-1.5 whitespace-nowrap">
                     {item.invoiceNum ? (
                       item.invoiceUrl
@@ -288,17 +294,17 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
                         : <span className="text-[12px]">{item.invoiceNum}</span>
                     ) : <span style={{ color: 'var(--ink-3)' }}>—</span>}
                   </td>
-                  <td className="px-1 py-1"><Cell item={item} field="note" /></td>
+                  <td className="px-1 py-1">{cell(item, 'note')}</td>
                 </>
               ) : (
                 <>
-                  <td className="px-1 py-1"><Cell item={item} field="material" /></td>
-                  <td className="px-1 py-1"><Cell item={item} field="thickness" /></td>
-                  <td className="px-1 py-1 tabular-nums"><Cell item={item} field="qty" /></td>
-                  <td className="px-1 py-1"><Cell item={item} field="op" /></td>
-                  <td className="px-1 py-1"><Cell item={item} field="executor" /></td>
-                  <td className="px-1 py-1"><Cell item={item} field="rowStatus" /></td>
-                  <td className="px-1 py-1"><Cell item={item} field="note" /></td>
+                  <td className="px-1 py-1">{cell(item, 'material')}</td>
+                  <td className="px-1 py-1">{cell(item, 'thickness')}</td>
+                  <td className="px-1 py-1 tabular-nums">{cell(item, 'qty')}</td>
+                  <td className="px-1 py-1">{cell(item, 'op')}</td>
+                  <td className="px-1 py-1">{cell(item, 'executor')}</td>
+                  <td className="px-1 py-1">{cell(item, 'rowStatus')}</td>
+                  <td className="px-1 py-1">{cell(item, 'note')}</td>
                   <td className="px-1 py-1 w-[34px]">
                     <button onClick={() => onAddOp(item)}
                       className="p-1 rounded-lg press opacity-0 group-hover:opacity-70 hover:!opacity-100"
@@ -359,7 +365,9 @@ const COLS_LOG: Array<{ key: string; label: string; w: string }> = [
 
 const COLS_BUH: Array<{ key: string; label: string; w: string }> = [
   { key: 'id', label: 'ID', w: 'w-[110px]' },
-  { key: 'name', label: 'Найменування', w: 'min-w-[280px]' },
+  { key: 'name', label: 'Найменування', w: 'min-w-[240px]' },
+  { key: 'op', label: 'Операція', w: 'w-[130px]' },
+  { key: 'executor', label: 'Виконавець', w: 'w-[150px]' },
   { key: 'qty', label: 'К-сть', w: 'w-[70px]' },
   { key: 'clientPrice', label: 'Ціна', w: 'w-[90px]' },
   { key: 'clientSum', label: 'Сума', w: 'w-[100px]' },
@@ -387,6 +395,10 @@ function ListPopover({ state, onPick, onClose }: {
     return query ? base.filter(o => o.toLowerCase().includes(query)) : base;
   }, [state, q]);
 
+  /** Свій текст: те, чого немає в списку, можна вписати вручну. */
+  const custom = q.trim();
+  const showCustom = !!custom && !options.some(o => o.toLowerCase() === custom.toLowerCase());
+
   // Позиція: під клітинкою; якщо знизу мало місця — над нею
   const H = Math.min(320, 92 + options.length * 34);
   const below = state.rect.bottom + H + 8 < window.innerHeight;
@@ -400,25 +412,36 @@ function ListPopover({ state, onPick, onClose }: {
         className="absolute w-[256px] bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden animate-pop-in flex flex-col"
         style={{ left, top, maxHeight: 320 }}
       >
-        {state.options.length > 6 && (
-          <div className="flex-shrink-0 p-2 border-b hairline">
-            <div className="relative">
-              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                ref={searchRef}
-                value={q}
-                onChange={e => setQ(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Escape') onClose();
-                  if (e.key === 'Enter' && options.length === 1) onPick(options[0]);
-                }}
-                placeholder="Пошук…"
-                className="w-full pl-7 pr-2 py-1.5 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-400 text-[12px]"
-              />
-            </div>
+        <div className="flex-shrink-0 p-2 border-b hairline">
+          <div className="relative">
+            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              ref={searchRef}
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Escape') onClose();
+                if (e.key === 'Enter') {
+                  if (showCustom) onPick(custom);
+                  else if (options.length === 1) onPick(options[0]);
+                }
+              }}
+              placeholder="Пошук або свій текст…"
+              className="w-full pl-7 pr-2 py-1.5 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-400 text-[12px]"
+            />
           </div>
-        )}
+        </div>
         <div className="flex-1 overflow-y-auto thin-scrollbar p-1">
+          {showCustom && (
+            <button
+              onClick={() => onPick(custom)}
+              className="w-full flex items-center gap-2 text-left px-2.5 py-1.5 rounded-xl text-[12.5px] press mb-0.5"
+              style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
+            >
+              <Plus size={13} className="flex-shrink-0" />
+              <span className="flex-1 truncate font-semibold">Вписати «{custom}»</span>
+            </button>
+          )}
           <button
             onClick={() => onPick('')}
             className="w-full text-left px-2.5 py-1.5 rounded-xl text-[12px] hover:bg-gray-50 press"
@@ -446,7 +469,7 @@ function ListPopover({ state, onPick, onClose }: {
               </button>
             );
           })}
-          {!options.length && (
+          {!options.length && !showCustom && (
             <p className="text-center text-[11.5px] py-3" style={{ color: 'var(--ink-3)' }}>Нічого не знайдено</p>
           )}
         </div>

@@ -5,7 +5,7 @@
 // ================================================================
 
 import { useCallback, useEffect, useState } from 'react';
-import { Bell, Menu, RefreshCw, FlaskConical } from 'lucide-react';
+import { Bell, Menu, RefreshCw, FlaskConical, ScanSearch, Inbox } from 'lucide-react';
 import { api, hasToken, setToken, getEnv } from './api';
 import { Order, OrderDetail, AppTab, DashboardData, Lists } from './types';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
@@ -21,6 +21,7 @@ import LogisticsPage from './pages/LogisticsPage';
 import MailPage from './pages/MailPage';
 import PartPage from './pages/PartPage';
 import BillingOverviewPage from './pages/BillingOverviewPage';
+import PageSheet from './components/PageSheet';
 import CreateOrderSheet from './components/CreateOrderSheet';
 import NotificationsSheet from './components/NotificationsSheet';
 import SideMenu from './components/SideMenu';
@@ -51,6 +52,9 @@ export default function App() {
   const [techTick, setTechTick] = useState(0);         // сайдбар → тех.запуск
   const [photoTick, setPhotoTick] = useState(0);       // сайдбар → фотошоп
   const [sendTick, setSendTick] = useState(0);         // сайдбар → відправити виконавцю
+  const [distrTick, setDistrTick] = useState(0);       // сайдбар → розподіл КД
+  /** Інструменти замовлень поверх списку: пошук деталі / вхідна пошта. */
+  const [overlay, setOverlay] = useState<'search' | 'mail' | null>(null);
   const [showCreate, setShowCreate] = useState(false); // ➕ нове замовлення
   const [logisticsTick, setLogisticsTick] = useState(0); // шапка → оновити логістику
   const [mailTick, setMailTick] = useState(0);           // шапка → оновити пошту
@@ -150,12 +154,19 @@ export default function App() {
   /** Інлайн-редагування будь-якого поля рядка (десктопна таблиця). */
   async function updateRow(row: number, field: string, value: string) {
     if (!detail) return;
-    setDetail({
-      ...detail,
-      items: detail.items.map(i => (i.row === row ? { ...i, [field]: value } : i)),
-    });
+    setDetail(d => d && ({
+      ...d,
+      items: d.items.map(i => (i.row === row ? { ...i, [field]: value } : i)),
+    }));
     try {
-      await api.updateRow(row, { [field]: value });
+      const res = await api.updateRow(row, { [field]: value });
+      // Сума клієнту перерахована в таблиці — показуємо одразу, без оновлення
+      if (res?.clientSum) {
+        setDetail(d => d && ({
+          ...d,
+          items: d.items.map(i => (i.row === row ? { ...i, clientSum: res.clientSum as string } : i)),
+        }));
+      }
     } catch (err: any) {
       showToast(err?.message || 'Не вдалося зберегти', true);
       openOrder(detail.header.headerRow, true);
@@ -200,6 +211,7 @@ export default function App() {
 
   /** Одна кнопка оновлення в шапці — оновлює те, що зараз на екрані. */
   function refreshCurrent() {
+    if (overlay === 'mail') { setMailTick(t => t + 1); return; }
     if (detail) { openOrder(detail.header.headerRow, true); return; }
     if (tab === 'dashboard') loadDashboard(true);
     else if (tab === 'orders') loadOrders(true);
@@ -231,13 +243,10 @@ export default function App() {
         onRefresh={() => loadOrders(true)} onOpen={o => openOrder(o.headerRow)}
         onCreate={() => setShowCreate(true)}
         pinned={pinned} onTogglePin={togglePin}
+        onSearch={() => setOverlay('search')} onMail={() => setOverlay('mail')}
         activeRow={detail?.header.headerRow} />
-    ) : tab === 'search' ? (
-      <SearchPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} />
     ) : tab === 'logistics' ? (
       <LogisticsPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} refreshSignal={logisticsTick} />
-    ) : tab === 'mail' ? (
-      <MailPage onToast={showToast} onProcessed={() => { loadOrders(true); loadDashboard(true); }} refreshSignal={mailTick} />
     ) : tab === 'billing' ? (
       <BillingOverviewPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} refreshSignal={overviewTick} />
     ) : (
@@ -264,6 +273,7 @@ export default function App() {
       techSignal={techTick}
       photoSignal={photoTick}
       sendSignal={sendTick}
+      distrSignal={distrTick}
     />
   );
 
@@ -290,6 +300,7 @@ export default function App() {
           else if (t === 'photo') setPhotoTick(v => v + 1);
           else if (t === 'send') setSendTick(v => v + 1);
           else if (t === 'print') setPrintTick(v => v + 1);
+          else if (t === 'distr') setDistrTick(v => v + 1);
         }}
         onLogout={logout}
       />
@@ -346,6 +357,23 @@ export default function App() {
       )}
 
       {showNotifs && <NotificationsSheet onClose={() => setShowNotifs(false)} onToast={showToast} />}
+
+      {/* Інструменти замовлень поверх списку — окремих пунктів меню не займають */}
+      {overlay === 'search' && (
+        <PageSheet title="Пошук деталі" subtitle="по всіх замовленнях"
+          icon={<ScanSearch size={16} />} onClose={() => setOverlay(null)}>
+          <SearchPage onOpenOrder={hr => { setOverlay(null); setTab('orders'); openOrder(hr); }} onToast={showToast} />
+        </PageSheet>
+      )}
+
+      {overlay === 'mail' && (
+        <PageSheet title="Вхідні (пошта)" subtitle="нові замовлення з Gmail"
+          icon={<Inbox size={16} />} onClose={() => setOverlay(null)}>
+          <MailPage onToast={showToast}
+            onProcessed={() => { loadOrders(true); loadDashboard(true); }}
+            refreshSignal={mailTick} />
+        </PageSheet>
+      )}
 
       {/* Деталь за QR-кодом — поверх усього */}
       {partId && (
