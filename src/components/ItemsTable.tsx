@@ -13,7 +13,17 @@ import { OrderItem, Lists, statusStyle } from '../types';
 type Field = 'op' | 'executor' | 'qty' | 'assignedQty' | 'material' | 'thickness' | 'note' | 'rowStatus'
   | 'name' | 'clientPrice' | 'payStatus';
 
-export type TableMode = 'prod' | 'buh';
+export type TableMode = 'prod' | 'buh' | 'log';
+
+/** Мітка доставки з примітки: рядок, що починається з 🚚. */
+export function deliveryOf(note: string): string {
+  const line = String(note || '').split('\n').find(l => l.trim().startsWith('🚚'));
+  return line ? line.trim().replace(/^🚚\s*/, '') : '';
+}
+/** Примітка без мітки доставки. */
+export function noteWithoutDelivery(note: string): string {
+  return String(note || '').split('\n').filter(l => !l.trim().startsWith('🚚')).join('\n').trim();
+}
 
 /** Статуси оплати — як у колонці "Статус оплати" таблиці. */
 const PAY_OPTIONS = ['Сформувати', 'Рахунок виставлено', 'Оплачено'];
@@ -203,7 +213,8 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
   }
 
   const buh = mode === 'buh';
-  const cols = buh ? COLS_BUH : COLS_PROD;
+  const log = mode === 'log';
+  const cols = buh ? COLS_BUH : log ? COLS_LOG : COLS_PROD;
 
   return (
     <div className="overflow-auto thin-scrollbar h-full">
@@ -243,7 +254,23 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
                 {item.id}
               </td>
               <td className="px-3 py-1.5"><NameCell item={item} /></td>
-              {buh ? (
+              {log ? (
+                <>
+                  <td className="px-1 py-1 tabular-nums"><Cell item={item} field="qty" /></td>
+                  <td className="px-1 py-1"><Cell item={item} field="executor" /></td>
+                  <td className="px-1 py-1"><Cell item={item} field="rowStatus" /></td>
+                  <td className="px-3 py-1.5">
+                    {deliveryOf(item.note)
+                      ? <span className="inline-block text-[11px] font-bold px-2 py-1 rounded-lg bg-orange-50 text-orange-700 whitespace-nowrap">
+                          🚚 {deliveryOf(item.note)}
+                        </span>
+                      : <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>— виберіть галочкою → «Доставка»</span>}
+                  </td>
+                  <td className="px-3 py-1.5 text-[12px]" style={{ color: 'var(--ink-2)' }}>
+                    {noteWithoutDelivery(item.note) || '—'}
+                  </td>
+                </>
+              ) : buh ? (
                 <>
                   <td className="px-1 py-1 tabular-nums"><Cell item={item} field="qty" /></td>
                   <td className="px-1 py-1 tabular-nums"><Cell item={item} field="clientPrice" /></td>
@@ -318,6 +345,16 @@ const COLS_PROD: Array<{ key: string; label: string; w: string }> = [
   { key: 'rowStatus', label: 'Статус', w: 'w-[150px]' },
   { key: 'note', label: 'Примітка', w: 'min-w-[160px]' },
   { key: 'add', label: '', w: 'w-[34px]' },
+];
+
+const COLS_LOG: Array<{ key: string; label: string; w: string }> = [
+  { key: 'id', label: 'ID', w: 'w-[110px]' },
+  { key: 'name', label: 'Найменування', w: 'min-w-[280px]' },
+  { key: 'qty', label: 'К-сть', w: 'w-[70px]' },
+  { key: 'executor', label: 'Виконавець', w: 'w-[150px]' },
+  { key: 'status', label: 'Статус', w: 'w-[140px]' },
+  { key: 'delivery', label: 'Доставка', w: 'min-w-[200px]' },
+  { key: 'note', label: 'Примітка', w: 'min-w-[130px]' },
 ];
 
 const COLS_BUH: Array<{ key: string; label: string; w: string }> = [

@@ -4,13 +4,14 @@
 //  з підгрупами за типом файлу, статус рядка, посилання на креслення.
 // ================================================================
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft, RefreshCw, FolderOpen, FileText, Ruler, Box, Paperclip,
   ExternalLink, User, Search, Printer, X, Send, Tags, Rocket, Paintbrush, Receipt,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
-import ItemsTable from '../components/ItemsTable';
+import ItemsTable, { TableMode } from '../components/ItemsTable';
+import DeliverySheet from '../components/DeliverySheet';
 import { api } from '../api';
 import PrintSheet from '../components/PrintSheet';
 import SendSheet from '../components/SendSheet';
@@ -48,6 +49,16 @@ const GROUP_META = {
 
 const PAGE = 40; // позицій на групу за раз — великі замовлення (400+) не вішають телефон
 
+/** Відкриває вікно лише при ЗМІНІ сигналу, ігноруючи значення на монтуванні. */
+function useOpenSignal(signal: number | undefined, open: () => void) {
+  const prev = useRef(signal);
+  useEffect(() => {
+    if (signal !== undefined && signal !== prev.current) open();
+    prev.current = signal;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signal]);
+}
+
 export default function OrderPage({
   detail, orderStatusList, rowStatusList, lists, loading,
   onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onBulkStatus, onToast,
@@ -64,8 +75,9 @@ export default function OrderPage({
   const [showTech, setShowTech] = useState(false);
   const [showPhoto, setShowPhoto] = useState(false);
   const [showBilling, setShowBilling] = useState(false);
-  const [tableMode, setTableMode] = useState<'prod' | 'buh'>('prod');
+  const [tableMode, setTableMode] = useState<TableMode>('prod');
   const [addOpItem, setAddOpItem] = useState<OrderItem | null>(null);
+  const [showDelivery, setShowDelivery] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [pickBulk, setPickBulk] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -82,11 +94,13 @@ export default function OrderPage({
   useEffect(() => { setLimits({}); }, [q, fOp, fExec, fStatus, header.headerRow]);
   useEffect(() => { setFOp(''); setFExec(''); setFStatus(''); setQ(''); setSelected(new Set()); }, [header.headerRow]);
   // Кнопка «Друк креслень + QR» у сайдбарі відкриває вікно друку для цього замовлення
-  useEffect(() => { if (printSignal) setShowPrint(true); }, [printSignal]);
-  useEffect(() => { if (billingSignal) setShowBilling(true); }, [billingSignal]);
-  useEffect(() => { if (techSignal) setShowTech(true); }, [techSignal]);
-  useEffect(() => { if (photoSignal) setShowPhoto(true); }, [photoSignal]);
-  useEffect(() => { if (sendSignal) setShowSend(true); }, [sendSignal]);
+  // Сигнали спрацьовують лише при ЗМІНІ (не при монтуванні компонента —
+  // інакше вікна самі відкривались при повторному відкритті замовлення)
+  useOpenSignal(printSignal, () => setShowPrint(true));
+  useOpenSignal(billingSignal, () => setShowBilling(true));
+  useOpenSignal(techSignal, () => setShowTech(true));
+  useOpenSignal(photoSignal, () => setShowPhoto(true));
+  useOpenSignal(sendSignal, () => setShowSend(true));
 
   const real = useMemo(() => items.filter(i => !i.group), [items]);
   const fOps = useMemo(() => distinct(real.map(i => i.op)), [real]);
@@ -219,10 +233,10 @@ export default function OrderPage({
             ))}
           </div>
 
-          {/* Зона: виробництво / бухгалтерія (колонки таблиці) */}
+          {/* Зона: виробництво / бухгалтерія / логістика (колонки таблиці) */}
           {view === 'table' && (
             <div className="flex bg-gray-100 rounded-full p-0.5">
-              {([['prod', '🏭 Виробництво'], ['buh', '💰 Бухгалтерія']] as const).map(([v, label]) => (
+              {([['prod', '🏭 Виробництво'], ['buh', '💰 Бухгалтерія'], ['log', '🚚 Логістика']] as const).map(([v, label]) => (
                 <button key={v} onClick={() => setTableMode(v)}
                   className="px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors"
                   style={tableMode === v ? { background: '#fff', color: 'var(--ink)' } : { color: 'var(--ink-3)' }}>
@@ -425,6 +439,10 @@ export default function OrderPage({
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-bold bg-blue-500 hover:bg-blue-400 press whitespace-nowrap">
             <Send size={13} /> Виконавцю
           </button>
+          <button onClick={() => setShowDelivery(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-bold bg-orange-500 hover:bg-orange-400 press whitespace-nowrap">
+            🚚 Доставка
+          </button>
           <button onClick={() => setSelected(new Set())}
             className="p-2 rounded-xl hover:bg-white/10 press" aria-label="Зняти вибір">
             <X size={15} />
@@ -494,15 +512,26 @@ export default function OrderPage({
           onPick={async op => {
             const item = addOpItem;
             setAddOpItem(null);
+            onToast(`⏳ Додаю «${op}» до «${item.name.slice(0, 28)}»…`);
             try {
               await api.addOperation(item.row, op);
-              onToast(`«${op}» додано до «${item.name.slice(0, 30)}» — маршрут`);
+              onToast(`✅ «${op}» додано — маршрут оновлюється`);
               onRefresh();
             } catch (e: any) {
               onToast(e?.message || 'Не вдалося додати операцію', true);
             }
           }}
           onClose={() => setAddOpItem(null)}
+        />
+      )}
+
+      {/* Доставка вибраних деталей */}
+      {showDelivery && (
+        <DeliverySheet
+          items={items.filter(i => selected.has(i.row))}
+          onClose={() => setShowDelivery(false)}
+          onToast={onToast}
+          onDone={() => { setShowDelivery(false); setSelected(new Set()); onRefresh(); }}
         />
       )}
     </div>

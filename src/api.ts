@@ -368,6 +368,11 @@ export const api = {
     return post('erp.addOperation', { row, op, ...extra });
   },
 
+  /** Мітка доставки (спосіб + ТТН) вибраним рядкам — у примітку. */
+  setDelivery(rows: number[], method: string, ttn?: string, note?: string): Promise<{ updated: number; tag: string }> {
+    return post('erp.setDelivery', { rows, method, ttn, note });
+  },
+
   /** Перевірка ключа при першому вході. */
   async checkToken(): Promise<boolean> {
     await post('erp.orders');
