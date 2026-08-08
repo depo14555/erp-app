@@ -12,7 +12,7 @@ import {
   DashboardData, NotificationItem, SearchRow, Lists,
   PartData, LogisticsData, FileData, ExecRowsData, ExecSendResult, ExecRow,
   TechFilesData, TechLaunchItem, TechLaunchResult, MailListData, SavePdfResult,
-  FolderFile, BillingData, CommerceContext, CommerceResult, DocType,
+  FolderFile, BillingData, CommerceContext, CommerceResult, DocType, CreateOrderResult,
 } from './types';
 
 /** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
@@ -79,7 +79,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /** Читання можна безпечно повторити; мутації — ні (щоб не задвоїти запис). */
 function isReadAction(action: string): boolean {
-  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate)/.test(action);
+  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation)/.test(action);
 }
 
 function cacheGet<T>(key: string): T | null {
@@ -351,6 +351,21 @@ export const api = {
   /** Створення документа: копія шаблону Google Doc + запис №/посилання в картку. */
   commerceCreate(formData: Record<string, unknown>): Promise<CommerceResult> {
     return post('erp.commerceCreate', { formData });
+  },
+
+  /** Нове замовлення з додатка: картка + папка на Диску. */
+  createOrder(data: { clientName: string; status: string; deadline?: string; note?: string }): Promise<CreateOrderResult> {
+    return post('erp.createOrder', data);
+  },
+
+  /** Файл у папку замовлення (ZIP до 8МБ розпаковується). */
+  uploadOrderFile(headerRow: number, name: string, base64: string, mime: string): Promise<{ saved: number; unzipped: number }> {
+    return post('erp.uploadOrderFile', { headerRow, name, base64, mime });
+  },
+
+  /** Додати операцію до деталі — рядок-дубль одразу під нею (маршрут). */
+  addOperation(row: number, op: string, extra?: { executor?: string; qty?: number; note?: string }): Promise<{ ok: boolean; row: number }> {
+    return post('erp.addOperation', { row, op, ...extra });
   },
 
   /** Перевірка ключа при першому вході. */

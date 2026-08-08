@@ -40,6 +40,11 @@ export interface OrderItem {
   note: string;
   assembly: string;
   execPrice: string;
+  clientPrice: string;
+  clientSum: string;
+  payStatus: string;
+  invoiceNum: string;
+  invoiceUrl: string;
 }
 
 export interface OrderHeader {
@@ -339,9 +344,17 @@ export interface DashboardData {
 export interface Lists {
   operations: string[];
   executors: string[];
+  clients?: string[];
   orderStatus: string[];
   rowStatus: string[];
   materials: string[];
+}
+
+export interface CreateOrderResult {
+  projectId: string;
+  orderNum: string;
+  headerRow: number;
+  folderUrl: string;
 }
 
 export interface NotificationItem {

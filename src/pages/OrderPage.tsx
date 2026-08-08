@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
 import ItemsTable from '../components/ItemsTable';
+import { api } from '../api';
 import PrintSheet from '../components/PrintSheet';
 import SendSheet from '../components/SendSheet';
 import TechLaunchSheet from '../components/TechLaunchSheet';
@@ -31,8 +32,11 @@ interface Props {
   onUpdateRow: (row: number, field: string, value: string) => Promise<void>;
   onBulkStatus: (rows: number[], status: string) => Promise<void>;
   onToast: (msg: string, err?: boolean) => void;
-  printSignal?: number;   // сайдбар «Друк креслень + QR» → відкрити вікно друку
-  billingSignal?: number; // сайдбар «Рахунки і оплати» → відкрити бухгалтерію
+  printSignal?: number;   // сигнали з сайдбара — відкрити відповідний інструмент
+  billingSignal?: number;
+  techSignal?: number;
+  photoSignal?: number;
+  sendSignal?: number;
 }
 
 const GROUP_META = {
@@ -46,7 +50,8 @@ const PAGE = 40; // позицій на групу за раз — великі 
 
 export default function OrderPage({
   detail, orderStatusList, rowStatusList, lists, loading,
-  onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onBulkStatus, onToast, printSignal, billingSignal,
+  onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onBulkStatus, onToast,
+  printSignal, billingSignal, techSignal, photoSignal, sendSignal,
 }: Props) {
   const [q, setQ] = useState('');
   const [fOp, setFOp] = useState('');
@@ -59,6 +64,8 @@ export default function OrderPage({
   const [showTech, setShowTech] = useState(false);
   const [showPhoto, setShowPhoto] = useState(false);
   const [showBilling, setShowBilling] = useState(false);
+  const [tableMode, setTableMode] = useState<'prod' | 'buh'>('prod');
+  const [addOpItem, setAddOpItem] = useState<OrderItem | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [pickBulk, setPickBulk] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -77,6 +84,9 @@ export default function OrderPage({
   // Кнопка «Друк креслень + QR» у сайдбарі відкриває вікно друку для цього замовлення
   useEffect(() => { if (printSignal) setShowPrint(true); }, [printSignal]);
   useEffect(() => { if (billingSignal) setShowBilling(true); }, [billingSignal]);
+  useEffect(() => { if (techSignal) setShowTech(true); }, [techSignal]);
+  useEffect(() => { if (photoSignal) setShowPhoto(true); }, [photoSignal]);
+  useEffect(() => { if (sendSignal) setShowSend(true); }, [sendSignal]);
 
   const real = useMemo(() => items.filter(i => !i.group), [items]);
   const fOps = useMemo(() => distinct(real.map(i => i.op)), [real]);
@@ -154,25 +164,26 @@ export default function OrderPage({
               <User size={11} /> {header.client || '—'}
             </p>
           </div>
+          {/* На десктопі ці інструменти живуть у сайдбарі (секція «Завдання») */}
           {header.folderUrl && (
             <a href={header.folderUrl} target="_blank" rel="noreferrer"
-              className="p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Папка">
+              className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Папка">
               <FolderOpen size={18} />
             </a>
           )}
-          <button onClick={() => setShowBilling(true)} className="p-1.5 lg:p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Рахунки і оплати" title="Рахунки і оплати">
+          <button onClick={() => setShowBilling(true)} className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Рахунки і оплати" title="Рахунки і оплати">
             <Receipt size={17} />
           </button>
-          <button onClick={() => setShowTech(true)} className="p-1.5 lg:p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Тех.запуск" title="Тех.запуск">
+          <button onClick={() => setShowTech(true)} className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Тех.запуск" title="Тех.запуск">
             <Rocket size={17} />
           </button>
-          <button onClick={() => setShowPhoto(true)} className="p-1.5 lg:p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Фотошоп креслень" title="Фотошоп: закрити конфіденційне">
+          <button onClick={() => setShowPhoto(true)} className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Фотошоп креслень" title="Фотошоп: закрити конфіденційне">
             <Paintbrush size={17} />
           </button>
-          <button onClick={() => setShowSend(true)} className="p-1.5 lg:p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Відправити виконавцю" title="Відправити виконавцю">
+          <button onClick={() => setShowSend(true)} className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Відправити виконавцю" title="Відправити виконавцю">
             <Send size={17} />
           </button>
-          <button onClick={() => setShowPrint(true)} className="p-1.5 lg:p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Друк креслень" title="Друк креслень + QR">
+          <button onClick={() => setShowPrint(true)} className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Друк креслень" title="Друк креслень + QR">
             <Printer size={18} />
           </button>
           {/* На десктопі оновлення в шапці додатка — тут лише для телефона */}
@@ -207,6 +218,19 @@ export default function OrderPage({
               </button>
             ))}
           </div>
+
+          {/* Зона: виробництво / бухгалтерія (колонки таблиці) */}
+          {view === 'table' && (
+            <div className="flex bg-gray-100 rounded-full p-0.5">
+              {([['prod', '🏭 Виробництво'], ['buh', '💰 Бухгалтерія']] as const).map(([v, label]) => (
+                <button key={v} onClick={() => setTableMode(v)}
+                  className="px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors"
+                  style={tableMode === v ? { background: '#fff', color: 'var(--ink)' } : { color: 'var(--ink-3)' }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Фільтри: пошук + операція / виконавець / статус (обидва вигляди) */}
@@ -247,7 +271,9 @@ export default function OrderPage({
           <ItemsTable
             items={filtered.filter(i => !i.group)}
             lists={lists}
+            mode={tableMode}
             onSave={(row, field, value) => onUpdateRow(row, field, value)}
+            onAddOp={setAddOpItem}
             selected={selected}
             onToggleRow={toggleRow}
             onToggleAll={toggleAll}
@@ -455,6 +481,28 @@ export default function OrderPage({
           onClose={() => setShowBilling(false)}
           onToast={onToast}
           onChanged={onRefresh}
+        />
+      )}
+
+      {/* Додати операцію деталі — рядок-дубль під нею (маршрут) */}
+      {addOpItem && (
+        <StatusPicker
+          title="Додати операцію"
+          subtitle={addOpItem.name}
+          options={(lists?.operations || []).filter(o => o !== addOpItem.op)}
+          current=""
+          onPick={async op => {
+            const item = addOpItem;
+            setAddOpItem(null);
+            try {
+              await api.addOperation(item.row, op);
+              onToast(`«${op}» додано до «${item.name.slice(0, 30)}» — маршрут`);
+              onRefresh();
+            } catch (e: any) {
+              onToast(e?.message || 'Не вдалося додати операцію', true);
+            }
+          }}
+          onClose={() => setAddOpItem(null)}
         />
       )}
     </div>

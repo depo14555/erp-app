@@ -7,15 +7,26 @@
 // ================================================================
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ExternalLink, Check, Loader2, Search, CheckSquare, Square } from 'lucide-react';
+import { ExternalLink, Check, Loader2, Search, CheckSquare, Square, Pencil, Plus } from 'lucide-react';
 import { OrderItem, Lists, statusStyle } from '../types';
 
-type Field = 'op' | 'executor' | 'qty' | 'assignedQty' | 'material' | 'thickness' | 'note' | 'rowStatus';
+type Field = 'op' | 'executor' | 'qty' | 'assignedQty' | 'material' | 'thickness' | 'note' | 'rowStatus'
+  | 'name' | 'clientPrice' | 'payStatus';
+
+export type TableMode = 'prod' | 'buh';
+
+/** Статуси оплати — як у колонці "Статус оплати" таблиці. */
+const PAY_OPTIONS = ['Сформувати', 'Рахунок виставлено', 'Оплачено'];
+
+/** Кольори маршрутних смужок: та сама деталь з різними операціями. */
+const ROUTE_COLORS = ['#6366F1', '#0891B2', '#D97706', '#DB2777', '#16A34A', '#7C3AED'];
 
 interface Props {
   items: OrderItem[];
   lists: Lists | null;
+  mode: TableMode;
   onSave: (row: number, field: Field, value: string) => Promise<void>;
+  onAddOp: (item: OrderItem) => void;
   /** Вибір рядків для масових дій (статус, відправка виконавцю). */
   selected: Set<number>;
   onToggleRow: (row: number) => void;
@@ -30,7 +41,7 @@ interface PopState {
   current: string;
 }
 
-export default function ItemsTable({ items, lists, onSave, selected, onToggleRow, onToggleAll }: Props) {
+export default function ItemsTable({ items, lists, mode, onSave, onAddOp, selected, onToggleRow, onToggleAll }: Props) {
   const [edit, setEdit] = useState<{ row: number; field: Field } | null>(null);
   const [pop, setPop] = useState<PopState | null>(null);
   const [draft, setDraft] = useState('');
@@ -40,6 +51,7 @@ export default function ItemsTable({ items, lists, onSave, selected, onToggleRow
   useEffect(() => { if (edit) inputRef.current?.focus(); }, [edit]);
 
   function optionsFor(field: Field): string[] | null {
+    if (field === 'payStatus') return PAY_OPTIONS;
     if (!lists) return null;
     if (field === 'op') return lists.operations;
     if (field === 'executor') return lists.executors;
@@ -47,6 +59,26 @@ export default function ItemsTable({ items, lists, onSave, selected, onToggleRow
     if (field === 'material') return lists.materials;
     return null;
   }
+
+  // Маршрути: однакова деталь (назва) з кількома рядками → спільна кольорова смужка
+  const routes = useMemo(() => {
+    const byName = new Map<string, number[]>();
+    items.forEach(i => {
+      const key = i.name.trim().toLowerCase();
+      const arr = byName.get(key) || [];
+      arr.push(i.row);
+      byName.set(key, arr);
+    });
+    const map = new Map<number, { color: string; step: number; total: number }>();
+    let gi = 0;
+    for (const rows of byName.values()) {
+      if (rows.length < 2) continue;
+      const color = ROUTE_COLORS[gi % ROUTE_COLORS.length];
+      gi++;
+      rows.forEach((r, i2) => map.set(r, { color, step: i2 + 1, total: rows.length }));
+    }
+    return map;
+  }, [items]);
 
   async function commit(row: number, field: Field, value: string, current: string) {
     setEdit(null);
@@ -123,6 +155,56 @@ export default function ItemsTable({ items, lists, onSave, selected, onToggleRow
     );
   }
 
+  /** Клітинка найменування: посилання + ✏️ редагування (лінк зберігається) + маршрут. */
+  function NameCell({ item }: { item: OrderItem }) {
+    const isEditing = edit?.row === item.row && edit.field === 'name';
+    const route = routes.get(item.row);
+    if (isEditing) {
+      return (
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={() => commit(item.row, 'name', draft, item.name)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') commit(item.row, 'name', draft, item.name);
+            if (e.key === 'Escape') setEdit(null);
+          }}
+          className="w-full px-2 py-1 rounded-lg border border-[var(--accent)] outline-none text-[12.5px] shadow-sm"
+        />
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 max-w-full">
+        {item.url ? (
+          <a href={item.url} target="_blank" rel="noreferrer"
+            className="text-[var(--accent)] hover:underline inline-flex items-start gap-1 min-w-0">
+            <span className="line-clamp-1">{item.name}</span>
+            <ExternalLink size={11} className="mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </a>
+        ) : (
+          <span className="line-clamp-1">{item.name}</span>
+        )}
+        {route && (
+          <span className="flex-shrink-0 text-[9px] font-bold px-1 py-0.5 rounded"
+            style={{ background: route.color + '18', color: route.color }}
+            title="Маршрут деталі: та сама деталь, різні операції">
+            {route.step}/{route.total}
+          </span>
+        )}
+        <button
+          onClick={() => { setDraft(item.name); setEdit({ row: item.row, field: 'name' }); }}
+          className="flex-shrink-0 p-0.5 rounded press opacity-0 group-hover:opacity-60 hover:!opacity-100"
+          style={{ color: 'var(--ink-3)' }} aria-label="Перейменувати" title="Перейменувати (посилання збережеться)">
+          <Pencil size={11} />
+        </button>
+      </span>
+    );
+  }
+
+  const buh = mode === 'buh';
+  const cols = buh ? COLS_BUH : COLS_PROD;
+
   return (
     <div className="overflow-auto thin-scrollbar h-full">
       <table className="w-full border-collapse text-[12.5px]">
@@ -135,7 +217,7 @@ export default function ItemsTable({ items, lists, onSave, selected, onToggleRow
                   : <Square size={15} className="text-gray-300" />}
               </button>
             </th>
-            {COLS.map(c => (
+            {cols.map(c => (
               <th key={c.key}
                 className={`${c.w} text-left font-semibold text-[11px] uppercase tracking-wide text-[var(--ink-3)] px-3 py-2 border-b hairline whitespace-nowrap`}>
                 {c.label}
@@ -144,11 +226,13 @@ export default function ItemsTable({ items, lists, onSave, selected, onToggleRow
           </tr>
         </thead>
         <tbody>
-          {items.map(item => (
+          {items.map(item => {
+            const route = routes.get(item.row);
+            return (
             <tr key={item.row}
               className="border-b hairline hover:bg-[#FCFCFD] group"
               style={selected.has(item.row) ? { background: 'var(--accent-soft)' } : undefined}>
-              <td className="px-2 py-1.5">
+              <td className="px-2 py-1.5" style={route ? { boxShadow: `inset 3px 0 0 ${route.color}` } : undefined}>
                 <button onClick={() => onToggleRow(item.row)} className="flex press" aria-label="Вибрати рядок">
                   {selected.has(item.row)
                     ? <CheckSquare size={15} className="text-[var(--accent)]" />
@@ -158,26 +242,49 @@ export default function ItemsTable({ items, lists, onSave, selected, onToggleRow
               <td className="px-3 py-1.5 font-mono text-[11px] text-[var(--ink-3)] whitespace-nowrap">
                 {item.id}
               </td>
-              <td className="px-3 py-1.5">
-                {item.url ? (
-                  <a href={item.url} target="_blank" rel="noreferrer"
-                    className="text-[var(--accent)] hover:underline inline-flex items-start gap-1">
-                    <span className="line-clamp-1">{item.name}</span>
-                    <ExternalLink size={11} className="mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </a>
-                ) : (
-                  <span className="line-clamp-1">{item.name}</span>
-                )}
-              </td>
-              <td className="px-1 py-1"><Cell item={item} field="material" /></td>
-              <td className="px-1 py-1"><Cell item={item} field="thickness" /></td>
-              <td className="px-1 py-1 tabular-nums"><Cell item={item} field="qty" /></td>
-              <td className="px-1 py-1"><Cell item={item} field="op" /></td>
-              <td className="px-1 py-1"><Cell item={item} field="executor" /></td>
-              <td className="px-1 py-1"><Cell item={item} field="rowStatus" /></td>
-              <td className="px-1 py-1"><Cell item={item} field="note" /></td>
+              <td className="px-3 py-1.5"><NameCell item={item} /></td>
+              {buh ? (
+                <>
+                  <td className="px-1 py-1 tabular-nums"><Cell item={item} field="qty" /></td>
+                  <td className="px-1 py-1 tabular-nums"><Cell item={item} field="clientPrice" /></td>
+                  <td className="px-3 py-1.5 tabular-nums text-[12px] font-semibold whitespace-nowrap">
+                    {item.clientSum || '—'}
+                  </td>
+                  <td className="px-1 py-1"><Cell item={item} field="payStatus" /></td>
+                  <td className="px-3 py-1.5 whitespace-nowrap">
+                    {item.invoiceNum ? (
+                      item.invoiceUrl
+                        ? <a href={item.invoiceUrl} target="_blank" rel="noreferrer"
+                            className="text-[var(--accent)] hover:underline text-[12px] font-semibold inline-flex items-center gap-1">
+                            {item.invoiceNum} <ExternalLink size={10} />
+                          </a>
+                        : <span className="text-[12px]">{item.invoiceNum}</span>
+                    ) : <span style={{ color: 'var(--ink-3)' }}>—</span>}
+                  </td>
+                  <td className="px-1 py-1"><Cell item={item} field="note" /></td>
+                </>
+              ) : (
+                <>
+                  <td className="px-1 py-1"><Cell item={item} field="material" /></td>
+                  <td className="px-1 py-1"><Cell item={item} field="thickness" /></td>
+                  <td className="px-1 py-1 tabular-nums"><Cell item={item} field="qty" /></td>
+                  <td className="px-1 py-1"><Cell item={item} field="op" /></td>
+                  <td className="px-1 py-1"><Cell item={item} field="executor" /></td>
+                  <td className="px-1 py-1"><Cell item={item} field="rowStatus" /></td>
+                  <td className="px-1 py-1"><Cell item={item} field="note" /></td>
+                  <td className="px-1 py-1 w-[34px]">
+                    <button onClick={() => onAddOp(item)}
+                      className="p-1 rounded-lg press opacity-0 group-hover:opacity-70 hover:!opacity-100"
+                      style={{ color: 'var(--accent)' }} aria-label="Додати операцію"
+                      title="Додати операцію цій деталі (рядок-дубль → маршрут)">
+                      <Plus size={14} />
+                    </button>
+                  </td>
+                </>
+              )}
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
 
@@ -186,7 +293,7 @@ export default function ItemsTable({ items, lists, onSave, selected, onToggleRow
       )}
 
       <div className="flex items-center gap-1.5 px-3 py-2 text-[11px] text-[var(--ink-3)]">
-        <Check size={12} /> Клік по клітинці — редагування, Enter — зберегти в таблицю
+        <Check size={12} /> Клік по клітинці — редагування · ✏️ — перейменувати · ➕ — додати операцію (маршрут)
       </div>
 
       {pop && (
@@ -200,7 +307,7 @@ export default function ItemsTable({ items, lists, onSave, selected, onToggleRow
   );
 }
 
-const COLS: Array<{ key: Field | 'name' | 'id'; label: string; w: string }> = [
+const COLS_PROD: Array<{ key: string; label: string; w: string }> = [
   { key: 'id', label: 'ID', w: 'w-[110px]' },
   { key: 'name', label: 'Найменування', w: 'min-w-[280px]' },
   { key: 'material', label: 'Матеріал', w: 'w-[110px]' },
@@ -210,6 +317,18 @@ const COLS: Array<{ key: Field | 'name' | 'id'; label: string; w: string }> = [
   { key: 'executor', label: 'Виконавець', w: 'w-[160px]' },
   { key: 'rowStatus', label: 'Статус', w: 'w-[150px]' },
   { key: 'note', label: 'Примітка', w: 'min-w-[160px]' },
+  { key: 'add', label: '', w: 'w-[34px]' },
+];
+
+const COLS_BUH: Array<{ key: string; label: string; w: string }> = [
+  { key: 'id', label: 'ID', w: 'w-[110px]' },
+  { key: 'name', label: 'Найменування', w: 'min-w-[280px]' },
+  { key: 'qty', label: 'К-сть', w: 'w-[70px]' },
+  { key: 'clientPrice', label: 'Ціна', w: 'w-[90px]' },
+  { key: 'clientSum', label: 'Сума', w: 'w-[100px]' },
+  { key: 'payStatus', label: 'Оплата', w: 'w-[160px]' },
+  { key: 'invoice', label: 'Рахунок', w: 'w-[110px]' },
+  { key: 'note', label: 'Примітка', w: 'min-w-[140px]' },
 ];
 
 /** Попап-список: фіксована позиція біля клітинки, пошук, чек на поточному. */

@@ -5,7 +5,7 @@
 // ================================================================
 
 import { useMemo, useState } from 'react';
-import { Search, SlidersHorizontal, Clock } from 'lucide-react';
+import { Search, SlidersHorizontal, Clock, Plus } from 'lucide-react';
 import OrderCard from '../components/OrderCard';
 import { Order, statusStyle, isClosed } from '../types';
 
@@ -15,10 +15,11 @@ interface Props {
   loading: boolean;
   onRefresh: () => void;
   onOpen: (o: Order) => void;
+  onCreate: () => void;
   activeRow?: number;
 }
 
-export default function OrdersPage({ orders, updatedAt, loading, onRefresh, onOpen, activeRow }: Props) {
+export default function OrdersPage({ orders, updatedAt, loading, onRefresh, onOpen, onCreate, activeRow }: Props) {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
   const [view, setView] = useState<'table' | 'cards'>(
@@ -62,6 +63,11 @@ export default function OrdersPage({ orders, updatedAt, loading, onRefresh, onOp
             {updatedAt && ` · ${updatedAt}`}
           </p>
           <div className="ml-auto flex items-center gap-2">
+            <button onClick={onCreate}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12px] font-bold text-white press"
+              style={{ background: 'var(--accent)' }}>
+              <Plus size={14} /> Нове замовлення
+            </button>
             {/* Перемикач вигляду (оновлення — однією кнопкою в шапці додатка) */}
             <div className="hidden md:flex bg-gray-100 rounded-full p-0.5">
               {(['table', 'cards'] as const).map(v => (

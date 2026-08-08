@@ -8,6 +8,7 @@
 import {
   LayoutDashboard, ClipboardList, Search, MessageSquare, Truck,
   Printer, LogOut, FlaskConical, RefreshCw, Inbox, Receipt,
+  FolderOpen, Rocket, Paintbrush, Send,
 } from 'lucide-react';
 import { AppTab } from '../types';
 import { EnvKey } from '../api';
@@ -39,16 +40,29 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
+export type OrderTool = 'billing' | 'tech' | 'photo' | 'send' | 'print';
+
 interface Props {
   tab: AppTab;
   env: EnvKey;
   onTab: (t: AppTab) => void;
   onPrint: () => void;
   onBilling: () => void;
+  /** Відкрите замовлення — сайдбар показує його інструменти. */
+  order: { label: string; folderUrl: string } | null;
+  onOrderTool: (t: OrderTool) => void;
   onLogout: () => void;
 }
 
-export default function Sidebar({ tab, env, onTab, onPrint, onBilling, onLogout }: Props) {
+const ORDER_TOOLS: Array<{ key: OrderTool; label: string; Icon: typeof Receipt; color: string }> = [
+  { key: 'tech', label: 'Тех.запуск', Icon: Rocket, color: '#EA580C' },
+  { key: 'photo', label: 'Фотошоп креслень', Icon: Paintbrush, color: '#DB2777' },
+  { key: 'send', label: 'Відправити виконавцю', Icon: Send, color: '#4F46E5' },
+  { key: 'print', label: 'Друк креслень + QR', Icon: Printer, color: '#0891B2' },
+  { key: 'billing', label: 'Рахунки і оплати', Icon: Receipt, color: '#059669' },
+];
+
+export default function Sidebar({ tab, env, onTab, onPrint, onBilling, order, onOrderTool, onLogout }: Props) {
   return (
     <aside className="hidden lg:flex flex-col w-[228px] flex-shrink-0 h-full bg-white border-r hairline">
       {/* Логотип */}
@@ -95,6 +109,33 @@ export default function Sidebar({ tab, env, onTab, onPrint, onBilling, onLogout 
             </div>
           </div>
         ))}
+
+        {/* Інструменти відкритого завдання */}
+        {order && (
+          <div className="rounded-2xl bg-[var(--accent-soft)]/60 p-1.5 -mx-0.5">
+            <p className="px-1.5 pt-1 pb-1 text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--accent)]">
+              Завдання {order.label}
+            </p>
+            <div className="space-y-0.5">
+              {ORDER_TOOLS.map(({ key, label, Icon, color }) => (
+                <button key={key} onClick={() => onOrderTool(key)}
+                  className="w-full flex items-center gap-2.5 px-2 py-[6px] rounded-xl text-left press hover:bg-white/70"
+                  style={{ color: 'var(--ink-2)' }}>
+                  <Icon size={15} strokeWidth={2.1} className="flex-shrink-0" style={{ color }} />
+                  <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>
+                </button>
+              ))}
+              {order.folderUrl && (
+                <a href={order.folderUrl} target="_blank" rel="noreferrer"
+                  className="w-full flex items-center gap-2.5 px-2 py-[6px] rounded-xl text-left press hover:bg-white/70"
+                  style={{ color: 'var(--ink-2)' }}>
+                  <FolderOpen size={15} strokeWidth={2.1} className="flex-shrink-0 text-amber-600" />
+                  <span className="flex-1 text-[12.5px] font-semibold truncate">Папка на Диску</span>
+                </a>
+              )}
+            </div>
+          </div>
+        )}
 
         <div>
           <p className="px-2 pb-1 text-[9.5px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--ink-3)' }}>

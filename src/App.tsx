@@ -20,6 +20,7 @@ import ChatPage from './pages/ChatPage';
 import LogisticsPage from './pages/LogisticsPage';
 import MailPage from './pages/MailPage';
 import PartPage from './pages/PartPage';
+import CreateOrderSheet from './components/CreateOrderSheet';
 import NotificationsSheet from './components/NotificationsSheet';
 import SideMenu from './components/SideMenu';
 import Toast from './components/Toast';
@@ -45,6 +46,10 @@ export default function App() {
   const [toast, setToast] = useState<{ msg: string; err?: boolean } | null>(null);
   const [printTick, setPrintTick] = useState(0);       // сайдбар → відкрити друк у відкритому замовленні
   const [billingTick, setBillingTick] = useState(0);   // сайдбар → рахунки і оплати замовлення
+  const [techTick, setTechTick] = useState(0);         // сайдбар → тех.запуск
+  const [photoTick, setPhotoTick] = useState(0);       // сайдбар → фотошоп
+  const [sendTick, setSendTick] = useState(0);         // сайдбар → відправити виконавцю
+  const [showCreate, setShowCreate] = useState(false); // ➕ нове замовлення
   const [logisticsTick, setLogisticsTick] = useState(0); // шапка → оновити логістику
   const [mailTick, setMailTick] = useState(0);           // шапка → оновити пошту
 
@@ -203,6 +208,7 @@ export default function App() {
     ) : tab === 'orders' ? (
       <OrdersPage orders={orders} updatedAt={updatedAt} loading={loading}
         onRefresh={() => loadOrders(true)} onOpen={o => openOrder(o.headerRow)}
+        onCreate={() => setShowCreate(true)}
         activeRow={detail?.header.headerRow} />
     ) : tab === 'search' ? (
       <SearchPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} />
@@ -231,6 +237,9 @@ export default function App() {
       onToast={showToast}
       printSignal={printTick}
       billingSignal={billingTick}
+      techSignal={techTick}
+      photoSignal={photoTick}
+      sendSignal={sendTick}
     />
   );
 
@@ -251,6 +260,17 @@ export default function App() {
           if (detail) { setBillingTick(t => t + 1); return; }
           setTab('orders');
           showToast('Виберіть замовлення — рахунки відкриються у ньому (🧾 у шапці)');
+        }}
+        order={detail ? {
+          label: detail.header.orderNum || detail.header.projectId,
+          folderUrl: detail.header.folderUrl,
+        } : null}
+        onOrderTool={t => {
+          if (t === 'billing') setBillingTick(v => v + 1);
+          else if (t === 'tech') setTechTick(v => v + 1);
+          else if (t === 'photo') setPhotoTick(v => v + 1);
+          else if (t === 'send') setSendTick(v => v + 1);
+          else if (t === 'print') setPrintTick(v => v + 1);
         }}
         onLogout={logout}
       />
@@ -315,6 +335,16 @@ export default function App() {
           onClose={closePart}
           onOpenOrder={hr => { closePart(); setTab('orders'); openOrder(hr); }}
           onToast={showToast}
+        />
+      )}
+
+      {showCreate && (
+        <CreateOrderSheet
+          lists={lists}
+          orderStatusList={orderStatusList}
+          onClose={() => setShowCreate(false)}
+          onToast={showToast}
+          onCreated={hr => { setShowCreate(false); loadOrders(true); loadDashboard(true); openOrder(hr); }}
         />
       )}
 
