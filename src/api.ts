@@ -13,6 +13,7 @@ import {
   PartData, LogisticsData, FileData, ExecRowsData, ExecSendResult, ExecRow,
   TechFilesData, TechLaunchItem, TechLaunchResult, MailListData, SavePdfResult,
   FolderFile, BillingData, CommerceContext, CommerceResult, DocType, CreateOrderResult,
+  BillingOverview,
 } from './types';
 
 /** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
@@ -79,7 +80,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /** Читання можна безпечно повторити; мутації — ні (щоб не задвоїти запис). */
 function isReadAction(action: string): boolean {
-  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation)/.test(action);
+  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin)/.test(action);
 }
 
 function cacheGet<T>(key: string): T | null {
@@ -371,6 +372,16 @@ export const api = {
   /** Мітка доставки (спосіб + ТТН) вибраним рядкам — у примітку. */
   setDelivery(rows: number[], method: string, ttn?: string, note?: string): Promise<{ updated: number; tag: string }> {
     return post('erp.setDelivery', { rows, method, ttn, note });
+  },
+
+  /** Закріпити/відкріпити замовлення — для всіх користувачів. */
+  pin(projectId: string, on: boolean): Promise<{ pinned: string[] }> {
+    return post('erp.pin', { projectId, on });
+  },
+
+  /** Панель бухгалтерії: всі рахунки + що треба виставити + шаблони. */
+  billingOverview(): Promise<BillingOverview> {
+    return post('erp.billingOverview');
   },
 
   /** Перевірка ключа при першому вході. */

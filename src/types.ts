@@ -18,6 +18,7 @@ export interface Order {
 
 export interface OrdersResponse {
   orders: Order[];
+  pinned?: string[]; // projectId закріплених (спільні для всіх)
   orderStatusList: string[];
   rowStatusList: string[];
   updatedAt: string;
@@ -81,7 +82,35 @@ export interface ChatMessage {
   itemName: string;
 }
 
-export type AppTab = 'dashboard' | 'orders' | 'search' | 'logistics' | 'chat' | 'mail';
+export type AppTab = 'dashboard' | 'orders' | 'search' | 'logistics' | 'chat' | 'mail' | 'billing';
+
+/** Панель бухгалтерії по всіх замовленнях. */
+export interface OverviewInvoice {
+  num: string;
+  url: string;
+  orderNum: string;
+  client: string;
+  headerRow: number;
+  sum: number;
+  items: number;
+  paidItems: number;
+  paid: boolean;
+}
+
+export interface OverviewToInvoice {
+  headerRow: number;
+  orderNum: string;
+  client: string;
+  count: number;
+  sum: number;
+}
+
+export interface BillingOverview {
+  invoices: OverviewInvoice[];
+  toInvoice: OverviewToInvoice[];
+  totals: { unpaidSum: number; paidSum: number; toInvoiceCount: number };
+  templates: { invoice?: string; salesInvoice?: string; act?: string };
+}
 
 /** Вміст файлу Drive для друку. */
 export interface FileData {

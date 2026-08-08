@@ -4,16 +4,19 @@
 //  ліворуч, чиста типографіка, прогрес-бар, метадані рядком.
 // ================================================================
 
-import { ChevronRight, Package, Rocket, Clock } from 'lucide-react';
+import { ChevronRight, Package, Rocket, Clock, Pin } from 'lucide-react';
 import { Order, statusStyle } from '../types';
 
 interface Props {
   order: Order;
   onOpen: () => void;
   active?: boolean;
+  /** Закріплене для всіх (спільний пін). */
+  pinned?: boolean;
+  onTogglePin?: () => void;
 }
 
-export default function OrderCard({ order, onOpen, active }: Props) {
+export default function OrderCard({ order, onOpen, active, pinned, onTogglePin }: Props) {
   const st = statusStyle(order.status);
   const pct = order.total > 0 ? Math.round((100 * order.done) / order.total) : 0;
 
@@ -21,7 +24,9 @@ export default function OrderCard({ order, onOpen, active }: Props) {
     <button
       onClick={onOpen}
       className="w-full text-left card overflow-hidden flex press cv-auto"
-      style={active ? { borderColor: 'var(--accent)', background: 'var(--accent-soft)' } : undefined}
+      style={active
+        ? { borderColor: 'var(--accent)', background: 'var(--accent-soft)' }
+        : pinned ? { borderColor: '#FCD34D', background: '#FFFDF2' } : undefined}
     >
       {/* Смуга статусу */}
       <span className="w-1 flex-shrink-0" style={{ background: st.solid }} />
@@ -34,6 +39,20 @@ export default function OrderCard({ order, onOpen, active }: Props) {
             </p>
             <p className="text-[12px] text-gray-500 truncate mt-0.5">{order.client || '—'}</p>
           </div>
+          {onTogglePin && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={e => { e.stopPropagation(); onTogglePin(); }}
+              onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); onTogglePin(); } }}
+              className="p-1.5 -mt-1 rounded-lg press flex-shrink-0"
+              style={{ color: pinned ? '#D97706' : 'var(--ink-3)' }}
+              aria-label={pinned ? 'Відкріпити' : 'Закріпити для всіх'}
+              title={pinned ? 'Відкріпити' : 'Закріпити для всіх'}
+            >
+              <Pin size={15} fill={pinned ? '#D97706' : 'none'} className={pinned ? '' : 'rotate-45 opacity-50'} />
+            </span>
+          )}
           <span
             className="text-[10.5px] font-bold px-2 py-1 rounded-lg flex-shrink-0"
             style={{ background: st.bg, color: st.fg }}

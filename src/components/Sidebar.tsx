@@ -47,7 +47,6 @@ interface Props {
   env: EnvKey;
   onTab: (t: AppTab) => void;
   onPrint: () => void;
-  onBilling: () => void;
   /** Відкрите замовлення — сайдбар показує його інструменти. */
   order: { label: string; folderUrl: string } | null;
   onOrderTool: (t: OrderTool) => void;
@@ -62,7 +61,7 @@ const ORDER_TOOLS: Array<{ key: OrderTool; label: string; Icon: typeof Receipt; 
   { key: 'billing', label: 'Рахунки і оплати', Icon: Receipt, color: '#059669' },
 ];
 
-export default function Sidebar({ tab, env, onTab, onPrint, onBilling, order, onOrderTool, onLogout }: Props) {
+export default function Sidebar({ tab, env, onTab, onPrint, order, onOrderTool, onLogout }: Props) {
   return (
     <aside className="hidden lg:flex flex-col w-[228px] flex-shrink-0 h-full bg-white border-r hairline">
       {/* Логотип */}
@@ -136,12 +135,14 @@ export default function Sidebar({ tab, env, onTab, onPrint, onBilling, order, on
           <p className="px-2 pb-1 text-[9.5px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--ink-3)' }}>
             Бухгалтерія
           </p>
-          <button onClick={onBilling}
-            className="w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-xl text-left press"
-            style={{ color: 'var(--ink-2)' }}>
-            <Receipt size={16.5} strokeWidth={2} className="flex-shrink-0" />
-            <span className="flex-1 text-[13px] font-medium truncate">Рахунки і оплати</span>
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-blue-600/10 text-blue-700">NEW</span>
+          <button onClick={() => onTab('billing')}
+            className="w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-xl text-left press transition-colors relative"
+            style={tab === 'billing'
+              ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
+              : { color: 'var(--ink-2)' }}>
+            {tab === 'billing' && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full" style={{ background: 'var(--accent)' }} />}
+            <Receipt size={16.5} strokeWidth={tab === 'billing' ? 2.4 : 2} className="flex-shrink-0" />
+            <span className={`flex-1 text-[13px] truncate ${tab === 'billing' ? 'font-bold' : 'font-medium'}`}>Рахунки і оплати</span>
           </button>
         </div>
 

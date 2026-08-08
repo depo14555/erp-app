@@ -5,7 +5,7 @@
 // ================================================================
 
 import { useMemo, useState } from 'react';
-import { Search, SlidersHorizontal, Clock, Plus } from 'lucide-react';
+import { Search, SlidersHorizontal, Clock, Plus, Pin } from 'lucide-react';
 import OrderCard from '../components/OrderCard';
 import { Order, statusStyle, isClosed } from '../types';
 
@@ -16,10 +16,13 @@ interface Props {
   onRefresh: () => void;
   onOpen: (o: Order) => void;
   onCreate: () => void;
+  /** Закріплені (спільні для всіх) — projectId. */
+  pinned: string[];
+  onTogglePin: (projectId: string, on: boolean) => void;
   activeRow?: number;
 }
 
-export default function OrdersPage({ orders, updatedAt, loading, onRefresh, onOpen, onCreate, activeRow }: Props) {
+export default function OrdersPage({ orders, updatedAt, loading, onRefresh, onOpen, onCreate, pinned, onTogglePin, activeRow }: Props) {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
   const [view, setView] = useState<'table' | 'cards'>(
@@ -32,15 +35,20 @@ export default function OrdersPage({ orders, updatedAt, loading, onRefresh, onOp
     return Array.from(set);
   }, [orders]);
 
+  const pinnedSet = useMemo(() => new Set(pinned), [pinned]);
+
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
-    return orders.filter(o => {
+    const list = orders.filter(o => {
       if (status && o.status !== status) return false;
       if (!query) return true;
       return [o.orderNum, o.client, o.projectId, o.status]
         .join(' ').toLowerCase().includes(query);
     });
-  }, [orders, q, status]);
+    // Закріплені — завжди зверху (сортування стабільне, порядок всередині груп зберігається)
+    return [...list].sort((a, b) =>
+      (pinnedSet.has(b.projectId) ? 1 : 0) - (pinnedSet.has(a.projectId) ? 1 : 0));
+  }, [orders, q, status, pinnedSet]);
 
   const active = orders.filter(o => !isClosed(o.status)).length;
 
@@ -139,13 +147,22 @@ export default function OrdersPage({ orders, updatedAt, loading, onRefresh, onOp
                   const st = statusStyle(o.status);
                   const pct = o.total > 0 ? Math.round((100 * o.done) / o.total) : 0;
                   const on = o.headerRow === activeRow;
+                  const isPinned = pinnedSet.has(o.projectId);
                   return (
                     <tr key={o.headerRow} onClick={() => onOpen(o)}
-                      className="border-b hairline last:border-b-0 cursor-pointer hover:bg-[#FAFBFF] transition-colors"
-                      style={on ? { background: 'var(--accent-soft)' } : undefined}>
+                      className="border-b hairline last:border-b-0 cursor-pointer hover:bg-[#FAFBFF] transition-colors group"
+                      style={on ? { background: 'var(--accent-soft)' } : isPinned ? { background: '#FFFDF2' } : undefined}>
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-2.5">
                           <span className="w-1.5 h-7 rounded-full flex-shrink-0" style={{ background: st.solid }} />
+                          <button
+                            onClick={e => { e.stopPropagation(); onTogglePin(o.projectId, !isPinned); }}
+                            className={`p-1 rounded-lg press flex-shrink-0 transition-opacity ${isPinned ? '' : 'opacity-0 group-hover:opacity-100'}`}
+                            style={{ color: isPinned ? '#D97706' : 'var(--ink-3)' }}
+                            aria-label={isPinned ? 'Відкріпити' : 'Закріпити для всіх'}
+                            title={isPinned ? 'Відкріпити' : 'Закріпити для всіх'}>
+                            <Pin size={14} fill={isPinned ? '#D97706' : 'none'} className={isPinned ? '' : 'rotate-45'} />
+                          </button>
                           <div className="min-w-0">
                             <p className="font-bold text-[13.5px] leading-tight truncate">{o.orderNum || '—'}</p>
                             <p className="font-mono text-[10.5px]" style={{ color: 'var(--ink-3)' }}>{o.projectId}</p>
@@ -197,7 +214,9 @@ export default function OrdersPage({ orders, updatedAt, loading, onRefresh, onOp
         <div className={`${view === 'table' ? 'md:hidden' : ''} grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5`}>
           {filtered.map((o, i) => (
             <div key={o.headerRow} className={i < 5 ? `rise rise-${i + 1}` : undefined}>
-              <OrderCard order={o} onOpen={() => onOpen(o)} active={o.headerRow === activeRow} />
+              <OrderCard order={o} onOpen={() => onOpen(o)} active={o.headerRow === activeRow}
+                pinned={pinnedSet.has(o.projectId)}
+                onTogglePin={() => onTogglePin(o.projectId, !pinnedSet.has(o.projectId))} />
             </div>
           ))}
         </div>

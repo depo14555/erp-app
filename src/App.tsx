@@ -20,6 +20,7 @@ import ChatPage from './pages/ChatPage';
 import LogisticsPage from './pages/LogisticsPage';
 import MailPage from './pages/MailPage';
 import PartPage from './pages/PartPage';
+import BillingOverviewPage from './pages/BillingOverviewPage';
 import CreateOrderSheet from './components/CreateOrderSheet';
 import NotificationsSheet from './components/NotificationsSheet';
 import SideMenu from './components/SideMenu';
@@ -33,6 +34,7 @@ export default function App() {
   const [tab, setTab] = useState<AppTab>('dashboard');
 
   const [orders, setOrders] = useState<Order[]>([]);
+  const [pinned, setPinned] = useState<string[]>([]);   // спільні закріплені (projectId)
   const [orderStatusList, setOrderStatusList] = useState<string[]>([]);
   const [rowStatusList, setRowStatusList] = useState<string[]>([]);
   const [updatedAt, setUpdatedAt] = useState('');
@@ -52,6 +54,7 @@ export default function App() {
   const [showCreate, setShowCreate] = useState(false); // ➕ нове замовлення
   const [logisticsTick, setLogisticsTick] = useState(0); // шапка → оновити логістику
   const [mailTick, setMailTick] = useState(0);           // шапка → оновити пошту
+  const [overviewTick, setOverviewTick] = useState(0);   // шапка → оновити панель бухгалтерії
 
   const isOnline = useOnlineStatus();
   const env = getEnv();
@@ -74,6 +77,7 @@ export default function App() {
     try {
       const data = await api.getOrders(force);
       setOrders(data.orders || []);
+      setPinned(data.pinned || []);
       setOrderStatusList(data.orderStatusList || []);
       setRowStatusList(data.rowStatusList || []);
       setUpdatedAt(data.updatedAt || '');
@@ -174,6 +178,18 @@ export default function App() {
     }
   }
 
+  /** Закріпити/відкріпити замовлення для всіх (спільний пін у таблиці). */
+  const togglePin = useCallback(async (projectId: string, on: boolean) => {
+    setPinned(prev => on ? [projectId, ...prev.filter(p => p !== projectId)] : prev.filter(p => p !== projectId));
+    try {
+      await api.pin(projectId, on);
+      showToast(on ? '📌 Закріплено — буде зверху у всіх' : 'Відкріплено');
+    } catch (err: any) {
+      showToast(err?.message || 'Не вдалося зберегти пін', true);
+      loadOrders(true);
+    }
+  }, [showToast, loadOrders]);
+
   function logout() {
     setToken('');
     setAuthed(false);
@@ -189,17 +205,22 @@ export default function App() {
     else if (tab === 'orders') loadOrders(true);
     else if (tab === 'logistics') setLogisticsTick(t => t + 1);
     else if (tab === 'mail') setMailTick(t => t + 1);
+    else if (tab === 'billing') setOverviewTick(t => t + 1);
     else { loadDashboard(true); loadOrders(true); }
   }
 
   if (!authed) return <TokenGate onSuccess={() => setAuthed(true)} />;
 
-  const title = tab === 'mail' ? 'Вхідні (пошта)' : (TABS.find(t => t.key === tab)?.label ?? 'ERP');
+  const title = tab === 'mail' ? 'Вхідні (пошта)'
+    : tab === 'billing' ? 'Рахунки і оплати'
+    : (TABS.find(t => t.key === tab)?.label ?? 'ERP');
   const subtitle = tab === 'mail'
     ? 'нові замовлення з Gmail'
-    : tab === 'dashboard' && dashboard
-      ? `${dashboard.counts.activeOrders} в роботі · ${dashboard.counts.orders} всього`
-      : updatedAt ? `Оновлено ${updatedAt}` : 'ERP Металообробка';
+    : tab === 'billing'
+      ? 'виставлено · оплачено · треба виставити'
+      : tab === 'dashboard' && dashboard
+        ? `${dashboard.counts.activeOrders} в роботі · ${dashboard.counts.orders} всього`
+        : updatedAt ? `Оновлено ${updatedAt}` : 'ERP Металообробка';
 
   const listPane = (
     tab === 'dashboard' ? (
@@ -209,6 +230,7 @@ export default function App() {
       <OrdersPage orders={orders} updatedAt={updatedAt} loading={loading}
         onRefresh={() => loadOrders(true)} onOpen={o => openOrder(o.headerRow)}
         onCreate={() => setShowCreate(true)}
+        pinned={pinned} onTogglePin={togglePin}
         activeRow={detail?.header.headerRow} />
     ) : tab === 'search' ? (
       <SearchPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} />
@@ -216,6 +238,8 @@ export default function App() {
       <LogisticsPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} refreshSignal={logisticsTick} />
     ) : tab === 'mail' ? (
       <MailPage onToast={showToast} onProcessed={() => { loadOrders(true); loadDashboard(true); }} refreshSignal={mailTick} />
+    ) : tab === 'billing' ? (
+      <BillingOverviewPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} refreshSignal={overviewTick} />
     ) : (
       <ChatPage onToast={showToast} />
     )
@@ -255,11 +279,6 @@ export default function App() {
           if (detail) { setPrintTick(t => t + 1); return; }
           setTab('orders');
           showToast('Виберіть замовлення — і друк відкриється у ньому (🖨️ у шапці)');
-        }}
-        onBilling={() => {
-          if (detail) { setBillingTick(t => t + 1); return; }
-          setTab('orders');
-          showToast('Виберіть замовлення — рахунки відкриються у ньому (🧾 у шапці)');
         }}
         order={detail ? {
           label: detail.header.orderNum || detail.header.projectId,
