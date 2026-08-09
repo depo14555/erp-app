@@ -14,7 +14,7 @@ import {
   TechFilesData, TechLaunchItem, TechLaunchResult, MailListData, SavePdfResult,
   FolderFile, BillingData, CommerceContext, CommerceResult, DocType, CreateOrderResult,
   BillingOverview, DistributionData, DistributeParams, DistributeResult, CalcData,
-  NestItemsData, NestPrice,
+  NestItemsData, NestPrice, ContractorsData,
 } from './types';
 
 /** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
@@ -81,7 +81,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /** Читання можна безпечно повторити; мутації — ні (щоб не задвоїти запис). */
 function isReadAction(action: string): boolean {
-  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute|calcSave)/.test(action);
+  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute|calcSave|contractorSave)/.test(action);
 }
 
 function cacheGet<T>(key: string): T | null {
@@ -383,6 +383,22 @@ export const api = {
   /** Панель бухгалтерії: всі рахунки + що треба виставити + шаблони. */
   billingOverview(): Promise<BillingOverview> {
     return post('erp.billingOverview');
+  },
+
+  /** Контрагенти: довідник з аркуша «Контрагенти» + матриця операцій. */
+  contractors(): Promise<ContractorsData> {
+    return post('erp.contractors');
+  },
+
+  /** Контрагенти: зберегти рядок (row=0 — новий) і позначки операцій. */
+  contractorSave(row: number, values: Record<string, string>, ops: Record<string, boolean>):
+    Promise<{ ok: boolean; row: number; isNew: boolean }> {
+    return post('erp.contractorSave', { row, values, ops });
+  },
+
+  /** Пріоритет замовлень — спільний порядок projectId (без аргументу — читання). */
+  priority(order?: string[]): Promise<{ order: string[] }> {
+    return post('erp.priority', order ? { order } : {});
   },
 
   /** Розкрій: позиції картки з DXF (файл + матеріал/товщина/кількості). */

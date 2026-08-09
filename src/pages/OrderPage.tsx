@@ -189,7 +189,6 @@ export default function OrderPage({
   const total = items.filter(i => !i.group).length;
 
   // ── Вибір рядків для масових дій ──
-  const visibleRows = useMemo(() => filtered.filter(i => !i.group).map(i => i.row), [filtered]);
 
   function toggleRow(row: number) {
     setSelected(prev => {
@@ -197,11 +196,6 @@ export default function OrderPage({
       if (next.has(row)) next.delete(row); else next.add(row);
       return next;
     });
-  }
-  function toggleAll() {
-    setSelected(prev => (visibleRows.some(r => !prev.has(r))
-      ? new Set([...prev, ...visibleRows])
-      : new Set([...prev].filter(r => !visibleRows.includes(r)))));
   }
   /** Набір рядків одразу: шапка таблиці, Shift-діапазон. */
   function selectRows(rows: number[], on: boolean) {

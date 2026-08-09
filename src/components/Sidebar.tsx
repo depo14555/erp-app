@@ -6,7 +6,7 @@
 // ================================================================
 
 import {
-  LayoutDashboard, ClipboardList, MessageSquare, Truck,
+  LayoutDashboard, ClipboardList, MessageSquare, Truck, Flame, Building2,
   Printer, LogOut, RefreshCw, Receipt,
   FolderOpen, Rocket, Paintbrush, Send, FolderTree, Calculator, Scissors,
 } from 'lucide-react';
@@ -25,8 +25,8 @@ const SECTIONS: NavSection[] = [
   {
     title: 'Виробництво',
     items: [
-      { key: 'dashboard', label: 'Огляд', Icon: LayoutDashboard },
       { key: 'orders', label: 'Замовлення', Icon: ClipboardList },
+      { key: 'priority', label: 'Пріоритет', Icon: Flame },
       { key: 'chat', label: 'Чат виконавців', Icon: MessageSquare },
     ],
   },
@@ -34,6 +34,12 @@ const SECTIONS: NavSection[] = [
     title: 'Логістика',
     items: [
       { key: 'logistics', label: 'Відвантаження', Icon: Truck },
+    ],
+  },
+  {
+    title: 'Довідники',
+    items: [
+      { key: 'contractors', label: 'Контрагенти', Icon: Building2 },
     ],
   },
 ];

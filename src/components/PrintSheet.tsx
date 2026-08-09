@@ -29,9 +29,6 @@ type Phase = 'pick' | 'work' | 'done';
 
 export default function PrintSheet({ detail, onClose, onMinimize, onToast }: Props) {
   const { header, items } = detail;
-  // Поки триває операція — сторінку не можна оновити (робота б загубилась)
-  useBusy(phase === 'work', 'Друк креслень');
-
 
   // Друкуємо лише PDF з посиланням на файл
   const printable = useMemo(() =>
@@ -44,6 +41,8 @@ export default function PrintSheet({ detail, onClose, onMinimize, onToast }: Pro
   const [withQr, setWithQr] = useState(true);
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
   const [phase, setPhase] = useState<Phase>('pick');
+  // Поки триває операція — сторінку не можна оновити (робота б загубилась)
+  useBusy(phase === 'work', 'Друк креслень');
   const [progress, setProgress] = useState({ done: 0, total: 0, label: '' });
   const [result, setResult] = useState<{ url: string; name: string; pages: number; failed: string[] } | null>(null);
 

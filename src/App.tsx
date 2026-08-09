@@ -7,13 +7,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Bell, Menu, RefreshCw, FlaskConical, ScanSearch, Inbox } from 'lucide-react';
 import { api, hasToken, setToken, getEnv } from './api';
-import { Order, OrderDetail, AppTab, DashboardData, Lists } from './types';
+import { Order, OrderDetail, AppTab, Lists } from './types';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import TokenGate from './components/TokenGate';
 import NavRail, { TABS } from './components/NavRail';
 import Sidebar from './components/Sidebar';
-import DashboardPage from './pages/DashboardPage';
 import OrdersPage from './pages/OrdersPage';
+import PriorityPage from './pages/PriorityPage';
+import ContractorsPage from './pages/ContractorsPage';
 import SearchPage from './pages/SearchPage';
 import OrderPage from './pages/OrderPage';
 import ChatPage from './pages/ChatPage';
@@ -33,14 +34,13 @@ import LoadingBar from './components/LoadingBar';
 
 export default function App() {
   const [authed, setAuthed] = useState(hasToken());
-  const [tab, setTab] = useState<AppTab>('dashboard');
+  const [tab, setTab] = useState<AppTab>('orders');
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [pinned, setPinned] = useState<string[]>([]);   // спільні закріплені (projectId)
   const [orderStatusList, setOrderStatusList] = useState<string[]>([]);
   const [rowStatusList, setRowStatusList] = useState<string[]>([]);
   const [updatedAt, setUpdatedAt] = useState('');
-  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [lists, setLists] = useState<Lists | null>(null);
 
   const [detail, setDetail] = useState<OrderDetail | null>(null);
@@ -64,6 +64,7 @@ export default function App() {
   const [logisticsTick, setLogisticsTick] = useState(0); // шапка → оновити логістику
   const [mailTick, setMailTick] = useState(0);           // шапка → оновити пошту
   const [overviewTick, setOverviewTick] = useState(0);   // шапка → оновити панель бухгалтерії
+  const [dirTick, setDirTick] = useState(0);             // шапка → оновити довідники/пріоритет
 
   const isOnline = useOnlineStatus();
   const env = getEnv();
@@ -98,24 +99,11 @@ export default function App() {
     }
   }, [showToast]);
 
-  const loadDashboard = useCallback(async (force = false) => {
-    setLoadingLabel('Оновлюю зведення…');
-    setLoading(true);
-    try {
-      setDashboard(await api.getDashboard(force));
-    } catch (err: any) {
-      showToast(err?.message || 'Не вдалося завантажити зведення', true);
-    } finally {
-      setLoading(false);
-    }
-  }, [showToast]);
-
   useEffect(() => {
     if (!authed) return;
-    loadDashboard();
     loadOrders();
     api.getLists().then(setLists).catch(() => {/* списки не критичні */});
-  }, [authed, loadDashboard, loadOrders]);
+  }, [authed, loadOrders]);
 
   const openOrder = useCallback(async (headerRow: number, force = false) => {
     setLoadingLabel('Відкриваю замовлення…');
@@ -138,10 +126,22 @@ export default function App() {
       await api.setOrderStatus(hr, status);
       showToast('Статус замовлення оновлено');
       loadOrders(true);
-      loadDashboard(true);
     } catch (err: any) {
       showToast(err?.message || 'Не вдалося зберегти статус', true);
       openOrder(hr, true);
+    }
+  }
+
+  /** Канбан: картку перетягнули в іншу колонку — статус пишеться в таблицю. */
+  async function moveOrderStatus(o: Order, status: string) {
+    setOrders(prev => prev.map(x => (x.headerRow === o.headerRow ? { ...x, status } : x)));
+    try {
+      await api.setOrderStatus(o.headerRow, status);
+      showToast(`${o.orderNum || o.projectId} → ${status}`);
+      loadOrders(true);
+    } catch (err: any) {
+      showToast(err?.message || 'Не вдалося змінити статус', true);
+      loadOrders(true);
     }
   }
 
@@ -213,7 +213,6 @@ export default function App() {
     setToken('');
     setAuthed(false);
     setOrders([]);
-    setDashboard(null);
     setDetail(null);
   }
 
@@ -221,38 +220,43 @@ export default function App() {
   function refreshCurrent() {
     if (overlay === 'mail') { setMailTick(t => t + 1); return; }
     if (detail) { openOrder(detail.header.headerRow, true); return; }
-    if (tab === 'dashboard') loadDashboard(true);
-    else if (tab === 'orders') loadOrders(true);
+    if (tab === 'orders') loadOrders(true);
     else if (tab === 'logistics') setLogisticsTick(t => t + 1);
     else if (tab === 'mail') setMailTick(t => t + 1);
     else if (tab === 'billing') setOverviewTick(t => t + 1);
-    else { loadDashboard(true); loadOrders(true); }
+    else if (tab === 'contractors' || tab === 'priority') setDirTick(t => t + 1);
+    else loadOrders(true);
   }
 
   if (!authed) return <TokenGate onSuccess={() => setAuthed(true)} />;
 
   const title = tab === 'mail' ? 'Вхідні (пошта)'
     : tab === 'billing' ? 'Рахунки і оплати'
+    : tab === 'contractors' ? 'Контрагенти'
     : (TABS.find(t => t.key === tab)?.label ?? 'ERP');
   const subtitle = tab === 'mail'
     ? 'нові замовлення з Gmail'
     : tab === 'billing'
       ? 'виставлено · оплачено · треба виставити'
-      : tab === 'dashboard' && dashboard
-        ? `${dashboard.counts.activeOrders} в роботі · ${dashboard.counts.orders} всього`
-        : updatedAt ? `Оновлено ${updatedAt}` : 'ERP Металообробка';
+      : tab === 'contractors'
+        ? 'дані, таблиці, матриця операцій'
+        : tab === 'priority'
+          ? 'спільна черга робіт'
+          : updatedAt ? `Оновлено ${updatedAt}` : 'ERP Металообробка';
 
   const listPane = (
-    tab === 'dashboard' ? (
-      <DashboardPage data={dashboard} loading={loading}
-        onRefresh={() => loadDashboard(true)} onOpenOrder={o => openOrder(o.headerRow)} />
-    ) : tab === 'orders' ? (
+    tab === 'orders' ? (
       <OrdersPage orders={orders} updatedAt={updatedAt} loading={loading}
-        onRefresh={() => loadOrders(true)} onOpen={o => openOrder(o.headerRow)}
+        onOpen={o => openOrder(o.headerRow)}
         onCreate={() => setShowCreate(true)}
         pinned={pinned} onTogglePin={togglePin}
         onSearch={() => setOverlay('search')} onMail={() => setOverlay('mail')}
+        onMoveStatus={moveOrderStatus} orderStatusList={orderStatusList}
         activeRow={detail?.header.headerRow} />
+    ) : tab === 'priority' ? (
+      <PriorityPage orders={orders} onOpen={o => openOrder(o.headerRow)} onToast={showToast} refreshSignal={dirTick} />
+    ) : tab === 'contractors' ? (
+      <ContractorsPage onToast={showToast} refreshSignal={dirTick} />
     ) : tab === 'logistics' ? (
       <LogisticsPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} refreshSignal={logisticsTick} />
     ) : tab === 'billing' ? (
@@ -386,7 +390,7 @@ export default function App() {
             onMinimize={() => { setMailHidden(true); showToast('📨 Пошта згорнута — обробка триває'); }}
             onClose={() => { setOverlay(null); setMailHidden(false); }}>
             <MailPage onToast={showToast}
-              onProcessed={() => { loadOrders(true); loadDashboard(true); if (mailHidden) showToast('✅ Пошта оброблена — відкрийте вікно'); }}
+              onProcessed={() => { loadOrders(true); if (mailHidden) showToast('✅ Пошта оброблена — відкрийте вікно'); }}
               refreshSignal={mailTick} />
           </PageSheet>
         </div>
@@ -417,7 +421,7 @@ export default function App() {
           orderStatusList={orderStatusList}
           onClose={() => setShowCreate(false)}
           onToast={showToast}
-          onCreated={hr => { setShowCreate(false); loadOrders(true); loadDashboard(true); openOrder(hr); }}
+          onCreated={hr => { setShowCreate(false); loadOrders(true); openOrder(hr); }}
         />
       )}
 

@@ -17,7 +17,7 @@ import { api } from '../api';
 import { OrderDetail, NestItem, NestPrice, CalcBundle } from '../types';
 import {
   parseDxf, computeMetrics, bestAngle, orientAt, packGroup, packTrueShape, buildDxf,
-  drawPart, thickOf, densOf, suggestPerM, suggestSpeed, suggestPierceSec, weightOf, safeFileName,
+  drawPart, thickOf, suggestPerM, suggestSpeed, suggestPierceSec, weightOf, safeFileName,
 } from '../lib/nesting';
 
 interface Props {

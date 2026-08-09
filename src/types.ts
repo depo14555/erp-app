@@ -113,7 +113,24 @@ export interface ChatMessage {
   itemName: string;
 }
 
-export type AppTab = 'dashboard' | 'orders' | 'search' | 'logistics' | 'chat' | 'mail' | 'billing';
+export type AppTab = 'orders' | 'priority' | 'contractors' | 'search' | 'logistics' | 'chat' | 'mail' | 'billing';
+
+/** Контрагент з аркуша «Контрагенти»: текстові поля + матриця операцій. */
+export interface ContractorField { col: number; label: string }
+export interface ContractorOp { col: number; name: string; group: string }
+export interface ContractorRow {
+  row: number;
+  name: string;
+  values: Record<string, string>;   // ключ — номер колонки
+  ops: string[];
+  tableUrl: string;
+  invoiceUrl: string;
+}
+export interface ContractorsData {
+  fields: ContractorField[];
+  ops: ContractorOp[];
+  rows: ContractorRow[];
+}
 
 /** Панель бухгалтерії по всіх замовленнях. */
 export interface OverviewInvoice {

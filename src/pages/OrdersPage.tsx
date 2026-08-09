@@ -7,13 +7,13 @@
 import { useMemo, useState } from 'react';
 import { Search, SlidersHorizontal, Clock, Plus, Pin, Inbox, ScanSearch } from 'lucide-react';
 import OrderCard from '../components/OrderCard';
+import KanbanBoard from '../components/KanbanBoard';
 import { Order, statusStyle, isClosed } from '../types';
 
 interface Props {
   orders: Order[];
   updatedAt: string;
   loading: boolean;
-  onRefresh: () => void;
   onOpen: (o: Order) => void;
   onCreate: () => void;
   /** Закріплені (спільні для всіх) — projectId. */
@@ -22,18 +22,19 @@ interface Props {
   /** Інструменти замовлень: пошук деталі й вхідна пошта (панелі поверх). */
   onSearch: () => void;
   onMail: () => void;
+  /** Перенос картки в інший статус (канбан). */
+  onMoveStatus: (o: Order, status: string) => void;
+  orderStatusList: string[];
   activeRow?: number;
 }
 
 export default function OrdersPage({
-  orders, updatedAt, loading, onRefresh, onOpen, onCreate,
-  pinned, onTogglePin, onSearch, onMail, activeRow,
+  orders, updatedAt, loading, onOpen, onCreate,
+  pinned, onTogglePin, onSearch, onMail, onMoveStatus, orderStatusList, activeRow,
 }: Props) {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
-  const [view, setView] = useState<'table' | 'cards'>(
-    typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'table' : 'cards'
-  );
+  const [view, setView] = useState<'kanban' | 'table' | 'cards'>('kanban');
 
   const statuses = useMemo(() => {
     const set = new Set<string>();
@@ -92,13 +93,13 @@ export default function OrdersPage({
               style={{ background: 'var(--accent)' }}>
               <Plus size={14} /> Нове замовлення
             </button>
-            {/* Перемикач вигляду (оновлення — однією кнопкою в шапці додатка) */}
-            <div className="hidden md:flex bg-gray-100 rounded-full p-0.5">
-              {(['table', 'cards'] as const).map(v => (
+            {/* Вигляд: канбан за статусами / таблиця / картки */}
+            <div className="flex bg-gray-100 rounded-full p-0.5">
+              {([['kanban', 'Канбан'], ['table', 'Таблиця'], ['cards', 'Картки']] as const).map(([v, label]) => (
                 <button key={v} onClick={() => setView(v)}
                   className="px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors"
                   style={view === v ? { background: '#fff', color: 'var(--ink)' } : { color: 'var(--ink-3)' }}>
-                  {v === 'table' ? 'Таблиця' : 'Картки'}
+                  {label}
                 </button>
               ))}
             </div>
@@ -137,7 +138,23 @@ export default function OrdersPage({
         )}
       </div>
 
+      {/* Канбан за статусами */}
+      {view === 'kanban' && (
+        <div className="flex-1 min-h-0">
+          <KanbanBoard
+            orders={filtered}
+            statuses={orderStatusList}
+            pinned={pinnedSet}
+            onOpen={onOpen}
+            onMove={onMoveStatus}
+            onTogglePin={onTogglePin}
+            activeRow={activeRow}
+          />
+        </div>
+      )}
+
       {/* Вміст */}
+      {view !== 'kanban' && (
       <div className="flex-1 min-h-0 overflow-y-auto px-3 lg:px-5 pb-5">
         {filtered.length === 0 && !loading && (
           <div className="text-center py-16 text-gray-400 text-[13px]">
@@ -237,6 +254,7 @@ export default function OrdersPage({
           ))}
         </div>
       </div>
+      )}
     </div>
   );
 }

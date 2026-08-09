@@ -21,9 +21,15 @@ const GROUPS: MenuGroup[] = [
   {
     title: 'Виробництво',
     items: [
-      { icon: '📊', label: 'Огляд', sub: 'зведення по замовленнях', tab: 'dashboard' },
-      { icon: '📋', label: 'Замовлення', sub: 'картки, пошук деталі, вхідна пошта', tab: 'orders' },
+      { icon: '📋', label: 'Замовлення', sub: 'канбан по статусах, пошук, пошта', tab: 'orders' },
+      { icon: '🔥', label: 'Пріоритет', sub: 'спільна черга робіт', tab: 'priority' },
       { icon: '💬', label: 'Чат виконавців', tab: 'chat' },
+    ],
+  },
+  {
+    title: 'Довідники',
+    items: [
+      { icon: '🤝', label: 'Контрагенти', sub: 'дані, таблиці, матриця операцій', tab: 'contractors' },
     ],
   },
   {
