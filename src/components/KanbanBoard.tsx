@@ -32,6 +32,10 @@ export default function KanbanBoard({
   const [movePick, setMovePick] = useState<Order | null>(null);
   const [newCol, setNewCol] = useState('');
   const [adding, setAdding] = useState(false);
+  const [newBoard, setNewBoard] = useState<string | null>(null);   // інлайн-створення дошки
+  const [renaming, setRenaming] = useState<string>('');            // колонка, яку перейменовують
+  const [renameTo, setRenameTo] = useState('');
+  const [confirmDel, setConfirmDel] = useState('');                // id дошки на підтвердженні
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -94,10 +98,10 @@ export default function KanbanBoard({
     setNewCol('');
     setAdding(false);
   }
-  function renameColumn(oldName: string) {
-    if (!board) return;
-    const name = prompt('Нова назва колонки', oldName)?.trim();
-    if (!name || name === oldName) return;
+  function renameColumn(oldName: string, raw: string) {
+    setRenaming('');
+    const name = raw.trim();
+    if (!board || !name || name === oldName) return;
     const cards: Record<string, string> = {};
     Object.entries(board.cards).forEach(([k, v]) => { cards[k] = v === oldName ? name : v; });
     patchBoard(board.id, { columns: board.columns.map(c => (c === oldName ? name : c)), cards });
@@ -108,8 +112,17 @@ export default function KanbanBoard({
     Object.entries(board.cards).forEach(([k, v]) => { if (v !== name) cards[k] = v; });
     patchBoard(board.id, { columns: board.columns.filter(c => c !== name), cards });
   }
-  function addBoard() {
-    const name = prompt('Назва нової дошки')?.trim();
+  function removeBoard(b: KanbanBoardData) {
+    const next = boards.filter(x => x.id !== b.id);
+    setConfirmDel('');
+    setBoardId(next[0]?.id || '');
+    persist(next);
+    onToast(`Дошку «${b.name}» видалено — замовлення лишились на місці`);
+  }
+
+  function addBoard(raw: string) {
+    const name = raw.trim();
+    setNewBoard(null);
     if (!name) return;
     const b: KanbanBoardData = {
       id: 'b' + Math.random().toString(36).slice(2, 7),
@@ -126,21 +139,56 @@ export default function KanbanBoard({
         {boards.map(b => {
           const on = board?.id === b.id;
           return (
-            <button key={b.id} onClick={() => setBoardId(b.id)}
-              className="px-3 py-1.5 rounded-xl text-[12px] font-bold transition-colors"
+            <span key={b.id}
+              className="inline-flex items-center rounded-xl transition-colors"
               style={on ? { background: 'var(--ink)', color: '#fff' } : { background: '#fff', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px #E5E7EB' }}>
-              {b.name}
-              <span className="ml-1.5 opacity-60">
-                {orders.filter(o => b.cards[o.projectId]).length}
-              </span>
-            </button>
+              <button onClick={() => setBoardId(b.id)}
+                className="pl-3 pr-2 py-1.5 text-[12px] font-bold press rounded-l-xl">
+                {b.name}
+                <span className="ml-1.5 opacity-60">
+                  {orders.filter(o => b.cards[o.projectId]).length}
+                </span>
+              </button>
+              {/* Видалити дошку — лише активну і з підтвердженням другим кліком */}
+              {on && (confirmDel === b.id ? (
+                <button onClick={() => removeBoard(b)}
+                  className="pr-2.5 pl-1 py-1.5 press rounded-r-xl text-[11px] font-bold text-red-300"
+                  title="Натисніть ще раз, щоб видалити">
+                  видалити?
+                </button>
+              ) : (
+                <button onClick={() => { setConfirmDel(b.id); setTimeout(() => setConfirmDel(''), 4000); }}
+                  className="pr-2 pl-0.5 py-1.5 press rounded-r-xl opacity-70 hover:opacity-100"
+                  aria-label={`Видалити дошку ${b.name}`} title="Видалити дошку">
+                  <Trash2 size={12} />
+                </button>
+              ))}
+            </span>
           );
         })}
-        <button onClick={addBoard}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[12px] font-bold press"
-          style={{ color: 'var(--accent)' }}>
-          <Plus size={13} /> дошка
-        </button>
+        {newBoard === null ? (
+          <button onClick={() => setNewBoard('')}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[12px] font-bold press"
+            style={{ color: 'var(--accent)' }}>
+            <Plus size={13} /> дошка
+          </button>
+        ) : (
+          <span className="inline-flex items-center gap-1">
+            <input autoFocus value={newBoard} onChange={e => setNewBoard(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') addBoard(newBoard);
+                if (e.key === 'Escape') setNewBoard(null);
+              }}
+              placeholder="Назва дошки"
+              className="w-[150px] px-2.5 py-1.5 rounded-xl bg-white ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 outline-none text-[12px]" />
+            <button onClick={() => addBoard(newBoard)}
+              className="px-2.5 py-1.5 rounded-xl text-[12px] font-bold text-white press"
+              style={{ background: 'var(--accent)' }}>Створити</button>
+            <button onClick={() => setNewBoard(null)} className="p-1.5 press" style={{ color: 'var(--ink-3)' }} aria-label="Скасувати">
+              <X size={13} />
+            </button>
+          </span>
+        )}
         {saving && <Loader2 size={13} className="animate-spin" style={{ color: 'var(--accent)' }} />}
         <span className="text-[11px] ml-auto" style={{ color: 'var(--ink-3)' }}>
           перетягніть картку в колонку · дошки спільні для всіх
@@ -175,15 +223,25 @@ export default function KanbanBoard({
                 <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2.5 group/col">
                   <span className="w-2 h-2 rounded-full flex-shrink-0"
                     style={{ background: isRest ? '#CBD5E1' : st.solid }} />
-                  <p className="text-[12.5px] font-bold truncate flex-1"
-                    style={{ color: isRest ? 'var(--ink-3)' : st.fg }}>
-                    {isRest ? 'Не розподілені' : name}
-                  </p>
+                  {renaming === name && !isRest ? (
+                    <input autoFocus value={renameTo} onChange={e => setRenameTo(e.target.value)}
+                      onBlur={() => renameColumn(name, renameTo)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') renameColumn(name, renameTo);
+                        if (e.key === 'Escape') setRenaming('');
+                      }}
+                      className="flex-1 min-w-0 px-2 py-1 rounded-lg bg-white ring-1 ring-[var(--accent)] outline-none text-[12.5px] font-bold" />
+                  ) : (
+                    <p className="text-[12.5px] font-bold truncate flex-1"
+                      style={{ color: isRest ? 'var(--ink-3)' : st.fg }}>
+                      {isRest ? 'Не розподілені' : name}
+                    </p>
+                  )}
                   <span className="text-[11px] font-bold tabular-nums px-1.5 py-0.5 rounded-md bg-white/80"
                     style={{ color: 'var(--ink-2)' }}>{list.length}</span>
                   {!isRest && (
                     <span className="hidden lg:flex items-center opacity-0 group-hover/col:opacity-100 transition-opacity">
-                      <button onClick={() => renameColumn(name)} className="p-1 press" style={{ color: 'var(--ink-3)' }} aria-label="Перейменувати">
+                      <button onClick={() => { setRenaming(name); setRenameTo(name); }} className="p-1 press" style={{ color: 'var(--ink-3)' }} aria-label="Перейменувати">
                         <Pencil size={11} />
                       </button>
                       <button onClick={() => removeColumn(name)} className="p-1 press text-red-500" aria-label="Видалити колонку">

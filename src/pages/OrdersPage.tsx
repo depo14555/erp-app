@@ -5,7 +5,7 @@
 // ================================================================
 
 import { useMemo, useState } from 'react';
-import { Search, SlidersHorizontal, Plus, Inbox, ScanSearch } from 'lucide-react';
+import { Search, SlidersHorizontal, Plus, Inbox, ScanSearch, LayoutGrid, Columns3 } from 'lucide-react';
 import OrderCard from '../components/OrderCard';
 import KanbanBoard from '../components/KanbanBoard';
 import { Order, statusStyle, isClosed } from '../types';
@@ -32,7 +32,7 @@ export default function OrdersPage({
 }: Props) {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
-  const [view, setView] = useState<'kanban' | 'cards'>('kanban');
+  const [view, setView] = useState<'kanban' | 'cards'>('cards');
 
   const statuses = useMemo(() => {
     const set = new Set<string>();
@@ -91,15 +91,21 @@ export default function OrdersPage({
               style={{ background: 'var(--accent)' }}>
               <Plus size={14} /> Нове замовлення
             </button>
-            {/* Вигляд: канбан за статусами / таблиця / картки */}
-            <div className="flex bg-gray-100 rounded-full p-0.5">
-              {([['kanban', 'Канбан'], ['cards', 'Картки']] as const).map(([v, label]) => (
-                <button key={v} onClick={() => setView(v)}
-                  className="px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors"
-                  style={view === v ? { background: '#fff', color: 'var(--ink)' } : { color: 'var(--ink-3)' }}>
-                  {label}
-                </button>
-              ))}
+            {/* Вигляд: картки або дошки — помітний перемикач, щоб одразу знайти */}
+            <div className="flex items-center gap-1 p-1 rounded-2xl bg-white ring-1 ring-gray-200 shadow-sm">
+              {([['cards', 'Картки', LayoutGrid], ['kanban', 'Дошки', Columns3]] as const).map(([v, label, Icon]) => {
+                const on = view === v;
+                return (
+                  <button key={v} onClick={() => setView(v)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-bold transition-all"
+                    style={on
+                      ? { background: 'var(--accent)', color: '#fff', boxShadow: '0 1px 3px rgba(31,111,235,.35)' }
+                      : { color: 'var(--ink-2)' }}>
+                    <Icon size={14} strokeWidth={on ? 2.4 : 2} />
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
