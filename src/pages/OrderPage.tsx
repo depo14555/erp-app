@@ -31,7 +31,7 @@ interface Props {
   lists: Lists | null;
   loading: boolean;
   onBack: () => void;
-  onRefresh: () => void;
+  onRefresh: (label?: string) => void;
   onSetOrderStatus: (s: string) => void;
   onSetRowStatus: (row: number, s: string) => void;
   onUpdateRow: (row: number, field: string, value: string) => Promise<void>;
@@ -262,7 +262,7 @@ export default function OrderPage({
             <Wrench size={15} />
             <span className="text-[12px] font-bold">Дії</span>
           </button>
-          <button onClick={onRefresh} className="lg:hidden p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Оновити">
+          <button onClick={() => onRefresh()} className="lg:hidden p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Оновити">
             <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
@@ -570,7 +570,7 @@ export default function OrderPage({
             onClose={() => setShowSend(false)}
             onMinimize={() => minimize('send')}
             onToast={onToast}
-            onSent={() => { setSelected(new Set()); markFinished('send'); onRefresh(); }}
+            onSent={() => { setSelected(new Set()); markFinished('send'); onRefresh('Оновлюю після відправки…'); }}
           />
         </div>
       )}
@@ -589,7 +589,7 @@ export default function OrderPage({
             onClose={() => setShowTech(false)}
             onMinimize={() => minimize('tech')}
             onToast={onToast}
-            onLaunched={() => { markFinished('tech'); onRefresh(); }}
+            onLaunched={() => { markFinished('tech'); onRefresh('Оновлюю після тех.запуску…'); }}
           />
         </div>
       )}
@@ -601,7 +601,7 @@ export default function OrderPage({
             onClose={() => setShowPhoto(false)}
             onMinimize={() => minimize('photo')}
             onToast={onToast}
-            onSaved={() => { markFinished('photo'); onRefresh(); }}
+            onSaved={() => { markFinished('photo'); onRefresh('Оновлюю після фотошопу…'); }}
           />
         </div>
       )}
@@ -611,7 +611,7 @@ export default function OrderPage({
           detail={detail}
           onClose={() => setShowBilling(false)}
           onToast={onToast}
-          onChanged={onRefresh}
+          onChanged={() => onRefresh('Оновлюю оплати…')}
         />
       )}
 
@@ -622,7 +622,7 @@ export default function OrderPage({
             onClose={() => setShowDistr(false)}
             onMinimize={() => minimize('distr')}
             onToast={onToast}
-            onDone={() => { markFinished('distr'); onRefresh(); }}
+            onDone={() => { markFinished('distr'); onRefresh('Оновлюю після розподілу КД…'); }}
           />
         </div>
       )}
@@ -634,7 +634,7 @@ export default function OrderPage({
             onClose={() => setShowCalc(false)}
             onMinimize={() => minimize('calc')}
             onToast={onToast}
-            onApplied={() => { markFinished('calc'); onRefresh(); }}
+            onApplied={() => { markFinished('calc'); onRefresh('Оновлюю ціни в картці…'); }}
           />
         </div>
       )}
@@ -742,7 +742,7 @@ export default function OrderPage({
             try {
               await api.addOperation(item.row, op);
               onToast(`✅ «${op}» додано — маршрут оновлюється`);
-              onRefresh();
+              onRefresh(`Додаю операцію «${op}»…`);
             } catch (e: any) {
               onToast(e?.message || 'Не вдалося додати операцію', true);
             }
@@ -757,7 +757,7 @@ export default function OrderPage({
           items={items.filter(i => selected.has(i.row))}
           onClose={() => setShowDelivery(false)}
           onToast={onToast}
-          onDone={() => { setShowDelivery(false); setSelected(new Set()); onRefresh(); }}
+          onDone={() => { setShowDelivery(false); setSelected(new Set()); onRefresh('Оновлюю доставку…'); }}
         />
       )}
     </div>

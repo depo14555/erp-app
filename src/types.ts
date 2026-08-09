@@ -113,7 +113,46 @@ export interface ChatMessage {
   itemName: string;
 }
 
-export type AppTab = 'orders' | 'priority' | 'contractors' | 'search' | 'logistics' | 'chat' | 'mail' | 'billing';
+export type AppTab = 'orders' | 'calc' | 'contractors' | 'search' | 'logistics' | 'chat' | 'mail' | 'billing';
+
+/** Дошка канбану: власні колонки поверх статусів («Пріоритет», «Пауза»…). */
+export interface KanbanBoardData {
+  id: string;
+  name: string;
+  columns: string[];
+  /** projectId → назва колонки. */
+  cards: Record<string, string>;
+}
+
+/** Прорахунок по всіх замовленнях. */
+export interface CalcOverviewBundle {
+  id: string;
+  kind: string;
+  invoiceName: string;
+  payTo: 'client' | 'executor';
+  rowsCount: number;
+  extras: CalcExtra[];
+  note: string;
+  sum: number;
+  time: number;
+  items: Array<{ row: number; name: string; qty: number; price: number }>;
+}
+
+export interface CalcOverviewOrder {
+  projectId: string;
+  orderNum: string;
+  client: string;
+  headerRow: number;
+  updatedAt: string;
+  bundles: CalcOverviewBundle[];
+  sum: number;
+  time: number;
+}
+
+export interface CalcOverview {
+  orders: CalcOverviewOrder[];
+  totals: { sum: number; byKind: Array<{ kind: string; sum: number }> };
+}
 
 /** Контрагент з аркуша «Контрагенти»: текстові поля + матриця операцій. */
 export interface ContractorField { col: number; label: string }

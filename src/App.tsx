@@ -13,7 +13,7 @@ import TokenGate from './components/TokenGate';
 import NavRail, { TABS } from './components/NavRail';
 import Sidebar from './components/Sidebar';
 import OrdersPage from './pages/OrdersPage';
-import PriorityPage from './pages/PriorityPage';
+import CalcOverviewPage from './pages/CalcOverviewPage';
 import ContractorsPage from './pages/ContractorsPage';
 import SearchPage from './pages/SearchPage';
 import OrderPage from './pages/OrderPage';
@@ -105,8 +105,8 @@ export default function App() {
     api.getLists().then(setLists).catch(() => {/* списки не критичні */});
   }, [authed, loadOrders]);
 
-  const openOrder = useCallback(async (headerRow: number, force = false) => {
-    setLoadingLabel('Відкриваю замовлення…');
+  const openOrder = useCallback(async (headerRow: number, force = false, label?: string) => {
+    setLoadingLabel(label || 'Відкриваю замовлення…');
     setLoading(true);
     try {
       setDetail(await api.getOrder(headerRow, force));
@@ -224,7 +224,7 @@ export default function App() {
     else if (tab === 'logistics') setLogisticsTick(t => t + 1);
     else if (tab === 'mail') setMailTick(t => t + 1);
     else if (tab === 'billing') setOverviewTick(t => t + 1);
-    else if (tab === 'contractors' || tab === 'priority') setDirTick(t => t + 1);
+    else if (tab === 'contractors' || tab === 'calc') setDirTick(t => t + 1);
     else loadOrders(true);
   }
 
@@ -233,6 +233,7 @@ export default function App() {
   const title = tab === 'mail' ? 'Вхідні (пошта)'
     : tab === 'billing' ? 'Рахунки і оплати'
     : tab === 'contractors' ? 'Контрагенти'
+    : tab === 'calc' ? 'Прорахунок'
     : (TABS.find(t => t.key === tab)?.label ?? 'ERP');
   const subtitle = tab === 'mail'
     ? 'нові замовлення з Gmail'
@@ -240,8 +241,8 @@ export default function App() {
       ? 'виставлено · оплачено · треба виставити'
       : tab === 'contractors'
         ? 'дані, таблиці, матриця операцій'
-        : tab === 'priority'
-          ? 'спільна черга робіт'
+        : tab === 'calc'
+          ? 'усі групи, суми і час по замовленнях'
           : updatedAt ? `Оновлено ${updatedAt}` : 'ERP Металообробка';
 
   const listPane = (
@@ -251,10 +252,10 @@ export default function App() {
         onCreate={() => setShowCreate(true)}
         pinned={pinned} onTogglePin={togglePin}
         onSearch={() => setOverlay('search')} onMail={() => setOverlay('mail')}
-        onMoveStatus={moveOrderStatus} orderStatusList={orderStatusList}
+        onMoveStatus={moveOrderStatus} orderStatusList={orderStatusList} onToast={showToast}
         activeRow={detail?.header.headerRow} />
-    ) : tab === 'priority' ? (
-      <PriorityPage orders={orders} onOpen={o => openOrder(o.headerRow)} onToast={showToast} refreshSignal={dirTick} />
+    ) : tab === 'calc' ? (
+      <CalcOverviewPage orders={orders} onOpenOrder={hr => openOrder(hr)} onToast={showToast} refreshSignal={dirTick} />
     ) : tab === 'contractors' ? (
       <ContractorsPage onToast={showToast} refreshSignal={dirTick} />
     ) : tab === 'logistics' ? (
@@ -274,7 +275,7 @@ export default function App() {
       lists={lists}
       loading={loading}
       onBack={() => setDetail(null)}
-      onRefresh={() => openOrder(detail.header.headerRow, true)}
+      onRefresh={(label?: string) => openOrder(detail.header.headerRow, true, label)}
       onSetOrderStatus={setOrderStatus}
       onSetRowStatus={setRowStatus}
       onUpdateRow={updateRow}
@@ -298,12 +299,6 @@ export default function App() {
         tab={tab}
         env={env}
         onTab={t => { setTab(t); setDetail(null); }}
-        onPrint={() => {
-          // Замовлення відкрите — одразу відкриваємо вікно друку для нього
-          if (detail) { setPrintTick(t => t + 1); return; }
-          setTab('orders');
-          showToast('Виберіть замовлення — і друк відкриється у ньому (🖨️ у шапці)');
-        }}
         order={detail ? {
           label: detail.header.orderNum || detail.header.projectId,
           folderUrl: detail.header.folderUrl,

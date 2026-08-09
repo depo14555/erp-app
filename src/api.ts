@@ -14,7 +14,7 @@ import {
   TechFilesData, TechLaunchItem, TechLaunchResult, MailListData, SavePdfResult,
   FolderFile, BillingData, CommerceContext, CommerceResult, DocType, CreateOrderResult,
   BillingOverview, DistributionData, DistributeParams, DistributeResult, CalcData,
-  NestItemsData, NestPrice, ContractorsData,
+  NestItemsData, NestPrice, ContractorsData, KanbanBoardData, CalcOverview,
 } from './types';
 
 /** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
@@ -38,7 +38,7 @@ const CACHE_TTL = 5 * 60 * 1000;
 
 /** Скільки чекати на відповідь — залежить від дії. */
 function timeoutFor(action: string): number {
-  return /^erp\.(techLaunch|mailProcess|execSend|savePdf|bulkUpdate|groupCard|fillAssembly|fileData|techFiles|distribut|nest)/.test(action)
+  return /^erp\.(techLaunch|mailProcess|execSend|savePdf|bulkUpdate|groupCard|fillAssembly|fileData|techFiles|distribut|nest|calcOverview|contractors|billingOverview)/.test(action)
     ? LONG_TIMEOUT
     : REQUEST_TIMEOUT;
 }
@@ -81,7 +81,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /** Читання можна безпечно повторити; мутації — ні (щоб не задвоїти запис). */
 function isReadAction(action: string): boolean {
-  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute|calcSave|contractorSave)/.test(action);
+  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute|calcSave|contractorSave|boards)/.test(action);
 }
 
 function cacheGet<T>(key: string): T | null {
@@ -396,9 +396,14 @@ export const api = {
     return post('erp.contractorSave', { row, values, ops });
   },
 
-  /** Пріоритет замовлень — спільний порядок projectId (без аргументу — читання). */
-  priority(order?: string[]): Promise<{ order: string[] }> {
-    return post('erp.priority', order ? { order } : {});
+  /** Дошки канбану (спільні): без аргументу — читання, з масивом — запис. */
+  boards(boards?: KanbanBoardData[]): Promise<{ boards: KanbanBoardData[] }> {
+    return post('erp.boards', boards ? { boards } : {});
+  },
+
+  /** Прорахунок по всіх замовленнях: групи, суми, час. */
+  calcOverview(): Promise<CalcOverview> {
+    return post('erp.calcOverview');
   },
 
   /** Розкрій: позиції картки з DXF (файл + матеріал/товщина/кількості). */

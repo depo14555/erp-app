@@ -6,8 +6,8 @@
 // ================================================================
 
 import {
-  LayoutDashboard, ClipboardList, MessageSquare, Truck, Flame, Building2,
-  Printer, LogOut, RefreshCw, Receipt,
+  LayoutDashboard, ClipboardList, MessageSquare, Truck, Building2,
+  LogOut, RefreshCw, Receipt, Printer,
   FolderOpen, Rocket, Paintbrush, Send, FolderTree, Calculator, Scissors,
 } from 'lucide-react';
 import { AppTab } from '../types';
@@ -26,7 +26,6 @@ const SECTIONS: NavSection[] = [
     title: 'Виробництво',
     items: [
       { key: 'orders', label: 'Замовлення', Icon: ClipboardList },
-      { key: 'priority', label: 'Пріоритет', Icon: Flame },
       { key: 'chat', label: 'Чат виконавців', Icon: MessageSquare },
     ],
   },
@@ -50,7 +49,6 @@ interface Props {
   tab: AppTab;
   env: EnvKey;
   onTab: (t: AppTab) => void;
-  onPrint: () => void;
   /** Відкрите замовлення — сайдбар показує його інструменти. */
   order: { label: string; folderUrl: string } | null;
   onOrderTool: (t: OrderTool) => void;
@@ -68,7 +66,7 @@ const ORDER_TOOLS: Array<{ key: OrderTool; label: string; Icon: typeof Receipt; 
   { key: 'billing', label: 'Рахунки і оплати', Icon: Receipt, color: '#059669' },
 ];
 
-export default function Sidebar({ tab, env, onTab, onPrint, order, onOrderTool, onLogout }: Props) {
+export default function Sidebar({ tab, env, onTab, order, onOrderTool, onLogout }: Props) {
   return (
     <aside className="hidden lg:flex flex-col w-[228px] flex-shrink-0 h-full bg-white border-r hairline">
       {/* Логотип */}
@@ -140,8 +138,17 @@ export default function Sidebar({ tab, env, onTab, onPrint, order, onOrderTool, 
 
         <div>
           <p className="px-2 pb-1 text-[9.5px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--ink-3)' }}>
-            Бухгалтерія
+            Гроші
           </p>
+          <button onClick={() => onTab('calc')}
+            className="w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-xl text-left press transition-colors relative"
+            style={tab === 'calc'
+              ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
+              : { color: 'var(--ink-2)' }}>
+            {tab === 'calc' && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full" style={{ background: 'var(--accent)' }} />}
+            <Calculator size={16.5} strokeWidth={tab === 'calc' ? 2.4 : 2} className="flex-shrink-0" />
+            <span className={`flex-1 text-[13px] truncate ${tab === 'calc' ? 'font-bold' : 'font-medium'}`}>Прорахунок</span>
+          </button>
           <button onClick={() => onTab('billing')}
             className="w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-xl text-left press transition-colors relative"
             style={tab === 'billing'
@@ -153,17 +160,6 @@ export default function Sidebar({ tab, env, onTab, onPrint, order, onOrderTool, 
           </button>
         </div>
 
-        <div>
-          <p className="px-2 pb-1 text-[9.5px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--ink-3)' }}>
-            Інструменти
-          </p>
-          <button onClick={onPrint}
-            className="w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-xl text-left press"
-            style={{ color: 'var(--ink-2)' }}>
-            <Printer size={16.5} strokeWidth={2} className="flex-shrink-0" />
-            <span className="flex-1 text-[13px] font-medium truncate">Друк креслень + QR</span>
-          </button>
-        </div>
       </nav>
 
       {/* Низ */}

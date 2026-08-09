@@ -22,7 +22,6 @@ const GROUPS: MenuGroup[] = [
     title: 'Виробництво',
     items: [
       { icon: '📋', label: 'Замовлення', sub: 'канбан по статусах, пошук, пошта', tab: 'orders' },
-      { icon: '🔥', label: 'Пріоритет', sub: 'спільна черга робіт', tab: 'priority' },
       { icon: '💬', label: 'Чат виконавців', tab: 'chat' },
     ],
   },
@@ -39,17 +38,11 @@ const GROUPS: MenuGroup[] = [
     ],
   },
   {
-    title: 'Бухгалтерія',
+    title: 'Гроші',
     items: [
+      { icon: '🧮', label: 'Прорахунок', sub: 'усі групи, суми, час', tab: 'calc' },
       { icon: '🧾', label: 'Рахунки і оплати', sub: 'виставлено · оплачено · треба виставити',
         tab: 'billing' },
-    ],
-  },
-  {
-    title: 'Інструменти',
-    items: [
-      { icon: '🖨️', label: 'Друк креслень + QR', sub: 'пакет PDF з QR-кодами для цеху',
-        tab: 'orders', hint: 'Відкрийте замовлення → 🖨️ у шапці' },
     ],
   },
 ];

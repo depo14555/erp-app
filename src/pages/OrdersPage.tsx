@@ -5,7 +5,7 @@
 // ================================================================
 
 import { useMemo, useState } from 'react';
-import { Search, SlidersHorizontal, Clock, Plus, Pin, Inbox, ScanSearch } from 'lucide-react';
+import { Search, SlidersHorizontal, Plus, Inbox, ScanSearch } from 'lucide-react';
 import OrderCard from '../components/OrderCard';
 import KanbanBoard from '../components/KanbanBoard';
 import { Order, statusStyle, isClosed } from '../types';
@@ -25,16 +25,17 @@ interface Props {
   /** Перенос картки в інший статус (канбан). */
   onMoveStatus: (o: Order, status: string) => void;
   orderStatusList: string[];
+  onToast: (msg: string, err?: boolean) => void;
   activeRow?: number;
 }
 
 export default function OrdersPage({
   orders, updatedAt, loading, onOpen, onCreate,
-  pinned, onTogglePin, onSearch, onMail, onMoveStatus, orderStatusList, activeRow,
+  pinned, onTogglePin, onSearch, onMail, onMoveStatus, orderStatusList, onToast, activeRow,
 }: Props) {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
-  const [view, setView] = useState<'kanban' | 'table' | 'cards'>('kanban');
+  const [view, setView] = useState<'kanban' | 'cards'>('kanban');
 
   const statuses = useMemo(() => {
     const set = new Set<string>();
@@ -95,7 +96,7 @@ export default function OrdersPage({
             </button>
             {/* Вигляд: канбан за статусами / таблиця / картки */}
             <div className="flex bg-gray-100 rounded-full p-0.5">
-              {([['kanban', 'Канбан'], ['table', 'Таблиця'], ['cards', 'Картки']] as const).map(([v, label]) => (
+              {([['kanban', 'Канбан'], ['cards', 'Картки']] as const).map(([v, label]) => (
                 <button key={v} onClick={() => setView(v)}
                   className="px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors"
                   style={view === v ? { background: '#fff', color: 'var(--ink)' } : { color: 'var(--ink-3)' }}>
@@ -148,6 +149,7 @@ export default function OrdersPage({
             onOpen={onOpen}
             onMove={onMoveStatus}
             onTogglePin={onTogglePin}
+            onToast={onToast}
             activeRow={activeRow}
           />
         </div>
@@ -162,89 +164,10 @@ export default function OrdersPage({
           </div>
         )}
 
-        {/* Таблиця (широкі екрани) */}
-        {view === 'table' && filtered.length > 0 && (
-          <div className="hidden md:block bg-white rounded-2xl ring-1 ring-gray-200/70 overflow-hidden">
-            <table className="w-full border-collapse text-[13px]">
-              <thead>
-                <tr className="bg-[#FAFBFC]">
-                  {['Замовлення', 'Клієнт', 'Статус', 'Готовність', 'Позицій', 'Запуск', 'Термін'].map(h => (
-                    <th key={h} className="text-left font-semibold text-[10.5px] uppercase tracking-wide text-[var(--ink-3)] px-4 py-2.5 border-b hairline whitespace-nowrap">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(o => {
-                  const st = statusStyle(o.status);
-                  const pct = o.total > 0 ? Math.round((100 * o.done) / o.total) : 0;
-                  const on = o.headerRow === activeRow;
-                  const isPinned = pinnedSet.has(o.projectId);
-                  return (
-                    <tr key={o.headerRow} onClick={() => onOpen(o)}
-                      className="border-b hairline last:border-b-0 cursor-pointer hover:bg-[#FAFBFF] transition-colors group"
-                      style={on ? { background: 'var(--accent-soft)' } : isPinned ? { background: '#FFFDF2' } : undefined}>
-                      <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-1.5 h-7 rounded-full flex-shrink-0" style={{ background: st.solid }} />
-                          <button
-                            onClick={e => { e.stopPropagation(); onTogglePin(o.projectId, !isPinned); }}
-                            className={`p-1 rounded-lg press flex-shrink-0 transition-opacity ${isPinned ? '' : 'opacity-0 group-hover:opacity-100'}`}
-                            style={{ color: isPinned ? '#D97706' : 'var(--ink-3)' }}
-                            aria-label={isPinned ? 'Відкріпити' : 'Закріпити для всіх'}
-                            title={isPinned ? 'Відкріпити' : 'Закріпити для всіх'}>
-                            <Pin size={14} fill={isPinned ? '#D97706' : 'none'} className={isPinned ? '' : 'rotate-45'} />
-                          </button>
-                          <div className="min-w-0">
-                            <p className="font-bold text-[13.5px] leading-tight truncate">{o.orderNum || '—'}</p>
-                            <p className="font-mono text-[10.5px]" style={{ color: 'var(--ink-3)' }}>{o.projectId}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-2.5 max-w-[240px]">
-                        <span className="block truncate" style={{ color: o.client ? 'var(--ink)' : 'var(--ink-3)' }}>
-                          {o.client || '—'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <span className="inline-block text-[11px] font-bold px-2 py-1 rounded-lg whitespace-nowrap"
-                          style={{ background: st.bg, color: st.fg }}>
-                          {o.status || 'без статусу'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5 w-[190px]">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden min-w-[70px]">
-                            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: st.solid }} />
-                          </div>
-                          <span className="text-[11px] font-bold tabular-nums w-9 text-right" style={{ color: st.fg }}>{pct}%</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap tabular-nums text-[12.5px]">
-                        <b>{o.done}</b><span style={{ color: 'var(--ink-3)' }}> / {o.total}</span>
-                      </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap text-[12px]" style={{ color: 'var(--ink-2)' }}>
-                        {o.date || '—'}
-                      </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap text-[12px]">
-                        {o.deadline
-                          ? <span className="inline-flex items-center gap-1 font-semibold" style={{ color: 'var(--ink-2)' }}>
-                              <Clock size={11} /> {o.deadline}
-                            </span>
-                          : <span style={{ color: 'var(--ink-3)' }}>—</span>}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
 
         {/* Картки: сітка на десктопі, стовпчик на телефоні.
             На телефоні показуються завжди (таблиця лише md+). */}
-        <div className={`${view === 'table' ? 'md:hidden' : ''} grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5`}>
+        <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5`}>
           {filtered.map((o, i) => (
             <div key={o.headerRow} className={i < 5 ? `rise rise-${i + 1}` : undefined}>
               <OrderCard order={o} onOpen={() => onOpen(o)} active={o.headerRow === activeRow}
