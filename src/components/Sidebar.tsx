@@ -7,7 +7,7 @@
 
 import {
   LayoutDashboard, ClipboardList, MessageSquare, Truck, Building2,
-  LogOut, RefreshCw, Receipt, Printer,
+  LogOut, RefreshCw, Receipt, Printer, Lock,
   FolderOpen, Rocket, Paintbrush, Send, FolderTree, Calculator, Scissors,
 } from 'lucide-react';
 import { AppTab } from '../types';
@@ -18,6 +18,8 @@ interface NavItem {
   label: string;
   Icon: typeof LayoutDashboard;
   badge?: string;
+  /** Розділ ще в тестуванні — заблокований замком. */
+  locked?: boolean;
 }
 interface NavSection { title: string; items: NavItem[] }
 
@@ -32,7 +34,7 @@ const SECTIONS: NavSection[] = [
   {
     title: 'Логістика',
     items: [
-      { key: 'logistics', label: 'Відвантаження', Icon: Truck },
+      { key: 'logistics', label: 'Відвантаження', Icon: Truck, locked: true },
     ],
   },
   {
@@ -49,6 +51,7 @@ interface Props {
   tab: AppTab;
   env: EnvKey;
   onTab: (t: AppTab) => void;
+  onLocked: (label: string) => void;
   /** Відкрите замовлення — сайдбар показує його інструменти. */
   order: { label: string; folderUrl: string } | null;
   onOrderTool: (t: OrderTool) => void;
@@ -66,7 +69,7 @@ const ORDER_TOOLS: Array<{ key: OrderTool; label: string; Icon: typeof Receipt; 
   { key: 'billing', label: 'Рахунки і оплати', Icon: Receipt, color: '#059669' },
 ];
 
-export default function Sidebar({ tab, env, onTab, order, onOrderTool, onLogout }: Props) {
+export default function Sidebar({ tab, env, onTab, onLocked, order, onOrderTool, onLogout }: Props) {
   return (
     <aside className="hidden lg:flex flex-col w-[228px] flex-shrink-0 h-full bg-white border-r hairline">
       {/* Логотип */}
@@ -88,17 +91,19 @@ export default function Sidebar({ tab, env, onTab, order, onOrderTool, onLogout 
               {sec.title}
             </p>
             <div className="space-y-0.5">
-              {sec.items.map(({ key, label, Icon, badge }) => {
-                const on = tab === key;
+              {sec.items.map(({ key, label, Icon, badge, locked }) => {
+                const on = tab === key && !locked;
                 return (
-                  <button key={key} onClick={() => onTab(key)}
+                  <button key={key} onClick={() => (locked ? onLocked(label) : onTab(key))}
                     className="w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-xl text-left press transition-colors relative"
                     style={on
                       ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
-                      : { color: 'var(--ink-2)' }}>
+                      : { color: locked ? 'var(--ink-3)' : 'var(--ink-2)' }}
+                    title={locked ? 'Розділ у тестуванні — скоро буде доступний' : undefined}>
                     {on && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full" style={{ background: 'var(--accent)' }} />}
                     <Icon size={16.5} strokeWidth={on ? 2.4 : 2} className="flex-shrink-0" />
                     <span className={`flex-1 text-[13px] truncate ${on ? 'font-bold' : 'font-medium'}`}>{label}</span>
+                    {locked && <Lock size={12} className="flex-shrink-0 opacity-70" />}
                     {badge && (
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-blue-600/10 text-blue-700">{badge}</span>
                     )}

@@ -22,16 +22,13 @@ interface Props {
   /** Інструменти замовлень: пошук деталі й вхідна пошта (панелі поверх). */
   onSearch: () => void;
   onMail: () => void;
-  /** Перенос картки в інший статус (канбан). */
-  onMoveStatus: (o: Order, status: string) => void;
-  orderStatusList: string[];
   onToast: (msg: string, err?: boolean) => void;
   activeRow?: number;
 }
 
 export default function OrdersPage({
   orders, updatedAt, loading, onOpen, onCreate,
-  pinned, onTogglePin, onSearch, onMail, onMoveStatus, orderStatusList, onToast, activeRow,
+  pinned, onTogglePin, onSearch, onMail, onToast, activeRow,
 }: Props) {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
@@ -144,10 +141,8 @@ export default function OrdersPage({
         <div className="flex-1 min-h-0">
           <KanbanBoard
             orders={filtered}
-            statuses={orderStatusList}
             pinned={pinnedSet}
             onOpen={onOpen}
-            onMove={onMoveStatus}
             onTogglePin={onTogglePin}
             onToast={onToast}
             activeRow={activeRow}

@@ -56,6 +56,7 @@ export default function App() {
   const [sendTick, setSendTick] = useState(0);         // сайдбар → відправити виконавцю
   const [distrTick, setDistrTick] = useState(0);       // сайдбар → розподіл КД
   const [calcTick, setCalcTick] = useState(0);         // сайдбар → прорахунок
+  const [autoOpen, setAutoOpen] = useState<'calc' | null>(null);  // відкрити інструмент одразу
   const [nestTick, setNestTick] = useState(0);         // сайдбар → розкрій DXF
   /** Інструменти замовлень поверх списку: пошук деталі / вхідна пошта. */
   const [overlay, setOverlay] = useState<'search' | 'mail' | null>(null);
@@ -132,17 +133,17 @@ export default function App() {
     }
   }
 
-  /** Канбан: картку перетягнули в іншу колонку — статус пишеться в таблицю. */
-  async function moveOrderStatus(o: Order, status: string) {
-    setOrders(prev => prev.map(x => (x.headerRow === o.headerRow ? { ...x, status } : x)));
-    try {
-      await api.setOrderStatus(o.headerRow, status);
-      showToast(`${o.orderNum || o.projectId} → ${status}`);
-      loadOrders(true);
-    } catch (err: any) {
-      showToast(err?.message || 'Не вдалося змінити статус', true);
-      loadOrders(true);
-    }
+
+  /** З загального прорахунку — одразу у вікно прорахунку цього замовлення. */
+  async function openOrderCalc(headerRow: number) {
+    setTab('orders');
+    setAutoOpen('calc');
+    await openOrder(headerRow, false, 'Відкриваю прорахунок…');
+  }
+
+  /** Розділи, які ще в тестуванні. */
+  function lockedTab(label: string) {
+    showToast('🔒 ' + label + ' — розділ у тестуванні, буде доступний незабаром');
   }
 
   async function setRowStatus(row: number, status: string) {
@@ -252,10 +253,10 @@ export default function App() {
         onCreate={() => setShowCreate(true)}
         pinned={pinned} onTogglePin={togglePin}
         onSearch={() => setOverlay('search')} onMail={() => setOverlay('mail')}
-        onMoveStatus={moveOrderStatus} orderStatusList={orderStatusList} onToast={showToast}
+        onToast={showToast}
         activeRow={detail?.header.headerRow} />
     ) : tab === 'calc' ? (
-      <CalcOverviewPage orders={orders} onOpenOrder={hr => openOrder(hr)} onToast={showToast} refreshSignal={dirTick} />
+      <CalcOverviewPage orders={orders} onOpenOrder={hr => openOrderCalc(hr)} onToast={showToast} refreshSignal={dirTick} />
     ) : tab === 'contractors' ? (
       <ContractorsPage onToast={showToast} refreshSignal={dirTick} />
     ) : tab === 'logistics' ? (
@@ -289,6 +290,8 @@ export default function App() {
       distrSignal={distrTick}
       calcSignal={calcTick}
       nestSignal={nestTick}
+      autoOpen={autoOpen}
+      onAutoOpened={() => setAutoOpen(null)}
     />
   );
 
@@ -299,6 +302,7 @@ export default function App() {
         tab={tab}
         env={env}
         onTab={t => { setTab(t); setDetail(null); }}
+        onLocked={lockedTab}
         order={detail ? {
           label: detail.header.orderNum || detail.header.projectId,
           folderUrl: detail.header.folderUrl,
@@ -354,7 +358,10 @@ export default function App() {
         <OfflineBanner isOnline={isOnline} pendingCount={0} />
 
         {/* Мобільна нижня навігація */}
-        {!detail && <NavRail tab={tab} onTab={t => { setTab(t); setDetail(null); }} onMenu={() => setShowMenu(true)} />}
+        {!detail && (
+        <NavRail tab={tab} onTab={t => { setTab(t); setDetail(null); }}
+          onLocked={lockedTab} onMenu={() => setShowMenu(true)} />
+      )}
       </div>
 
       {showMenu && (
@@ -362,6 +369,7 @@ export default function App() {
           env={env}
           onClose={() => setShowMenu(false)}
           onNavigate={t => { setTab(t); setDetail(null); setShowMenu(false); }}
+          onLocked={l => { setShowMenu(false); lockedTab(l); }}
           onLogout={() => { setShowMenu(false); logout(); }}
           onToast={showToast}
         />

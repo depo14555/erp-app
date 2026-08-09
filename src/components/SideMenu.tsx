@@ -4,7 +4,7 @@
 //  розділи + інструменти, знизу вихід/версія/оновлення.
 // ================================================================
 
-import { X, ChevronRight, LogOut, FlaskConical, RefreshCw } from 'lucide-react';
+import { X, ChevronRight, LogOut, FlaskConical, RefreshCw, Lock } from 'lucide-react';
 import { AppTab } from '../types';
 import { EnvKey } from '../api';
 
@@ -14,6 +14,7 @@ interface MenuItem {
   sub?: string;
   tab?: AppTab;
   hint?: string;
+  locked?: boolean;
 }
 interface MenuGroup { title: string; items: MenuItem[] }
 
@@ -34,7 +35,8 @@ const GROUPS: MenuGroup[] = [
   {
     title: 'Логістика',
     items: [
-      { icon: '🚚', label: 'Відвантаження', sub: 'забрати від виконавців · відвезти клієнту', tab: 'logistics' },
+      { icon: '🚚', label: 'Відвантаження', sub: 'забрати від виконавців · відвезти клієнту',
+        tab: 'logistics', locked: true },
     ],
   },
   {
@@ -51,11 +53,12 @@ interface Props {
   env: EnvKey;
   onClose: () => void;
   onNavigate: (tab: AppTab) => void;
+  onLocked: (label: string) => void;
   onLogout: () => void;
   onToast?: (msg: string) => void;
 }
 
-export default function SideMenu({ env, onClose, onNavigate, onLogout, onToast }: Props) {
+export default function SideMenu({ env, onClose, onNavigate, onLocked, onLogout, onToast }: Props) {
   return (
     <div className="fixed inset-0 z-[70] flex">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] animate-fade-in" onClick={onClose} />
@@ -85,6 +88,7 @@ export default function SideMenu({ env, onClose, onNavigate, onLogout, onToast }
                   <button
                     key={item.label}
                     onClick={() => {
+                      if (item.locked) { onLocked(item.label); return; }
                       if (item.tab) onNavigate(item.tab);
                       if (item.hint) onToast?.(item.hint);
                     }}
@@ -99,7 +103,9 @@ export default function SideMenu({ env, onClose, onNavigate, onLogout, onToast }
                         <span className="block text-[10.5px] truncate" style={{ color: 'var(--ink-3)' }}>{item.sub}</span>
                       )}
                     </span>
-                    <ChevronRight size={15} className="text-gray-300 flex-shrink-0" />
+                    {item.locked
+                      ? <Lock size={14} className="text-gray-400 flex-shrink-0" />
+                      : <ChevronRight size={15} className="text-gray-300 flex-shrink-0" />}
                   </button>
                 ))}
               </div>

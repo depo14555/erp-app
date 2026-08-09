@@ -45,6 +45,9 @@ interface Props {
   distrSignal?: number;
   calcSignal?: number;
   nestSignal?: number;
+  /** Відкрити інструмент одразу після відкриття замовлення (із загального прорахунку). */
+  autoOpen?: 'calc' | null;
+  onAutoOpened?: () => void;
 }
 
 const GROUP_META = {
@@ -101,7 +104,7 @@ function useOpenSignal(signal: number | undefined, open: () => void) {
 export default function OrderPage({
   detail, orderStatusList, rowStatusList, lists, loading,
   onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onBulkStatus, onToast,
-  printSignal, billingSignal, techSignal, photoSignal, sendSignal, distrSignal, calcSignal, nestSignal,
+  printSignal, billingSignal, techSignal, photoSignal, sendSignal, distrSignal, calcSignal, nestSignal, autoOpen, onAutoOpened,
 }: Props) {
   const [q, setQ] = useState('');
   const [fOp, setFOp] = useState('');
@@ -151,6 +154,13 @@ export default function OrderPage({
   useOpenSignal(distrSignal, () => setShowDistr(true));
   useOpenSignal(calcSignal, () => setShowCalc(true));
   useOpenSignal(nestSignal, () => setShowNest(true));
+  // Прийшли із загального прорахунку — одразу показуємо вікно прорахунку
+  useEffect(() => {
+    if (autoOpen !== 'calc') return;
+    setShowCalc(true);
+    onAutoOpened?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpen, header.headerRow]);
 
   const real = useMemo(() => items.filter(i => !i.group), [items]);
   const fOps = useMemo(() => distinct(real.map(i => i.op)), [real]);

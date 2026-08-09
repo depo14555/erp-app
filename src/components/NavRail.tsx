@@ -4,13 +4,13 @@
 //  Мінімалізм — тільки іконка + підпис, активний стан м'якою плашкою.
 // ================================================================
 
-import { ClipboardList, MessageSquare, Menu, Truck, Receipt, Calculator } from 'lucide-react';
+import { ClipboardList, MessageSquare, Menu, Truck, Receipt, Calculator, Lock } from 'lucide-react';
 import { AppTab } from '../types';
 
 export const TABS = [
   { key: 'orders' as AppTab, label: 'Замовлення', Icon: ClipboardList },
   { key: 'calc' as AppTab, label: 'Прорахунок', Icon: Calculator },
-  { key: 'logistics' as AppTab, label: 'Логістика', Icon: Truck },
+  { key: 'logistics' as AppTab, label: 'Логістика', Icon: Truck, locked: true },
   { key: 'billing' as AppTab, label: 'Рахунки', Icon: Receipt },
   { key: 'chat' as AppTab, label: 'Чат', Icon: MessageSquare },
 ];
@@ -18,11 +18,12 @@ export const TABS = [
 interface Props {
   tab: AppTab;
   onTab: (t: AppTab) => void;
+  onLocked: (label: string) => void;
   onMenu: () => void;
   desktop?: boolean;
 }
 
-export default function NavRail({ tab, onTab, onMenu, desktop }: Props) {
+export default function NavRail({ tab, onTab, onLocked, onMenu, desktop }: Props) {
   if (desktop) {
     return (
       <nav className="hidden lg:flex flex-col items-center w-[76px] flex-shrink-0 border-r hairline bg-white py-3 gap-1">
@@ -31,12 +32,13 @@ export default function NavRail({ tab, onTab, onMenu, desktop }: Props) {
           aria-label="Меню">
           <Menu size={20} />
         </button>
-        {TABS.map(({ key, label, Icon }) => {
-          const on = tab === key;
+        {TABS.map(({ key, label, Icon, locked }) => {
+          const on = tab === key && !locked;
           return (
-            <button key={key} onClick={() => onTab(key)}
-              className="w-[60px] py-2 rounded-2xl flex flex-col items-center gap-1 press"
+            <button key={key} onClick={() => (locked ? onLocked(label) : onTab(key))}
+              className="w-[60px] py-2 rounded-2xl flex flex-col items-center gap-1 press relative"
               style={on ? { background: 'var(--accent-soft)' } : undefined}>
+              {locked && <Lock size={9} className="absolute top-1.5 right-3 text-gray-400" />}
               <Icon size={20} strokeWidth={on ? 2.4 : 1.9}
                 style={{ color: on ? 'var(--accent)' : 'var(--ink-3)' }} />
               <span className="text-[10px] font-semibold"
@@ -50,12 +52,13 @@ export default function NavRail({ tab, onTab, onMenu, desktop }: Props) {
 
   return (
     <nav className="lg:hidden flex-shrink-0 bg-white/90 backdrop-blur-xl border-t hairline flex px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-      {TABS.map(({ key, label, Icon }) => {
-        const on = tab === key;
+      {TABS.map(({ key, label, Icon, locked }) => {
+        const on = tab === key && !locked;
         return (
-          <button key={key} onClick={() => onTab(key)}
-            className="flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-2xl press"
+          <button key={key} onClick={() => (locked ? onLocked(label) : onTab(key))}
+            className="flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-2xl press relative"
             style={on ? { background: 'var(--accent-soft)' } : undefined}>
+            {locked && <Lock size={9} className="absolute top-1 right-[22%] text-gray-400" />}
             <Icon size={19} strokeWidth={on ? 2.4 : 1.9}
               style={{ color: on ? 'var(--accent)' : 'var(--ink-3)' }} />
             <span className="text-[10px] font-semibold"

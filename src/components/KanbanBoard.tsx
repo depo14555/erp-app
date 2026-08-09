@@ -1,8 +1,8 @@
 // ================================================================
 //  src/components/KanbanBoard.tsx — замовлення як канбан, у стилі Trello.
-//  Дошки: «Всі» (колонки = статуси замовлень із таблиці) і власні —
-//  «Пріоритет», «Пауза» чи будь-які інші, де колонки створює користувач,
-//  а картки розкладає вручну. Перетягування мишею, на телефоні — кнопка ⇄.
+//  Дошки власні: «Пріоритет», «Пауза» чи будь-які інші — колонки створює
+//  користувач, картки розкладає вручну (статус лишається міткою).
+//  Перетягування мишею, на телефоні — кнопка ⇄.
 //  Дошки спільні для всіх (зберігаються в таблиці-хабі).
 // ================================================================
 
@@ -15,22 +15,18 @@ import { Order, KanbanBoardData, statusStyle } from '../types';
 
 interface Props {
   orders: Order[];
-  statuses: string[];
   pinned: Set<string>;
   onOpen: (o: Order) => void;
-  onMove: (o: Order, status: string) => void;
   onTogglePin: (projectId: string, on: boolean) => void;
   onToast: (msg: string, err?: boolean) => void;
   activeRow?: number;
 }
 
-const ALL = '__all__';   // вбудована дошка «Всі» — колонки зі статусів замовлень
-
 export default function KanbanBoard({
-  orders, statuses, pinned, onOpen, onMove, onTogglePin, onToast, activeRow,
+  orders, pinned, onOpen, onTogglePin, onToast, activeRow,
 }: Props) {
   const [boards, setBoards] = useState<KanbanBoardData[]>([]);
-  const [boardId, setBoardId] = useState<string>(ALL);
+  const [boardId, setBoardId] = useState<string>('');
   const [drag, setDrag] = useState<Order | null>(null);
   const [over, setOver] = useState<string>('');
   const [movePick, setMovePick] = useState<Order | null>(null);
@@ -40,12 +36,16 @@ export default function KanbanBoard({
 
   useEffect(() => {
     api.boards()
-      .then(r => setBoards(r.boards || []))
+      .then(r => {
+        const list = r.boards || [];
+        setBoards(list);
+        if (list.length) setBoardId(prev => prev || list[0].id);
+      })
       .catch(e => onToast(e?.message || 'Не вдалося прочитати дошки', true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const board = boards.find(b => b.id === boardId) || null;
+  const board = boards.find(b => b.id === boardId) || boards[0] || null;
 
   async function persist(next: KanbanBoardData[]) {
     setBoards(next);
@@ -64,22 +64,14 @@ export default function KanbanBoard({
 
   /** Колонки поточної дошки: статуси або власні + «Без колонки». */
   const columns = useMemo(() => {
-    if (!board) {
-      const seen: string[] = [];
-      statuses.forEach(s => { if (s && !seen.includes(s)) seen.push(s); });
-      orders.forEach(o => { const s = o.status || 'без статусу'; if (!seen.includes(s)) seen.push(s); });
-      return seen.map(name => ({
-        name,
-        items: orders.filter(o => (o.status || 'без статусу') === name),
-      }));
-    }
+    if (!board) return [];
     const cols = board.columns.map(name => ({
       name,
       items: orders.filter(o => board.cards[o.projectId] === name),
     }));
     cols.push({ name: '', items: orders.filter(o => !board.cards[o.projectId]) });
     return cols;
-  }, [board, orders, statuses]);
+  }, [board, orders]);
 
   const sortPinned = (list: Order[]) =>
     [...list].sort((a, b) => (pinned.has(b.projectId) ? 1 : 0) - (pinned.has(a.projectId) ? 1 : 0));
@@ -88,11 +80,7 @@ export default function KanbanBoard({
     const o = drag;
     setDrag(null);
     setOver('');
-    if (!o) return;
-    if (!board) {
-      if ((o.status || 'без статусу') !== colName) onMove(o, colName);
-      return;
-    }
+    if (!o || !board) return;
     const cards = { ...board.cards };
     if (colName) cards[o.projectId] = colName; else delete cards[o.projectId];
     patchBoard(board.id, { cards });
@@ -135,18 +123,16 @@ export default function KanbanBoard({
     <div className="flex flex-col h-full">
       {/* Перемикач дошок */}
       <div className="flex-shrink-0 px-3 lg:px-5 pb-2 flex items-center gap-1.5 flex-wrap">
-        {[{ id: ALL, name: 'Всі' }, ...boards].map(b => {
-          const on = boardId === b.id;
+        {boards.map(b => {
+          const on = board?.id === b.id;
           return (
             <button key={b.id} onClick={() => setBoardId(b.id)}
               className="px-3 py-1.5 rounded-xl text-[12px] font-bold transition-colors"
               style={on ? { background: 'var(--ink)', color: '#fff' } : { background: '#fff', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px #E5E7EB' }}>
               {b.name}
-              {b.id !== ALL && (
-                <span className="ml-1.5 opacity-60">
-                  {orders.filter(o => (boards.find(x => x.id === b.id)?.cards || {})[o.projectId]).length}
-                </span>
-              )}
+              <span className="ml-1.5 opacity-60">
+                {orders.filter(o => b.cards[o.projectId]).length}
+              </span>
             </button>
           );
         })}
@@ -156,12 +142,16 @@ export default function KanbanBoard({
           <Plus size={13} /> дошка
         </button>
         {saving && <Loader2 size={13} className="animate-spin" style={{ color: 'var(--accent)' }} />}
-        {board && (
-          <span className="text-[11px] ml-auto" style={{ color: 'var(--ink-3)' }}>
-            перетягніть картку в колонку · дошка спільна для всіх
-          </span>
-        )}
+        <span className="text-[11px] ml-auto" style={{ color: 'var(--ink-3)' }}>
+          перетягніть картку в колонку · дошки спільні для всіх
+        </span>
       </div>
+
+      {!board && (
+        <p className="text-center text-[12.5px] py-14" style={{ color: 'var(--ink-3)' }}>
+          Дошок ще немає — натисніть «+ дошка», щоб створити першу
+        </p>
+      )}
 
       {/* Дошка */}
       <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-3 lg:px-5 pb-4">
@@ -170,7 +160,7 @@ export default function KanbanBoard({
             const st = statusStyle(name || 'без статусу');
             const isOver = over === name;
             const list = sortPinned(items);
-            const isRest = board && !name;
+            const isRest = !name;
             return (
               <div key={name || '__rest__'}
                 onDragOver={e => { e.preventDefault(); setOver(name); }}
@@ -191,7 +181,7 @@ export default function KanbanBoard({
                   </p>
                   <span className="text-[11px] font-bold tabular-nums px-1.5 py-0.5 rounded-md bg-white/80"
                     style={{ color: 'var(--ink-2)' }}>{list.length}</span>
-                  {board && !isRest && (
+                  {!isRest && (
                     <span className="hidden lg:flex items-center opacity-0 group-hover/col:opacity-100 transition-opacity">
                       <button onClick={() => renameColumn(name)} className="p-1 press" style={{ color: 'var(--ink-3)' }} aria-label="Перейменувати">
                         <Pencil size={11} />
@@ -237,8 +227,8 @@ export default function KanbanBoard({
                           </button>
                         </div>
 
-                        {/* На власній дошці статус лишається видимим міткою */}
-                        {board && (
+                        {/* Статус замовлення лишається видимим міткою */}
+                        {(
                           <span className="inline-block mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md"
                             style={{ background: cst.bg, color: cst.fg }}>
                             {o.status || 'без статусу'}
@@ -317,7 +307,7 @@ export default function KanbanBoard({
           <div className="absolute inset-0 bg-black/40 animate-fade-in" onClick={() => setMovePick(null)} />
           <div className="relative w-full lg:w-[380px] bg-white rounded-t-3xl lg:rounded-3xl shadow-2xl animate-sheet-up max-h-[70dvh] flex flex-col">
             <div className="px-4 pt-4 pb-2">
-              <p className="font-bold text-[15px]">{board ? `Перенести на «${board.name}»` : 'Змінити статус'}</p>
+              <p className="font-bold text-[15px]">Перенести на «{board?.name}»</p>
               <p className="text-[12px] truncate" style={{ color: 'var(--ink-3)' }}>
                 {movePick.orderNum || movePick.projectId}{movePick.client ? ` · ${movePick.client}` : ''}
               </p>
@@ -325,8 +315,9 @@ export default function KanbanBoard({
             <div className="p-2 overflow-y-auto">
               {columns.map(({ name }) => {
                 const st = statusStyle(name || 'без статусу');
-                const cur = board ? board.cards[movePick.projectId] === name || (!name && !board.cards[movePick.projectId])
-                                  : (movePick.status || 'без статусу') === name;
+                const cur = board
+                  ? board.cards[movePick.projectId] === name || (!name && !board.cards[movePick.projectId])
+                  : false;
                 return (
                   <button key={name || '__rest__'}
                     onClick={() => { const o = movePick; setMovePick(null); if (!cur) { setDrag(o); setTimeout(() => drop(name), 0); } }}
