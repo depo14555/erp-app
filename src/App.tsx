@@ -29,6 +29,7 @@ import Toast from './components/Toast';
 import InstallPrompt from './components/InstallPrompt';
 import UpdatePrompt from './components/UpdatePrompt';
 import OfflineBanner from './components/OfflineBanner';
+import LoadingBar from './components/LoadingBar';
 
 export default function App() {
   const [authed, setAuthed] = useState(hasToken());
@@ -44,6 +45,7 @@ export default function App() {
 
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingLabel, setLoadingLabel] = useState('');   // що саме зараз вантажиться
   const [showNotifs, setShowNotifs] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [toast, setToast] = useState<{ msg: string; err?: boolean } | null>(null);
@@ -80,6 +82,7 @@ export default function App() {
   }, []);
 
   const loadOrders = useCallback(async (force = false) => {
+    setLoadingLabel('Оновлюю список замовлень…');
     setLoading(true);
     try {
       const data = await api.getOrders(force);
@@ -96,6 +99,7 @@ export default function App() {
   }, [showToast]);
 
   const loadDashboard = useCallback(async (force = false) => {
+    setLoadingLabel('Оновлюю зведення…');
     setLoading(true);
     try {
       setDashboard(await api.getDashboard(force));
@@ -114,6 +118,7 @@ export default function App() {
   }, [authed, loadDashboard, loadOrders]);
 
   const openOrder = useCallback(async (headerRow: number, force = false) => {
+    setLoadingLabel('Відкриваю замовлення…');
     setLoading(true);
     try {
       setDetail(await api.getOrder(headerRow, force));
@@ -417,6 +422,7 @@ export default function App() {
       )}
 
       {toast && <Toast message={toast.msg} isError={toast.err} onClose={() => setToast(null)} />}
+      <LoadingBar active={loading} label={loadingLabel} />
       <InstallPrompt />
       <UpdatePrompt />
     </div>

@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft, RefreshCw, FolderOpen, FileText, Ruler, Box, Paperclip,
   ExternalLink, User, Search, Printer, X, Send, Tags, Rocket, Paintbrush, Receipt,
-  FolderTree, Calculator,
+  FolderTree, Calculator, Scissors, Wrench,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
 import ItemsTable, { TableMode } from '../components/ItemsTable';
@@ -64,6 +64,18 @@ const ZONES: Array<{ key: TableMode; label: string; short: string; icon: string 
   { key: 'log',  label: 'Логістика', short: 'Логіст.', icon: '🚚' },
 ];
 
+/** Дії з замовленням для телефона (на десктопі те саме в сайдбарі). */
+const TOOLS: Array<{ key: string; label: string; hint: string; Icon: typeof Rocket; color: string }> = [
+  { key: 'tech',    label: 'Тех.запуск',   hint: 'файли папки → рядки картки', Icon: Rocket,     color: '#EA580C' },
+  { key: 'distr',   label: 'Розподіл КД',  hint: 'по виконавцях і операціях',  Icon: FolderTree, color: '#7C3AED' },
+  { key: 'nest',    label: 'Розкрій DXF',  hint: 'листи, вага, вартість різу', Icon: Scissors,   color: '#0891B2' },
+  { key: 'calc',    label: 'Прорахунок',   hint: 'час, ціни, групи в рахунок', Icon: Calculator, color: '#0D9488' },
+  { key: 'photo',   label: 'Фотошоп',      hint: 'закрити зайве на кресленні', Icon: Paintbrush, color: '#DB2777' },
+  { key: 'send',    label: 'Виконавцю',    hint: 'відправити позиції в його таблицю', Icon: Send, color: '#4F46E5' },
+  { key: 'print',   label: 'Друк + QR',    hint: 'пакет креслень для цеху',    Icon: Printer,    color: '#0369A1' },
+  { key: 'billing', label: 'Рахунки',      hint: 'оплати і документи',         Icon: Receipt,    color: '#059669' },
+];
+
 /** Вікна інструментів, які можна згорнути (робота продовжується у фоні). */
 type SheetKey = 'print' | 'send' | 'tech' | 'photo' | 'distr' | 'calc' | 'nest';
 const SHEET_META: Record<SheetKey, { label: string; emoji: string }> = {
@@ -106,6 +118,7 @@ export default function OrderPage({
   const [showDistr, setShowDistr] = useState(false);
   const [showCalc, setShowCalc] = useState(false);
   const [showNest, setShowNest] = useState(false);
+  const [showTools, setShowTools] = useState(false);   // телефон: усі дії замовлення
   const [tableMode, setTableMode] = useState<TableMode>('prod');
   const [addOpItem, setAddOpItem] = useState<OrderItem | null>(null);
   const [showDelivery, setShowDelivery] = useState(false);
@@ -248,66 +261,55 @@ export default function OrderPage({
               <User size={11} /> {header.client || '—'}
             </p>
           </div>
-          {/* На десктопі ці інструменти живуть у сайдбарі (секція «Завдання») */}
-          {header.folderUrl && (
-            <a href={header.folderUrl} target="_blank" rel="noreferrer"
-              className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Папка">
-              <FolderOpen size={18} />
-            </a>
-          )}
-          <button onClick={() => setShowBilling(true)} className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Рахунки і оплати" title="Рахунки і оплати">
-            <Receipt size={17} />
+          {/* Телефон: усі інструменти — під однією кнопкою (на десктопі вони в сайдбарі) */}
+          <button onClick={() => setShowTools(true)}
+            className="lg:hidden flex items-center gap-1.5 pl-2.5 pr-3 py-1.5 rounded-xl press ring-1 ring-gray-200"
+            style={{ color: 'var(--ink-2)' }} aria-label="Інструменти замовлення">
+            <Wrench size={15} />
+            <span className="text-[12px] font-bold">Дії</span>
           </button>
-          <button onClick={() => setShowTech(true)} className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Тех.запуск" title="Тех.запуск">
-            <Rocket size={17} />
-          </button>
-          <button onClick={() => setShowDistr(true)} className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Розподіл КД" title="Розподіл КД по виконавцях і операціях">
-            <FolderTree size={17} />
-          </button>
-          <button onClick={() => setShowCalc(true)} className="p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Прорахунок" title="Прорахунок: час, ціни, групи для рахунку">
-            <Calculator size={17} />
-          </button>
-          <button onClick={() => setShowPhoto(true)} className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Фотошоп креслень" title="Фотошоп: закрити конфіденційне">
-            <Paintbrush size={17} />
-          </button>
-          <button onClick={() => setShowSend(true)} className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Відправити виконавцю" title="Відправити виконавцю">
-            <Send size={17} />
-          </button>
-          <button onClick={() => setShowPrint(true)} className="lg:hidden p-1.5 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Друк креслень" title="Друк креслень + QR">
-            <Printer size={18} />
-          </button>
-          {/* На десктопі оновлення в шапці додатка — тут лише для телефона */}
           <button onClick={onRefresh} className="lg:hidden p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Оновити">
             <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
 
-        <div className="px-3 pb-2.5 pt-1 flex items-center gap-2 flex-wrap">
-          {/* Статус + готовність — один блок, читається як стан замовлення */}
-          <div className="flex items-center gap-2.5 pl-1 pr-3 py-1 rounded-2xl bg-[#F7F8FA] ring-1 ring-gray-200/70">
-            <button onClick={() => setPickOrder(true)}
-              className="px-2.5 py-1 rounded-xl text-[11.5px] font-bold press whitespace-nowrap"
-              style={{ background: st.bg, color: st.fg }}>
-              {header.status || 'без статусу'} ▾
-            </button>
-            <div className="flex items-center gap-2">
-              <div className="w-[110px] sm:w-[150px] h-1.5 bg-gray-200/80 rounded-full overflow-hidden">
-                <div className="h-full rounded-full grow-x" style={{ width: `${pct}%`, background: st.solid }} />
-              </div>
-              <span className="text-[11.5px] font-bold tabular-nums whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
-                {done}<span style={{ color: 'var(--ink-3)' }}>/{total}</span>
-              </span>
+        {/* Стан замовлення + вигляд — один рядок, без переносів */}
+        <div className="px-3 pb-2 pt-1.5 flex items-center gap-2">
+          <button onClick={() => setPickOrder(true)}
+            className="px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold press whitespace-nowrap flex-shrink-0"
+            style={{ background: st.bg, color: st.fg }}>
+            {header.status || 'без статусу'} ▾
+          </button>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="flex-1 min-w-[40px] h-1.5 bg-gray-200/80 rounded-full overflow-hidden">
+              <div className="h-full rounded-full grow-x" style={{ width: `${pct}%`, background: st.solid }} />
             </div>
+            <span className="text-[11.5px] font-bold tabular-nums whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
+              {done}<span style={{ color: 'var(--ink-3)' }}>/{total}</span>
+            </span>
           </div>
+          <div className="flex items-center gap-0.5 p-0.5 rounded-xl bg-[#F1F2F4] flex-shrink-0">
+            {(['cards', 'table'] as const).map(v => (
+              <button key={v} onClick={() => setView(v)}
+                className="px-2.5 py-1 rounded-lg text-[11.5px] font-bold transition-all"
+                style={view === v
+                  ? { background: '#fff', color: 'var(--ink)', boxShadow: '0 1px 2px rgba(16,24,40,.08)' }
+                  : { color: 'var(--ink-3)' }}>
+                {v === 'cards' ? 'Картки' : 'Таблиця'}
+              </button>
+            ))}
+          </div>
+        </div>
 
-          {/* Зони таблиці — головний перемикач роботи */}
-          {view === 'table' && (
-            <div className="flex items-center gap-0.5 p-0.5 rounded-2xl bg-[#F7F8FA] ring-1 ring-gray-200/70">
+        {/* Зони — на всю ширину, гортається вбік замість переносу */}
+        {view === 'table' && (
+          <div className="px-3 pb-2">
+            <div className="flex items-center gap-0.5 p-0.5 rounded-xl bg-[#F1F2F4] overflow-x-auto no-scrollbar">
               {ZONES.map(({ key, label, short, icon }) => {
                 const on = tableMode === key;
                 return (
                   <button key={key} onClick={() => setTableMode(key)} title={label}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold transition-all whitespace-nowrap"
+                    className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11.5px] font-bold transition-all whitespace-nowrap"
                     style={on
                       ? { background: '#fff', color: 'var(--ink)', boxShadow: '0 1px 2px rgba(16,24,40,.08)' }
                       : { color: 'var(--ink-3)' }}>
@@ -318,25 +320,12 @@ export default function OrderPage({
                 );
               })}
             </div>
-          )}
-
-          {/* Вигляд: картки / таблиця */}
-          <div className="ml-auto flex items-center gap-0.5 p-0.5 rounded-2xl bg-[#F7F8FA] ring-1 ring-gray-200/70">
-            {(['cards', 'table'] as const).map(v => (
-              <button key={v} onClick={() => setView(v)}
-                className="px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold transition-all"
-                style={view === v
-                  ? { background: '#fff', color: 'var(--ink)', boxShadow: '0 1px 2px rgba(16,24,40,.08)' }
-                  : { color: 'var(--ink-3)' }}>
-                {v === 'cards' ? 'Картки' : 'Таблиця'}
-              </button>
-            ))}
           </div>
-        </div>
+        )}
 
         {/* Фільтри: пошук + операція / виконавець / статус (обидва вигляди) */}
-        <div className="px-3 pb-2.5 flex items-center gap-1.5 flex-wrap">
-          <div className="relative flex-1 min-w-[150px]">
+        <div className="px-3 pb-2.5 flex items-center gap-1.5 flex-nowrap lg:flex-wrap overflow-x-auto lg:overflow-visible no-scrollbar">
+          <div className="relative flex-1 min-w-[150px] flex-shrink-0">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={q}
@@ -664,6 +653,64 @@ export default function OrderPage({
             onMinimize={() => minimize('nest')}
             onToast={onToast}
           />
+        </div>
+      )}
+
+      {/* Телефон: усі дії замовлення в одній шторці */}
+      {showTools && (
+        <div className="lg:hidden fixed inset-0 z-[75] flex items-end">
+          <div className="absolute inset-0 bg-black/40 animate-fade-in" onClick={() => setShowTools(false)} />
+          <div className="relative w-full bg-white rounded-t-3xl shadow-2xl animate-sheet-up max-h-[85dvh] flex flex-col">
+            <div className="flex-shrink-0 px-4 pt-4 pb-2 flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-[15px] leading-tight">Дії з замовленням</p>
+                <p className="text-[11.5px] truncate" style={{ color: 'var(--ink-3)' }}>
+                  {header.orderNum || header.projectId}{header.client ? ` · ${header.client}` : ''}
+                </p>
+              </div>
+              <button onClick={() => setShowTools(false)} className="p-2 rounded-xl press" style={{ color: 'var(--ink-3)' }} aria-label="Закрити">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-3 pb-[max(1rem,env(safe-area-inset-bottom))] grid grid-cols-2 gap-1.5">
+              {TOOLS.map(({ key, label, Icon, color, hint }) => (
+                <button key={key}
+                  onClick={() => {
+                    setShowTools(false);
+                    if (key === 'tech') setShowTech(true);
+                    else if (key === 'distr') setShowDistr(true);
+                    else if (key === 'nest') setShowNest(true);
+                    else if (key === 'calc') setShowCalc(true);
+                    else if (key === 'photo') setShowPhoto(true);
+                    else if (key === 'send') setShowSend(true);
+                    else if (key === 'print') setShowPrint(true);
+                    else if (key === 'billing') setShowBilling(true);
+                  }}
+                  className="flex items-start gap-2.5 p-3 rounded-2xl ring-1 ring-gray-200/70 text-left press active:bg-gray-50">
+                  <span className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: color + '16', color }}>
+                    <Icon size={16} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[12.5px] font-bold leading-tight">{label}</span>
+                    <span className="block text-[10.5px] mt-0.5" style={{ color: 'var(--ink-3)' }}>{hint}</span>
+                  </span>
+                </button>
+              ))}
+              {header.folderUrl && (
+                <a href={header.folderUrl} target="_blank" rel="noreferrer" onClick={() => setShowTools(false)}
+                  className="flex items-start gap-2.5 p-3 rounded-2xl ring-1 ring-gray-200/70 text-left press active:bg-gray-50">
+                  <span className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 bg-amber-50 text-amber-600">
+                    <FolderOpen size={16} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[12.5px] font-bold leading-tight">Папка на Диску</span>
+                    <span className="block text-[10.5px] mt-0.5" style={{ color: 'var(--ink-3)' }}>усі файли замовлення</span>
+                  </span>
+                </a>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
