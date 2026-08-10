@@ -29,6 +29,7 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [draftOps, setDraftOps] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [newOp, setNewOp] = useState<{ name: string; group: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,6 +69,25 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
     setEdit(r);
     setDraft({ ...r.values });
     setDraftOps(new Set(r.ops));
+  }
+
+  /** Нова операція = нова колонка в аркуші «Контрагенти». */
+  async function addOp() {
+    if (!newOp) return;
+    const name = newOp.name.trim();
+    if (!name) return;
+    setSaving(true);
+    try {
+      await api.contractorAddOp(name, newOp.group);
+      onToast(`✅ Операцію «${name}» додано в матрицю`);
+      setNewOp(null);
+      setDraftOps(prev => new Set([...prev, name]));
+      await load();
+    } catch (e: any) {
+      onToast(e?.message || 'Не вдалося додати операцію', true);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function save() {
@@ -242,9 +262,38 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
 
               {/* Матриця операцій */}
               <div>
-                <p className="text-[10.5px] font-bold uppercase tracking-wide mb-1.5" style={{ color: 'var(--ink-3)' }}>
-                  Що вміє робити
-                </p>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <p className="text-[10.5px] font-bold uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>
+                    Що вміє робити
+                  </p>
+                  <button onClick={() => setNewOp({ name: '', group: opGroups[0]?.[0] || '' })}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold press"
+                    style={{ color: 'var(--accent)' }}
+                    title="Додати нову операцію в матрицю (нова колонка в аркуші)">
+                    <Plus size={12} /> операція
+                  </button>
+                </div>
+
+                {newOp && (
+                  <div className="mb-2 p-2.5 rounded-xl ring-1 ring-gray-200 bg-[#FAFBFC] flex items-center gap-1.5 flex-wrap">
+                    <input autoFocus value={newOp.name}
+                      onChange={e => setNewOp({ ...newOp, name: e.target.value })}
+                      onKeyDown={e => { if (e.key === 'Enter') addOp(); if (e.key === 'Escape') setNewOp(null); }}
+                      placeholder="Назва операції"
+                      className="flex-1 min-w-[150px] px-2.5 py-1.5 rounded-lg bg-white ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 outline-none text-[12.5px]" />
+                    <select value={newOp.group} onChange={e => setNewOp({ ...newOp, group: e.target.value })}
+                      className="px-2 py-1.5 rounded-lg bg-white ring-1 ring-gray-200 text-[12px] outline-none">
+                      {opGroups.map(([g]) => <option key={g} value={g}>{g}</option>)}
+                      <option value="">без групи</option>
+                    </select>
+                    <button onClick={addOp} disabled={saving || !newOp.name.trim()}
+                      className="px-3 py-1.5 rounded-lg text-[12px] font-bold text-white press disabled:opacity-40"
+                      style={{ background: 'var(--accent)' }}>Додати</button>
+                    <button onClick={() => setNewOp(null)} className="p-1.5 press" style={{ color: 'var(--ink-3)' }} aria-label="Скасувати">
+                      <X size={13} />
+                    </button>
+                  </div>
+                )}
                 <div className="space-y-2">
                   {opGroups.map(([group, names]) => (
                     <div key={group}>

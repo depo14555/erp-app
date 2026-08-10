@@ -15,6 +15,7 @@ import Sidebar from './components/Sidebar';
 import OrdersPage from './pages/OrdersPage';
 import CalcOverviewPage from './pages/CalcOverviewPage';
 import ContractorsPage from './pages/ContractorsPage';
+import StaffPage from './pages/StaffPage';
 import SearchPage from './pages/SearchPage';
 import OrderPage from './pages/OrderPage';
 import ChatPage from './pages/ChatPage';
@@ -225,7 +226,7 @@ export default function App() {
     else if (tab === 'logistics') setLogisticsTick(t => t + 1);
     else if (tab === 'mail') setMailTick(t => t + 1);
     else if (tab === 'billing') setOverviewTick(t => t + 1);
-    else if (tab === 'contractors' || tab === 'calc') setDirTick(t => t + 1);
+    else if (tab === 'contractors' || tab === 'calc' || tab === 'staff') setDirTick(t => t + 1);
     else loadOrders(true);
   }
 
@@ -234,12 +235,15 @@ export default function App() {
   const title = tab === 'mail' ? 'Вхідні (пошта)'
     : tab === 'billing' ? 'Рахунки і оплати'
     : tab === 'contractors' ? 'Контрагенти'
+    : tab === 'staff' ? 'Штат працівників'
     : tab === 'calc' ? 'Прорахунок'
     : (TABS.find(t => t.key === tab)?.label ?? 'ERP');
   const subtitle = tab === 'mail'
     ? 'нові замовлення з Gmail'
     : tab === 'billing'
       ? 'виставлено · оплачено · треба виставити'
+      : tab === 'staff'
+        ? 'посада, ставка, контакти, графік'
       : tab === 'contractors'
         ? 'дані, таблиці, матриця операцій'
         : tab === 'calc'
@@ -259,6 +263,8 @@ export default function App() {
       <CalcOverviewPage orders={orders} onOpenOrder={hr => openOrderCalc(hr)} onToast={showToast} refreshSignal={dirTick} />
     ) : tab === 'contractors' ? (
       <ContractorsPage onToast={showToast} refreshSignal={dirTick} />
+    ) : tab === 'staff' ? (
+      <StaffPage onToast={showToast} refreshSignal={dirTick} />
     ) : tab === 'logistics' ? (
       <LogisticsPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} refreshSignal={logisticsTick} />
     ) : tab === 'billing' ? (

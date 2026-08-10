@@ -30,6 +30,7 @@ const GROUPS: MenuGroup[] = [
     title: 'Довідники',
     items: [
       { icon: '🤝', label: 'Контрагенти', sub: 'дані, таблиці, матриця операцій', tab: 'contractors' },
+      { icon: '👷', label: 'Штат працівників', sub: 'посада, ставка, контакти', tab: 'staff' },
     ],
   },
   {

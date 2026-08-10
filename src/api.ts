@@ -14,7 +14,7 @@ import {
   TechFilesData, TechLaunchItem, TechLaunchResult, MailListData, SavePdfResult,
   FolderFile, BillingData, CommerceContext, CommerceResult, DocType, CreateOrderResult,
   BillingOverview, DistributionData, DistributeParams, DistributeResult, CalcData,
-  NestItemsData, NestPrice, ContractorsData, KanbanBoardData, CalcOverview,
+  NestItemsData, NestPrice, ContractorsData, KanbanBoardData, CalcOverview, StaffData,
 } from './types';
 
 /** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
@@ -81,7 +81,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /** Читання можна безпечно повторити; мутації — ні (щоб не задвоїти запис). */
 function isReadAction(action: string): boolean {
-  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute|calcSave|contractorSave|boards)/.test(action);
+  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute|calcSave|contractorSave|contractorAddOp|staffSave|boards)/.test(action);
 }
 
 function cacheGet<T>(key: string): T | null {
@@ -394,6 +394,22 @@ export const api = {
   contractorSave(row: number, values: Record<string, string>, ops: Record<string, boolean>):
     Promise<{ ok: boolean; row: number; isNew: boolean }> {
     return post('erp.contractorSave', { row, values, ops });
+  },
+
+  /** Контрагенти: додати нову операцію в матрицю (нова колонка в аркуші). */
+  contractorAddOp(name: string, group: string): Promise<{ ok: boolean; col: number }> {
+    return post('erp.contractorAddOp', { name, group });
+  },
+
+  /** Штат працівників: перелік з аркуша «Штат». */
+  staff(): Promise<StaffData> {
+    return post('erp.staff');
+  },
+
+  /** Штат: зберегти рядок (row=0 — новий) або видалити (remove). */
+  staffSave(row: number, values: Record<string, string>, remove = false):
+    Promise<{ ok: boolean; row?: number; isNew?: boolean; removed?: boolean }> {
+    return post('erp.staffSave', { row, values, remove });
   },
 
   /** Дошки канбану (спільні): без аргументу — читання, з масивом — запис. */

@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   X, Paintbrush, Loader2, Undo2, ChevronLeft, ChevronRight, Save, Square,
-  ExternalLink, ArrowLeft, ArrowRight, Search,
+  ExternalLink, ArrowLeft, ArrowRight, Search, Copy, Layers,
 } from 'lucide-react';
 import { MinimizeButton } from './PageSheet';
 import { useBusy } from '../lib/busy';
@@ -43,6 +43,9 @@ export default function PhotoSheet({ detail, onClose, onMinimize, onToast, onSav
   const [pageIdx, setPageIdx] = useState(0);
   const [color, setColor] = useState<'black' | 'white'>('black');
   const [savedUrl, setSavedUrl] = useState('');
+  /** Шаблон розмітки у ВІДНОСНИХ координатах (0..1) — щоб лягав на будь-який формат. */
+  const [template, setTemplate] = useState<Array<{ x: number; y: number; w: number; h: number; color: 'black' | 'white' }>>([]);
+  const [batch, setBatch] = useState<{ done: number; total: number; name: string } | null>(null);
   const prefetching = useRef<Set<string>>(new Set());
   // Поки триває операція — сторінку не можна оновити (робота б загубилась)
   useBusy(phase === 'save', 'Фотошоп креслень');
@@ -98,13 +101,14 @@ export default function PhotoSheet({ detail, onClose, onMinimize, onToast, onSav
     }
   }
 
+  /** Відкриття файлу; якщо є запам'ятована розмітка — вона одразу накладається. */
   async function openFile(f: FolderFile) {
     setFile(f);
     setPhase(renderCache.has(f.id) ? 'edit' : 'render');
     try {
       const rendered = await renderToCache(f);
       setPages(rendered);
-      setRects(rendered.map(() => []));
+      setRects(template.length ? applyTemplate(template, rendered) : rendered.map(() => []));
       setPageIdx(0);
       setPhase('edit');
       prefetchNext(f);
@@ -201,6 +205,71 @@ export default function PhotoSheet({ detail, onClose, onMinimize, onToast, onSav
 
   const totalRects = rects.reduce((s, a) => s + a.length, 0);
 
+  /** Поточні прямокутники сторінки → відносні координати шаблону. */
+  function makeTemplate(): typeof template {
+    const pg = pages[pageIdx];
+    if (!pg) return [];
+    return (rects[pageIdx] || []).map(r => ({
+      x: r.x / pg.width, y: r.y / pg.height,
+      w: r.w / pg.width, h: r.h / pg.height, color: r.color,
+    }));
+  }
+  /** Шаблон → прямокутники для конкретної сторінки. */
+  function applyTemplate(tpl: typeof template, pgs: RenderedPage[]): Rect[][] {
+    return pgs.map(pg => tpl.map(t => ({
+      x: t.x * pg.width, y: t.y * pg.height,
+      w: t.w * pg.width, h: t.h * pg.height, color: t.color,
+    })));
+  }
+
+  /** «Повторити на всі»: запам'ятати розмітку і накласти на всі сторінки файлу. */
+  function repeatOnAll() {
+    const tpl = makeTemplate();
+    if (!tpl.length) { onToast('Спершу намалюйте прямокутники', true); return; }
+    setTemplate(tpl);
+    setRects(applyTemplate(tpl, pages));
+    onToast(`Розмітку запам'ятано (${tpl.length}) — ляже на всі наступні креслення`);
+  }
+
+  /** Зберегти всі файли з накладеним шаблоном. */
+  async function saveAll() {
+    const tpl = template.length ? template : makeTemplate();
+    if (!tpl.length) { onToast('Немає розмітки для повторення', true); return; }
+    setTemplate(tpl);
+    const list = visible.filter(f => f.ext === 'pdf');
+    if (!list.length) { onToast('Немає PDF для збереження', true); return; }
+
+    setPhase('save');
+    let ok = 0;
+    const failed: string[] = [];
+    try {
+      const { assemblePdf } = await import('../lib/photoPdf');
+      for (let i = 0; i < list.length; i++) {
+        const f = list[i];
+        setBatch({ done: i, total: list.length, name: f.name });
+        try {
+          const pgs = await renderToCache(f);
+          const base64 = await assemblePdf(pgs, applyTemplate(tpl, pgs));
+          const res = await api.savePdf(f.id, base64, f.name, f.row || undefined);
+          renderCache.delete(f.id);
+          setFiles(prev => prev.map(x => (x.id === f.id
+            ? { ...x, id: res.newId, name: res.newName, processed: true } : x)));
+          ok++;
+        } catch (e: any) {
+          failed.push(f.name);
+        }
+      }
+      onToast(failed.length
+        ? `Збережено ${ok} з ${list.length}; не вдалося: ${failed.slice(0, 3).join('; ')}`
+        : `✅ Збережено всі ${ok} креслень`, failed.length > 0);
+      onSaved();
+    } finally {
+      setBatch(null);
+      setPhase('files');
+      setFile(null);
+    }
+  }
+
   async function save() {
     if (!file) return;
     setPhase('save');
@@ -256,6 +325,13 @@ export default function PhotoSheet({ detail, onClose, onMinimize, onToast, onSav
         {/* Вибір файлу */}
         {phase === 'files' && (
           <>
+            {template.length > 0 && (
+              <div className="flex-shrink-0 mx-4 mt-2.5 px-3 py-2 rounded-xl bg-pink-50 text-pink-700 text-[11.5px] flex items-center gap-2">
+                <Copy size={13} className="flex-shrink-0" />
+                <span className="flex-1">Запам'ятана розмітка ({template.length} прямок.) ляже на кожне відкрите креслення</span>
+                <button onClick={() => setTemplate([])} className="press font-bold">скинути</button>
+              </div>
+            )}
             <div className="flex-shrink-0 px-4 pt-2.5 flex items-center gap-1.5">
               <div className="relative flex-1 min-w-0">
                 <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -338,6 +414,20 @@ export default function PhotoSheet({ detail, onClose, onMinimize, onToast, onSav
                 style={{ background: '#F3F4F6', color: 'var(--ink-2)' }}>
                 <Undo2 size={12} /> Відмінити
               </button>
+              <button onClick={repeatOnAll} disabled={!(rects[pageIdx] || []).length}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold press disabled:opacity-40"
+                style={template.length
+                  ? { background: '#FCE7F3', color: '#BE185D' }
+                  : { background: '#F3F4F6', color: 'var(--ink-2)' }}
+                title="Запам'ятати цю розмітку і накладати її на всі наступні креслення">
+                <Copy size={12} /> {template.length ? `Шаблон · ${template.length}` : 'Повторити на всі'}
+              </button>
+              {template.length > 0 && (
+                <button onClick={() => { setTemplate([]); onToast('Шаблон розмітки скинуто'); }}
+                  className="p-1.5 rounded-lg press" style={{ color: 'var(--ink-3)' }} aria-label="Скинути шаблон">
+                  <X size={13} />
+                </button>
+              )}
               <span className="ml-auto text-[11px] font-semibold tabular-nums" style={{ color: 'var(--ink-3)' }}>
                 {totalRects} прямок.
               </span>
@@ -375,10 +465,16 @@ export default function PhotoSheet({ detail, onClose, onMinimize, onToast, onSav
                 style={{ background: '#DB2777' }}>
                 <Save size={15} /> Зберегти ({totalRects} прямок.)
               </button>
+              <button onClick={saveAll} disabled={!totalRects && !template.length}
+                className="px-3.5 py-2.5 rounded-2xl font-bold text-[12.5px] press disabled:opacity-40 inline-flex items-center gap-1.5"
+                style={{ background: '#FCE7F3', color: '#BE185D' }}
+                title="Накласти цю розмітку на всі показані креслення і зберегти їх">
+                <Layers size={14} /> Зберегти всі
+              </button>
               <button onClick={() => step(1)} disabled={fileIdx >= visible.length - 1}
-                className="px-4 py-2.5 rounded-2xl font-bold text-[12.5px] press border disabled:opacity-40"
+                className="px-3.5 py-2.5 rounded-2xl font-bold text-[12.5px] press border disabled:opacity-40"
                 style={{ color: 'var(--ink-2)', borderColor: 'var(--line)' }}>
-                Пропустити →
+                Далі →
               </button>
             </div>
           </>
@@ -387,8 +483,22 @@ export default function PhotoSheet({ detail, onClose, onMinimize, onToast, onSav
         {phase === 'save' && (
           <div className="p-10 flex flex-col items-center gap-3">
             <Loader2 size={26} className="animate-spin text-pink-600" />
-            <p className="text-[13px] font-bold">Збираю PDF і зберігаю на Диск…</p>
-            <p className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Старий файл піде в кошик, посилання в картці оновиться</p>
+            {batch ? (
+              <>
+                <p className="text-[13px] font-bold">Обробляю {batch.done + 1} з {batch.total}</p>
+                <p className="text-[11.5px] text-center max-w-[320px] truncate" style={{ color: 'var(--ink-2)' }}>{batch.name}</p>
+                <div className="w-[260px] h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all"
+                    style={{ width: `${Math.round(100 * batch.done / batch.total)}%`, background: '#DB2777' }} />
+                </div>
+                <p className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Вікно можна згорнути — робота триває</p>
+              </>
+            ) : (
+              <>
+                <p className="text-[13px] font-bold">Збираю PDF і зберігаю на Диск…</p>
+                <p className="text-[11px]" style={{ color: 'var(--ink-3)' }}>Старий файл піде в кошик, посилання в картці оновиться</p>
+              </>
+            )}
           </div>
         )}
 

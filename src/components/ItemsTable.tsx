@@ -7,7 +7,7 @@
 // ================================================================
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ExternalLink, Check, Loader2, Search, CheckSquare, Square, Pencil, Plus, Filter } from 'lucide-react';
+import { ExternalLink, Check, Loader2, Search, CheckSquare, Square, Pencil, Plus, Filter, FolderOpen } from 'lucide-react';
 import { OrderItem, Lists, statusStyle } from '../types';
 
 type Field = 'op' | 'executor' | 'qty' | 'assignedQty' | 'material' | 'thickness' | 'note' | 'rowStatus'
@@ -175,8 +175,11 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
       );
     }
 
+    // Виконавець із посиланням на папку (після розподілу КД) — поруч значок
+    const folder = field === 'executor' ? (item.executorUrl || '') : '';
     const isList = !!optionsFor(field)?.length;
     return (
+      <span className="flex items-center gap-0.5 w-full">
       <button
         onClick={e => openEditor(e, item, field)}
         className={`w-full text-left px-2 py-1 rounded-lg text-[12.5px] truncate press hover:bg-gray-50 ${isList ? 'hover:ring-1 hover:ring-gray-200' : ''}`}
@@ -188,6 +191,14 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
           : (value || '—')}
         {isList && <span className="float-right text-[8px] opacity-0 group-hover:opacity-40 ml-1 mt-1">▼</span>}
       </button>
+      {folder && (
+        <a href={folder} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
+          className="p-0.5 rounded press flex-shrink-0" style={{ color: 'var(--accent)' }}
+          title="Папка виконавця з кресленнями (розподіл КД)">
+          <FolderOpen size={12} />
+        </a>
+      )}
+      </span>
     );
   }
 

@@ -6,7 +6,7 @@
 // ================================================================
 
 import {
-  LayoutDashboard, ClipboardList, MessageSquare, Truck, Building2,
+  LayoutDashboard, ClipboardList, MessageSquare, Truck, Building2, UserRound,
   LogOut, RefreshCw, Receipt, Printer, Lock,
   FolderOpen, Rocket, Paintbrush, Send, FolderTree, Calculator, Scissors,
 } from 'lucide-react';
@@ -41,6 +41,7 @@ const SECTIONS: NavSection[] = [
     title: 'Довідники',
     items: [
       { key: 'contractors', label: 'Контрагенти', Icon: Building2 },
+      { key: 'staff', label: 'Штат працівників', Icon: UserRound },
     ],
   },
 ];

@@ -46,6 +46,8 @@ export interface OrderItem {
   payStatus: string;
   invoiceNum: string;
   invoiceUrl: string;
+  /** Папка виконавця після розподілу КД (посилання з колонки «Виконавець»). */
+  executorUrl?: string;
   /** Прорахунок: ціна/сума виконавця, час на 1 шт (колонка «Час на виконання»). */
   execSum?: string;
   time?: string;
@@ -113,7 +115,7 @@ export interface ChatMessage {
   itemName: string;
 }
 
-export type AppTab = 'orders' | 'calc' | 'contractors' | 'search' | 'logistics' | 'chat' | 'mail' | 'billing';
+export type AppTab = 'orders' | 'calc' | 'contractors' | 'staff' | 'search' | 'logistics' | 'chat' | 'mail' | 'billing';
 
 /** Дошка канбану: власні колонки поверх статусів («Пріоритет», «Пауза»…). */
 export interface KanbanBoardData {
@@ -170,6 +172,11 @@ export interface ContractorsData {
   ops: ContractorOp[];
   rows: ContractorRow[];
 }
+
+/** Штат: працівник із аркуша «Штат». */
+export interface StaffField { col: number; label: string }
+export interface StaffRow { row: number; [col: string]: string | number }
+export interface StaffData { fields: StaffField[]; rows: StaffRow[] }
 
 /** Панель бухгалтерії по всіх замовленнях. */
 export interface OverviewInvoice {

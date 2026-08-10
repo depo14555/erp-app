@@ -8,11 +8,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft, RefreshCw, FolderOpen, FileText, Ruler, Box, Paperclip,
   ExternalLink, User, Search, Printer, X, Send, Tags, Rocket, Paintbrush, Receipt,
-  FolderTree, Calculator, Scissors, Wrench,
+  FolderTree, Calculator, Scissors, Wrench, Layers,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
 import ItemsTable, { TableMode } from '../components/ItemsTable';
 import DeliverySheet from '../components/DeliverySheet';
+import BulkEditSheet from '../components/BulkEditSheet';
 import { api } from '../api';
 import PrintSheet from '../components/PrintSheet';
 import SendSheet from '../components/SendSheet';
@@ -130,6 +131,7 @@ export default function OrderPage({
   const [minimized, setMinimized] = useState<Set<SheetKey>>(new Set());
   const [finished, setFinished] = useState<Set<SheetKey>>(new Set());
   const [pickBulk, setPickBulk] = useState(false);
+  const [bulkEdit, setBulkEdit] = useState(false);   // масова зміна будь-якого поля
   const [bulkBusy, setBulkBusy] = useState(false);
   const [limits, setLimits] = useState<Record<string, number>>({});
   // На широкому екрані за замовчуванням таблиця, на телефоні — картки
@@ -546,6 +548,10 @@ export default function OrderPage({
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-bold bg-white/10 hover:bg-white/20 press whitespace-nowrap disabled:opacity-50">
             <Tags size={13} /> {bulkBusy ? 'Зберігаю…' : 'Статус'}
           </button>
+          <button onClick={() => setBulkEdit(true)} disabled={bulkBusy}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-bold bg-indigo-500 hover:bg-indigo-400 press whitespace-nowrap disabled:opacity-50">
+            <Layers size={13} /> Змінити поле
+          </button>
           <button onClick={() => setShowSend(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-bold bg-blue-500 hover:bg-blue-400 press whitespace-nowrap">
             <Send size={13} /> Виконавцю
@@ -758,6 +764,19 @@ export default function OrderPage({
             }
           }}
           onClose={() => setAddOpItem(null)}
+        />
+      )}
+
+      {/* Масова зміна поля для вибраних позицій */}
+      {bulkEdit && (
+        <BulkEditSheet
+          rows={[...selected]}
+          items={items.filter(i => selected.has(i.row))}
+          lists={lists}
+          rowStatusList={rowStatusList}
+          onClose={() => setBulkEdit(false)}
+          onToast={onToast}
+          onDone={() => { setBulkEdit(false); setSelected(new Set()); onRefresh('Оновлюю позиції…'); }}
         />
       )}
 
