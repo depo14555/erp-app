@@ -8,7 +8,7 @@
 import {
   LayoutDashboard, ClipboardList, MessageSquare, Truck, Building2, UserRound,
   LogOut, RefreshCw, Receipt, Printer, Lock,
-  FolderOpen, Rocket, Paintbrush, Send, FolderTree, Calculator, Scissors,
+  FolderOpen, Rocket, Paintbrush, Send, FolderTree, Calculator, Scissors, ShoppingCart,
 } from 'lucide-react';
 import { AppTab } from '../types';
 import { EnvKey } from '../api';
@@ -46,7 +46,7 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
-export type OrderTool = 'billing' | 'tech' | 'photo' | 'send' | 'print' | 'distr' | 'calc' | 'nest';
+export type OrderTool = 'billing' | 'tech' | 'photo' | 'send' | 'print' | 'distr' | 'calc' | 'nest' | 'purch';
 
 interface Props {
   tab: AppTab;
@@ -64,6 +64,7 @@ const ORDER_TOOLS: Array<{ key: OrderTool; label: string; Icon: typeof Receipt; 
   { key: 'distr', label: 'Розподіл КД', Icon: FolderTree, color: '#7C3AED' },
   { key: 'nest', label: 'Розкрій DXF', Icon: Scissors, color: '#0891B2' },
   { key: 'calc', label: 'Прорахунок', Icon: Calculator, color: '#0D9488' },
+  { key: 'purch', label: 'Покупні', Icon: ShoppingCart, color: '#EA580C' },
   { key: 'photo', label: 'Фотошоп креслень', Icon: Paintbrush, color: '#DB2777' },
   { key: 'send', label: 'Відправити виконавцю', Icon: Send, color: '#4F46E5' },
   { key: 'print', label: 'Друк креслень + QR', Icon: Printer, color: '#0891B2' },

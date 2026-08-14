@@ -209,6 +209,10 @@ export interface StaffData {
   rows: StaffRow[];
 }
 
+/** Покупний виріб у зведенні замовлення (аркуш «Покупні»). */
+export interface PurchasedRow { row: number; [col: string]: string | number }
+export interface PurchasedData { fields: StaffField[]; rows: PurchasedRow[] }
+
 /** Прайс і потужності контрагента по одній операції (аркуш «Прайси»). */
 export interface PriceRow { row: number; [col: string]: string | number }
 export interface PriceData { fields: StaffField[]; rows: PriceRow[] }

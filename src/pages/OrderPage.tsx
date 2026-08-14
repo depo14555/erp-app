@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft, RefreshCw, FolderOpen, FileText, Ruler, Box, Paperclip,
   ExternalLink, User, Search, Printer, X, Send, Tags, Rocket, Paintbrush, Receipt,
-  FolderTree, Calculator, Scissors, Wrench, Layers,
+  FolderTree, Calculator, Scissors, Wrench, Layers, ShoppingCart,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
 import ItemsTable, { TableMode } from '../components/ItemsTable';
@@ -23,6 +23,7 @@ import BillingSheet from '../components/BillingSheet';
 import DistributionSheet from '../components/DistributionSheet';
 import CalcSheet from '../components/CalcSheet';
 import NestingSheet from '../components/NestingSheet';
+import PurchasedSheet from '../components/PurchasedSheet';
 import { OrderDetail, OrderItem, Lists, statusStyle, fileKind } from '../types';
 
 interface Props {
@@ -46,6 +47,7 @@ interface Props {
   distrSignal?: number;
   calcSignal?: number;
   nestSignal?: number;
+  purchSignal?: number;
   /** Відкрити інструмент одразу після відкриття замовлення (із загального прорахунку). */
   autoOpen?: 'calc' | null;
   /** Рядок, на якому треба опинитись (з пошуку деталі або QR). */
@@ -77,6 +79,7 @@ const TOOLS: Array<{ key: string; label: string; hint: string; Icon: typeof Rock
   { key: 'distr',   label: 'Розподіл КД',  hint: 'по виконавцях і операціях',  Icon: FolderTree, color: '#7C3AED' },
   { key: 'nest',    label: 'Розкрій DXF',  hint: 'листи, вага, вартість різу', Icon: Scissors,   color: '#0891B2' },
   { key: 'calc',    label: 'Прорахунок',   hint: 'час, ціни, групи в рахунок', Icon: Calculator, color: '#0D9488' },
+  { key: 'purch',   label: 'Покупні',      hint: 'кріплення зі специфікацій збірок', Icon: ShoppingCart, color: '#EA580C' },
   { key: 'photo',   label: 'Фотошоп',      hint: 'закрити зайве на кресленні', Icon: Paintbrush, color: '#DB2777' },
   { key: 'send',    label: 'Виконавцю',    hint: 'відправити позиції в його таблицю', Icon: Send, color: '#4F46E5' },
   { key: 'print',   label: 'Друк + QR',    hint: 'пакет креслень для цеху',    Icon: Printer,    color: '#0369A1' },
@@ -84,7 +87,7 @@ const TOOLS: Array<{ key: string; label: string; hint: string; Icon: typeof Rock
 ];
 
 /** Вікна інструментів, які можна згорнути (робота продовжується у фоні). */
-type SheetKey = 'print' | 'send' | 'tech' | 'photo' | 'distr' | 'calc' | 'nest';
+type SheetKey = 'print' | 'send' | 'tech' | 'photo' | 'distr' | 'calc' | 'nest' | 'purch';
 const SHEET_META: Record<SheetKey, { label: string; emoji: string }> = {
   print: { label: 'Друк креслень', emoji: '🖨️' },
   send:  { label: 'Відправка виконавцю', emoji: '📤' },
@@ -93,6 +96,7 @@ const SHEET_META: Record<SheetKey, { label: string; emoji: string }> = {
   distr: { label: 'Розподіл КД', emoji: '📂' },
   calc:  { label: 'Прорахунок', emoji: '🧮' },
   nest:  { label: 'Розкрій DXF', emoji: '✂️' },
+  purch: { label: 'Покупні', emoji: '🔩' },
 };
 
 /** Відкриває вікно лише при ЗМІНІ сигналу, ігноруючи значення на монтуванні. */
@@ -108,7 +112,7 @@ function useOpenSignal(signal: number | undefined, open: () => void) {
 export default function OrderPage({
   detail, orderStatusList, rowStatusList, lists, loading,
   onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onBulkStatus, onToast,
-  printSignal, billingSignal, techSignal, photoSignal, sendSignal, distrSignal, calcSignal, nestSignal, autoOpen, onAutoOpened,
+  printSignal, billingSignal, techSignal, photoSignal, sendSignal, distrSignal, calcSignal, nestSignal, purchSignal, autoOpen, onAutoOpened,
   focusRow, onFocused,
 }: Props) {
   const [q, setQ] = useState('');
@@ -126,6 +130,7 @@ export default function OrderPage({
   const [showDistr, setShowDistr] = useState(false);
   const [showCalc, setShowCalc] = useState(false);
   const [showNest, setShowNest] = useState(false);
+  const [showPurch, setShowPurch] = useState(false);
   const [showTools, setShowTools] = useState(false);   // телефон: усі дії замовлення
   const [tableMode, setTableMode] = useState<TableMode>('prod');
   const [addOpItem, setAddOpItem] = useState<OrderItem | null>(null);
@@ -160,6 +165,7 @@ export default function OrderPage({
   useOpenSignal(distrSignal, () => setShowDistr(true));
   useOpenSignal(calcSignal, () => setShowCalc(true));
   useOpenSignal(nestSignal, () => setShowNest(true));
+  useOpenSignal(purchSignal, () => setShowPurch(true));
   // Прийшли із загального прорахунку — одразу показуємо вікно прорахунку
   useEffect(() => {
     if (autoOpen !== 'calc') return;
@@ -758,6 +764,7 @@ export default function OrderPage({
                     else if (key === 'send') setShowSend(true);
                     else if (key === 'print') setShowPrint(true);
                     else if (key === 'billing') setShowBilling(true);
+                    else if (key === 'purch') setShowPurch(true);
                   }}
                   className="flex items-start gap-2.5 p-3 rounded-2xl ring-1 ring-gray-200/70 text-left press active:bg-gray-50">
                   <span className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -828,6 +835,18 @@ export default function OrderPage({
           }}
           onClose={() => setAddOpItem(null)}
         />
+      )}
+
+      {/* Покупні вироби зі специфікацій складальних креслень */}
+      {showPurch && (
+        <div className={hide('purch')}>
+          <PurchasedSheet
+            detail={detail}
+            onToast={onToast}
+            onMinimize={() => minimize('purch')}
+            onClose={() => { setShowPurch(false); restore('purch'); }}
+          />
+        </div>
       )}
 
       {/* Масова зміна поля для вибраних позицій */}

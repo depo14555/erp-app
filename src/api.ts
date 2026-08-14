@@ -15,7 +15,7 @@ import {
   FolderFile, BillingData, CommerceContext, CommerceResult, DocType, CreateOrderResult,
   BillingOverview, DistributionData, DistributeParams, DistributeResult, CalcData,
   NestItemsData, NestPrice, ContractorsData, KanbanBoardData, CalcOverview, StaffData,
-  PriceData,
+  PriceData, PurchasedData,
 } from './types';
 
 /** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
@@ -39,7 +39,7 @@ const CACHE_TTL = 5 * 60 * 1000;
 
 /** Скільки чекати на відповідь — залежить від дії. */
 function timeoutFor(action: string): number {
-  return /^erp\.(techLaunch|mailProcess|execSend|savePdf|bulkUpdate|groupCard|fillAssembly|fileData|techFiles|distribut|nest|calcOverview|contractors|billingOverview|staffPhoto|prices)/.test(action)
+  return /^erp\.(techLaunch|mailProcess|execSend|savePdf|bulkUpdate|groupCard|fillAssembly|fileData|techFiles|distribut|nest|calcOverview|contractors|billingOverview|staffPhoto|prices|aiParse|purchased)/.test(action)
     ? LONG_TIMEOUT
     : REQUEST_TIMEOUT;
 }
@@ -82,7 +82,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /** Читання можна безпечно повторити; мутації — ні (щоб не задвоїти запис). */
 function isReadAction(action: string): boolean {
-  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute|calcSave|contractorSave|contractorAddOp|staffSave|staffAddSkill|staffPhoto|priceSave|boards)/.test(action);
+  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute|calcSave|contractorSave|contractorAddOp|staffSave|staffAddSkill|staffPhoto|priceSave|aiParseSave|aiCorrect|purchasedSave|boards)/.test(action);
 }
 
 function cacheGet<T>(key: string): T | null {
@@ -401,6 +401,37 @@ export const api = {
   contractorAddOp(name: string, group: string, remove = false):
     Promise<{ ok: boolean; col?: number; removed?: boolean }> {
     return post('erp.contractorAddOp', { name, group, remove });
+  },
+
+  /** ШІ-розбір: що з цих файлів уже розібрано (щоб не платити вдруге). */
+  aiParseGet(files: Array<{ fileId: string; size: number }>):
+    Promise<{ rows: any[]; items: Record<string, any[]>; asked: number; hit: number }> {
+    return post('erp.aiParseGet', { files });
+  },
+
+  /** ШІ-розбір: зберегти результати в аркуш «Розбір». */
+  aiParseSave(files: any[]): Promise<{ saved: number; at: string }> {
+    return post('erp.aiParseSave', { files });
+  },
+
+  /** Журнал виправлень: правка лягає поруч із відповіддю ШІ. */
+  aiCorrect(row: number, value: string): Promise<{ ok: boolean }> {
+    return post('erp.aiCorrect', { row, value });
+  },
+
+  /** Точність у цифрах: скільки рядків пішло без правок. */
+  aiStats(): Promise<{ items: number; corrected: number; accuracy: number | null; files: number; cost: number }> {
+    return post('erp.aiStats');
+  },
+
+  /** Покупні вироби замовлення (аркуш «Покупні»). */
+  purchasedGet(order: string): Promise<PurchasedData> {
+    return post('erp.purchasedGet', { order });
+  },
+
+  /** Записати зведення покупних (рядки замовлення перезаписуються). */
+  purchasedSave(order: string, rows: any[]): Promise<{ saved: number; at?: string }> {
+    return post('erp.purchasedSave', { order, rows });
   },
 
   /** Прайси і потужності: усі або по одному контрагенту. */

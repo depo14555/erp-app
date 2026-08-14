@@ -10,7 +10,10 @@
 //
 //  Секрети (панель Cloudflare → Settings → Variables and Secrets):
 //    ANTHROPIC_API_KEY — ключ Anthropic
-//    ERP_API_TOKEN     — той самий токен, що в додатку (пропуск сюди)
+//    ERP_API_TOKEN     — той самий токен, що в додатку (пропуск сюди).
+//                        Середовищ у додатка два — робоча таблиця і тестова
+//                        копія, — тож токенів тут можна перелічити кілька
+//                        через кому.
 // ================================================================
 
 /** Дозволені моделі: щоб з нашим токеном не можна було замовити що завгодно. */
@@ -32,6 +35,17 @@ function sameToken(a, b) {
   let diff = 0;
   for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
+}
+
+/**
+ * У секреті може бути кілька токенів через кому — по одному на середовище
+ * додатка (робоче й тестове). Один токен теж працює, як і раніше.
+ */
+function tokenAllowed(given, secret) {
+  return String(secret || '')
+    .split(/[\s,;]+/)
+    .filter(Boolean)
+    .some((t) => sameToken(given, t));
 }
 
 /** Дозволяємо звертатись із локального dev-сервера; у проді це той самий origin. */
@@ -63,7 +77,7 @@ async function proxyToAnthropic(request, env) {
   if (!env.ERP_API_TOKEN) {
     return json({ error: 'Не налаштований ERP_API_TOKEN у секретах Worker' }, 500, cors);
   }
-  if (!sameToken(request.headers.get('x-erp-token') || '', env.ERP_API_TOKEN)) {
+  if (!tokenAllowed(request.headers.get('x-erp-token') || '', env.ERP_API_TOKEN)) {
     return json({ error: 'Немає доступу' }, 401, cors);
   }
 

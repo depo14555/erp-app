@@ -58,7 +58,8 @@ export default function App() {
   const [distrTick, setDistrTick] = useState(0);       // сайдбар → розподіл КД
   const [calcTick, setCalcTick] = useState(0);         // сайдбар → прорахунок
   const [autoOpen, setAutoOpen] = useState<'calc' | null>(null);  // відкрити інструмент одразу
-  const [nestTick, setNestTick] = useState(0);         // сайдбар → розкрій DXF
+  const [nestTick, setNestTick] = useState(0);
+  const [purchTick, setPurchTick] = useState(0);   // сайдбар → покупні         // сайдбар → розкрій DXF
   /** Інструменти замовлень поверх списку: пошук деталі / вхідна пошта. */
   const [overlay, setOverlay] = useState<'search' | 'mail' | null>(null);
   const [mailHidden, setMailHidden] = useState(false);   // пошта згорнута в плашку
@@ -300,6 +301,7 @@ export default function App() {
       distrSignal={distrTick}
       calcSignal={calcTick}
       nestSignal={nestTick}
+      purchSignal={purchTick}
       autoOpen={autoOpen}
       focusRow={focusRow}
       onFocused={() => setFocusRow(null)}
@@ -328,6 +330,7 @@ export default function App() {
           else if (t === 'distr') setDistrTick(v => v + 1);
           else if (t === 'calc') setCalcTick(v => v + 1);
           else if (t === 'nest') setNestTick(v => v + 1);
+          else if (t === 'purch') setPurchTick(v => v + 1);
         }}
         onLogout={logout}
       />
