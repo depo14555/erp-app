@@ -1,11 +1,19 @@
 {
-  // Cloudflare Workers: публікація зібраного PWA як статичних ассетів.
-  // Без цього файлу wrangler намагається сам сконфігурувати Vite-плагін
-  // (потребує Vite 6+) і деплой падає.
-  "name": "erp-app",
+  // Cloudflare Worker: роздає зібраний PWA і має службовий маршрут
+  // /api/ai — проксі до Anthropic. Ключ лежить у секретах Worker'а,
+  // а не в браузері (див. worker/index.js).
+  //
+  // ВАЖЛИВО: ім'я має збігатися з worker'ом у панелі Cloudflare —
+  // erp-app1, акаунт Onischuk.zt@gmail.com. Раніше тут стояло
+  // "erp-app": локальний деплой створив би ДРУГИЙ worker, і додаток
+  // поїхав би не на ту адресу.
+  "name": "erp-app1",
+  "main": "worker/index.js",
   "compatibility_date": "2025-06-01",
   "assets": {
     "directory": "./dist",
+    // Завдяки цьому біндингу статика доступна скрипту як env.ASSETS
+    "binding": "ASSETS",
     // SPA: будь-який маршрут віддає index.html (сервіс-воркер і ассети
     // віддаються як звичайні файли, бо існують на диску)
     "not_found_handling": "single-page-application"
