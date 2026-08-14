@@ -24,6 +24,7 @@ import DistributionSheet from '../components/DistributionSheet';
 import CalcSheet from '../components/CalcSheet';
 import NestingSheet from '../components/NestingSheet';
 import PurchasedSheet from '../components/PurchasedSheet';
+import { AiBadge } from '../components/Sidebar';
 import { OrderDetail, OrderItem, Lists, statusStyle, fileKind } from '../types';
 
 interface Props {
@@ -74,16 +75,16 @@ const ZONES: Array<{ key: TableMode; label: string; short: string; icon: string 
 ];
 
 /** Дії з замовленням для телефона (на десктопі те саме в сайдбарі). */
-const TOOLS: Array<{ key: string; label: string; hint: string; Icon: typeof Rocket; color: string }> = [
+const TOOLS: Array<{ key: string; label: string; hint: string; Icon: typeof Rocket; color: string; ai?: boolean }> = [
   { key: 'tech',    label: 'Тех.запуск',   hint: 'файли папки → рядки картки', Icon: Rocket,     color: '#EA580C' },
   { key: 'distr',   label: 'Розподіл КД',  hint: 'по виконавцях і операціях',  Icon: FolderTree, color: '#7C3AED' },
   { key: 'nest',    label: 'Розкрій DXF',  hint: 'листи, вага, вартість різу', Icon: Scissors,   color: '#0891B2' },
   { key: 'calc',    label: 'Прорахунок',   hint: 'час, ціни, групи в рахунок', Icon: Calculator, color: '#0D9488' },
-  { key: 'purch',   label: 'Покупні',      hint: 'кріплення зі специфікацій збірок', Icon: ShoppingCart, color: '#EA580C' },
   { key: 'photo',   label: 'Фотошоп',      hint: 'закрити зайве на кресленні', Icon: Paintbrush, color: '#DB2777' },
   { key: 'send',    label: 'Виконавцю',    hint: 'відправити позиції в його таблицю', Icon: Send, color: '#4F46E5' },
   { key: 'print',   label: 'Друк + QR',    hint: 'пакет креслень для цеху',    Icon: Printer,    color: '#0369A1' },
   { key: 'billing', label: 'Рахунки',      hint: 'оплати і документи',         Icon: Receipt,    color: '#059669' },
+  { key: 'purch',   label: 'Покупні',      hint: 'кріплення зі специфікацій збірок', Icon: ShoppingCart, color: '#EA580C', ai: true },
 ];
 
 /** Вікна інструментів, які можна згорнути (робота продовжується у фоні). */
@@ -752,7 +753,7 @@ export default function OrderPage({
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-3 pb-[max(1rem,env(safe-area-inset-bottom))] grid grid-cols-2 gap-1.5">
-              {TOOLS.map(({ key, label, Icon, color, hint }) => (
+              {TOOLS.map(({ key, label, Icon, color, hint, ai }) => (
                 <button key={key}
                   onClick={() => {
                     setShowTools(false);
@@ -771,8 +772,11 @@ export default function OrderPage({
                     style={{ background: color + '16', color }}>
                     <Icon size={16} />
                   </span>
-                  <span className="min-w-0">
-                    <span className="block text-[12.5px] font-bold leading-tight">{label}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-[12.5px] font-bold leading-tight truncate">{label}</span>
+                      {ai && <AiBadge small />}
+                    </span>
                     <span className="block text-[10.5px] mt-0.5" style={{ color: 'var(--ink-3)' }}>{hint}</span>
                   </span>
                 </button>

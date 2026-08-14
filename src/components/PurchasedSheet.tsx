@@ -19,6 +19,7 @@ import {
   AlertTriangle, ShoppingCart, FileText, Check,
 } from 'lucide-react';
 import { MinimizeButton } from './PageSheet';
+import { AiBadge } from './Sidebar';
 import { useBusy } from '../lib/busy';
 import { api } from '../api';
 import { parseDrawings, driveIdFromUrl, ParsedDrawing, ParseProgress } from '../lib/ai';
@@ -207,7 +208,9 @@ export default function PurchasedSheet({ detail, onClose, onMinimize, onToast }:
             <ShoppingCart size={16} />
           </span>
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-[15px] leading-tight">Покупні вироби</p>
+            <p className="font-bold text-[15px] leading-tight flex items-center gap-1.5">
+              Покупні вироби <AiBadge />
+            </p>
             <p className="text-[11.5px] truncate" style={{ color: 'var(--ink-3)' }}>
               {detail.header.orderNum || order} · збірок Сл.Св: {candidates.length}
               {savedAt && ` · записано ${savedAt}`}

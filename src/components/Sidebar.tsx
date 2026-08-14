@@ -7,7 +7,7 @@
 
 import {
   LayoutDashboard, ClipboardList, MessageSquare, Truck, Building2, UserRound,
-  LogOut, RefreshCw, Receipt, Printer, Lock,
+  LogOut, RefreshCw, Receipt, Printer, Lock, Sparkles,
   FolderOpen, Rocket, Paintbrush, Send, FolderTree, Calculator, Scissors, ShoppingCart,
 } from 'lucide-react';
 import { AppTab } from '../types';
@@ -59,17 +59,36 @@ interface Props {
   onLogout: () => void;
 }
 
-const ORDER_TOOLS: Array<{ key: OrderTool; label: string; Icon: typeof Receipt; color: string }> = [
+interface ToolItem { key: OrderTool; label: string; Icon: typeof Receipt; color: string }
+
+const ORDER_TOOLS: ToolItem[] = [
   { key: 'tech', label: 'Тех.запуск', Icon: Rocket, color: '#EA580C' },
   { key: 'distr', label: 'Розподіл КД', Icon: FolderTree, color: '#7C3AED' },
   { key: 'nest', label: 'Розкрій DXF', Icon: Scissors, color: '#0891B2' },
   { key: 'calc', label: 'Прорахунок', Icon: Calculator, color: '#0D9488' },
-  { key: 'purch', label: 'Покупні', Icon: ShoppingCart, color: '#EA580C' },
   { key: 'photo', label: 'Фотошоп креслень', Icon: Paintbrush, color: '#DB2777' },
   { key: 'send', label: 'Відправити виконавцю', Icon: Send, color: '#4F46E5' },
   { key: 'print', label: 'Друк креслень + QR', Icon: Printer, color: '#0891B2' },
   { key: 'billing', label: 'Рахунки і оплати', Icon: Receipt, color: '#059669' },
 ];
+
+/** Те, що читає креслення само — окремим блоком, щоб було видно, де працює ШІ. */
+const AI_TOOLS: ToolItem[] = [
+  { key: 'purch', label: 'Покупні', Icon: ShoppingCart, color: '#EA580C' },
+];
+
+/** Мітка AI — однакова скрізь, де є ШІ-дія. */
+export function AiBadge({ small }: { small?: boolean } = {}) {
+  return (
+    <span
+      className={`flex-shrink-0 font-black tracking-[0.06em] rounded-md text-white ${
+        small ? 'text-[8px] px-1 py-[1px]' : 'text-[8.5px] px-1.5 py-[1.5px]'
+      }`}
+      style={{ background: 'linear-gradient(135deg, #7C3AED, #2563EB)' }}>
+      AI
+    </span>
+  );
+}
 
 export default function Sidebar({ tab, env, onTab, onLocked, order, onOrderTool, onLogout }: Props) {
   return (
@@ -131,6 +150,7 @@ export default function Sidebar({ tab, env, onTab, onLocked, order, onOrderTool,
                   <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>
                 </button>
               ))}
+
               {order.folderUrl && (
                 <a href={order.folderUrl} target="_blank" rel="noreferrer"
                   className="w-full flex items-center gap-2.5 px-2 py-[6px] rounded-xl text-left press hover:bg-white/70"
@@ -139,6 +159,25 @@ export default function Sidebar({ tab, env, onTab, onLocked, order, onOrderTool,
                   <span className="flex-1 text-[12.5px] font-semibold truncate">Папка на Диску</span>
                 </a>
               )}
+
+              {/* ШІ-функції — окремо, щоб було видно, де креслення читаються самі */}
+              <div className="pt-1.5 mt-1 border-t border-white/70">
+                <p className="px-1.5 pb-1 flex items-center gap-1.5">
+                  <Sparkles size={11} className="text-[#7C3AED]" />
+                  <span className="text-[9.5px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--ink-3)' }}>
+                    Читає креслення
+                  </span>
+                </p>
+                {AI_TOOLS.map(({ key, label, Icon, color }) => (
+                  <button key={key} onClick={() => onOrderTool(key)}
+                    className="w-full flex items-center gap-2.5 px-2 py-[6px] rounded-xl text-left press hover:bg-white/70"
+                    style={{ color: 'var(--ink-2)' }}>
+                    <Icon size={15} strokeWidth={2.1} className="flex-shrink-0" style={{ color }} />
+                    <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>
+                    <AiBadge small />
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
