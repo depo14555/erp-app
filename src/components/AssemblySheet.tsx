@@ -25,7 +25,8 @@ import { AiBadge } from './Sidebar';
 import { useBusy } from '../lib/busy';
 import { api } from '../api';
 import {
-  parseDrawings, driveIdFromUrl, decimalCore, normName, ParsedDrawing, ParseProgress,
+  parseDrawings, driveIdFromUrl, decimalCore, normName, assemblyLabel,
+  ParsedDrawing, ParseProgress,
 } from '../lib/ai';
 import { OrderDetail, OrderItem } from '../types';
 
@@ -52,11 +53,6 @@ function plural(n: number, one: string, few: string, many: string): string {
   if (d === 1 && dd !== 11) return one;
   if (d >= 2 && d <= 4 && (dd < 10 || dd >= 20)) return few;
   return many;
-}
-
-/** Підпис збірки для колонки «Збірка» — назва зрозуміліша за шифр. */
-function labelOf(p: ParsedDrawing): string {
-  return (p.itemName || p.designation || p.name.replace(/\.pdf$/i, '')).trim();
 }
 
 /** Рядок складу: позиція специфікації і що їй відповідає в замовленні. */
@@ -142,7 +138,7 @@ export default function AssemblySheet({ detail, onClose, onMinimize, onToast, on
     let missing = 0;
 
     parsed.filter(p => !p.error).forEach(p => {
-      const label = labelOf(p);
+      const label = assemblyLabel(p);
       const parts: Part[] = [];
 
       // Саме складальне креслення теж належить своїй збірці

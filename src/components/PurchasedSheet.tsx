@@ -22,7 +22,7 @@ import { MinimizeButton } from './PageSheet';
 import { AiBadge } from './Sidebar';
 import { useBusy } from '../lib/busy';
 import { api } from '../api';
-import { parseDrawings, driveIdFromUrl, ParsedDrawing, ParseProgress } from '../lib/ai';
+import { parseDrawings, driveIdFromUrl, assemblyLabel, ParsedDrawing, ParseProgress } from '../lib/ai';
 import { OrderDetail, OrderItem } from '../types';
 import { num, qtyOf } from './ItemsTable';
 
@@ -136,7 +136,9 @@ export default function PurchasedSheet({ detail, onClose, onMinimize, onToast }:
         const perOne = num(it.qty) || 0;
         out.push({
           key: `${p.fileId}:${it.pos}:${it.code}:${it.name}`,
-          assembly: p.designation || p.itemName || p.name,
+          // Той самий підпис, що й у колонці «Збірка» картки — інакше
+          // покупні не приліпляться до своєї групи в таблиці позицій
+          assembly: assemblyLabel(p),
           assemblyRow: src?.row ?? 0,
           file: p.name, fileId: p.fileId,
           pos: it.pos, code: it.code, name: it.name,

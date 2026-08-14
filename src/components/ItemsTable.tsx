@@ -9,7 +9,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ExternalLink, Check, Loader2, Search, CheckSquare, Square, Pencil, Plus, Filter, FolderOpen,
-  Blocks, ChevronDown, ChevronRight,
+  Blocks, ChevronDown, ChevronRight, ShoppingCart,
 } from 'lucide-react';
 import { OrderItem, Lists, statusStyle } from '../types';
 
@@ -61,6 +61,8 @@ interface Props {
   onSelectRows: (rows: number[], on: boolean) => void;
   /** Групувати по збірках: збірка і що в неї входить, «Без збірок» знизу. */
   grouped?: boolean;
+  /** Покупні по збірках — своїх рядків у картці вони не мають. */
+  purchasedBy?: Map<string, Array<{ name: string; total: string }>>;
 }
 
 interface PopState {
@@ -71,7 +73,7 @@ interface PopState {
   current: string;
 }
 
-export default function ItemsTable({ items, lists, mode, onSave, onAddOp, selected, onToggleRow, onSelectRows, grouped }: Props) {
+export default function ItemsTable({ items, lists, mode, onSave, onAddOp, selected, onToggleRow, onSelectRows, grouped, purchasedBy }: Props) {
   const [edit, setEdit] = useState<{ row: number; field: Field } | null>(null);
   const [pop, setPop] = useState<PopState | null>(null);
   const [draft, setDraft] = useState('');
@@ -389,6 +391,21 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
                     <span className="text-[12px] font-bold truncate">{b.key || 'Без збірок'}</span>
                     <span className="text-[11px] tabular-nums" style={{ color: 'var(--ink-3)' }}>
                       {b.items.length} поз.
+                    </span>
+                  </span>
+                </td>
+              </tr>
+            )}
+
+            {/* Покупні цієї збірки — окремих рядків у картці вони не мають */}
+            {b.key && !collapsed.has(b.key) && !!purchasedBy?.get(b.key)?.length && (
+              <tr className="bg-[#FFF8F2]">
+                <td colSpan={cols.length + 1} className="px-2 py-1.5 border-b hairline">
+                  <span className="flex items-start gap-2">
+                    <ShoppingCart size={12} className="flex-shrink-0 mt-[3px]" style={{ color: '#EA580C' }} />
+                    <span className="text-[11px]" style={{ color: 'var(--ink-2)' }}>
+                      <span className="font-bold" style={{ color: '#C2410C' }}>Покупні: </span>
+                      {purchasedBy.get(b.key)!.map(p => `${p.name} — ${p.total} шт`).join(' · ')}
                     </span>
                   </span>
                 </td>

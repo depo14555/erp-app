@@ -138,6 +138,15 @@ export function driveIdFromUrl(url: string): string {
 }
 
 /**
+ * Підпис збірки — один на всю систему: і в колонці «Збірка» картки,
+ * і в аркуші «Покупні». Інакше покупні не приліпляться до своєї групи.
+ * Назва зрозуміліша за шифр, тому вона перша.
+ */
+export function assemblyLabel(p: { itemName?: string; designation?: string; name?: string }): string {
+  return String(p.itemName || p.designation || String(p.name || '').replace(/\.pdf$/i, '')).trim();
+}
+
+/**
  * Децимальний номер із назви: ТБМД.000000.059 | IB.Mil.2360.01.00.00.003-04 | 000800.012.
  * Порт extractDecimal_ із хаба — зіставлення має працювати однаково з обох боків.
  */

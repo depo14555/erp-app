@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft, RefreshCw, FolderOpen, FileText, Ruler, Box, Paperclip,
   ExternalLink, User, Search, Printer, X, Send, Tags, Rocket, Paintbrush, Receipt,
-  FolderTree, Calculator, Scissors, Wrench, Layers, ShoppingCart, Blocks, SlidersHorizontal,
+  FolderTree, Calculator, Scissors, Wrench, Layers, ShoppingCart, Blocks,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
 import ItemsTable, { TableMode } from '../components/ItemsTable';
@@ -27,7 +27,7 @@ import PurchasedSheet from '../components/PurchasedSheet';
 import AssemblySheet from '../components/AssemblySheet';
 import OrderInsights, { GAP_FIELDS } from '../components/OrderInsights';
 import { AiBadge } from '../components/Sidebar';
-import { OrderDetail, OrderItem, Lists, statusStyle, fileKind } from '../types';
+import { OrderDetail, OrderItem, Lists, PurchasedRow, statusStyle, fileKind } from '../types';
 
 interface Props {
   detail: OrderDetail;
@@ -155,7 +155,6 @@ export default function OrderPage({
     typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'table' : 'cards'
   );
   const [byAsm, setByAsm] = useState(false);   // групувати позиції по збірках
-  const [showFilters, setShowFilters] = useState(false);
   const [gap, setGap] = useState('');          // «показати рядки, де цього поля немає»
   const [insightsTick, setInsightsTick] = useState(0);
 
@@ -243,6 +242,34 @@ export default function OrderPage({
 
   /** Чи є взагалі проставлені збірки — від цього залежить, чи показувати перемикач. */
   const hasAsm = useMemo(() => real.some(i => String(i.assembly || '').trim()), [real]);
+
+  /**
+   * Покупні замовлення, розкладені по збірках. Кріплення не мають власного
+   * рядка в картці — вони живуть в аркуші «Покупні», — тому показуємо їх
+   * прямо в групі тієї збірки, куди вони входять.
+   */
+  const [purchRows, setPurchRows] = useState<PurchasedRow[]>([]);
+  useEffect(() => {
+    let alive = true;
+    api.purchasedGet(header.projectId)
+      .then(d => { if (alive) setPurchRows(d.rows); })
+      .catch(() => { /* покупних ще нема — не біда */ });
+    return () => { alive = false; };
+  }, [header.projectId, insightsTick]);
+
+  const purchByAsm = useMemo(() => {
+    const m = new Map<string, Array<{ name: string; total: string }>>();
+    purchRows.forEach(r => {
+      const asm = String(r['2'] || '').trim();
+      if (!asm) return;
+      const name = [String(r['6'] || '').trim(), String(r['5'] || '').trim()]
+        .filter(Boolean).join(' ');
+      const a = m.get(asm) || [];
+      a.push({ name, total: String(r['9'] || '') });
+      m.set(asm, a);
+    });
+    return m;
+  }, [purchRows]);
 
   /**
    * Картки, згруповані по збірках: спершу збірки за назвою, «Без збірок» — знизу.
@@ -485,75 +512,74 @@ export default function OrderPage({
           ))}
         </div>
 
-        {/* Фільтри — під однією кнопкою; активні висять чіпами нижче */}
-        <button onClick={() => setShowFilters(v => !v)}
-          className="order-2 lg:order-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold flex-shrink-0 press transition-colors"
-          style={filterCount || showFilters
-            ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
-            : { background: '#F1F2F4', color: 'var(--ink-3)' }}>
-          <SlidersHorizontal size={13} />
-          Фільтри{filterCount ? ` · ${filterCount}` : ''}
-        </button>
-
         </div>
 
-        {/* Розгорнута панель фільтрів */}
-        {showFilters && (
-          <div className="px-3 pb-2.5 flex items-center gap-1.5 flex-wrap">
-            <div className="relative flex-1 min-w-[150px] lg:flex-none lg:w-[240px]">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                value={q}
-                onChange={e => setQ(e.target.value)}
-                placeholder="Пошук деталі…"
-                className="w-full pl-7 pr-6 py-1.5 rounded-xl bg-gray-50 ring-1 ring-gray-200/80 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[12px]"
-              />
-              {q && (
-                <button onClick={() => setQ('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400" aria-label="Очистити">
-                  <X size={13} />
-                </button>
-              )}
-            </div>
-            <FilterChip value={fOp} onChange={setFOp} label="Операція" options={fOps} />
-            <FilterChip value={fExec} onChange={setFExec} label="Виконавець" options={fExecs} />
-            <FilterChip value={fStatus} onChange={setFStatus} label="Статус" options={fStatuses} />
-            {/* Тип файлу: PDF / DXF / 3D / інші — лише ті, що є в замовленні */}
-            {fKinds.length > 1 && fKinds.map(({ key, count }) => {
-              const meta = GROUP_META[key as keyof typeof GROUP_META];
-              const on = fKind === key;
-              return (
-                <button key={key} onClick={() => setFKind(on ? '' : key)}
-                  className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-colors whitespace-nowrap"
-                  style={on ? { background: meta.color, color: '#fff' } : { background: meta.bg, color: meta.color }}
-                  title={meta.label}>
-                  {key === 'pdf' ? 'PDF' : key === 'dxf' ? 'DXF' : key === '3d' ? '3D' : 'Інші'} · {count}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Що саме зараз відсіяно — видно й тоді, коли панель згорнута */}
-        {filterCount > 0 && (
-          <div className="px-3 pb-2.5 flex items-center gap-1.5 flex-wrap">
-            {activeFilters.map(f => (
-              <button key={f.key} onClick={f.clear}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold press"
-                style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
-                title="Прибрати фільтр">
-                {f.label}
-                <X size={11} />
+        {/*
+          Один рядок замість панелі фільтрів: пошук, типи файлів і активні
+          фільтри на спільній осі. Операцію/виконавця/статус у таблиці
+          прибрано — вони є прямо в заголовках колонок; у картках заголовків
+          немає, тому там списки лишаються.
+        */}
+        <div className="px-3 pb-2.5 flex items-center gap-1.5 flex-wrap">
+          <div className="relative flex-1 min-w-[150px] lg:flex-none lg:w-[240px]">
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              placeholder="Пошук деталі…"
+              className="w-full pl-7 pr-6 py-1.5 rounded-xl bg-gray-50 ring-1 ring-gray-200/80 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[12px]"
+            />
+            {q && (
+              <button onClick={() => setQ('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400" aria-label="Очистити">
+                <X size={13} />
               </button>
-            ))}
-            <button onClick={clearFilters}
-              className="text-[11px] font-bold px-2 py-1 rounded-lg press" style={{ color: 'var(--ink-3)' }}>
-              Скинути все
-            </button>
-            <span className="text-[11px] font-semibold tabular-nums ml-auto" style={{ color: 'var(--ink-2)' }}>
-              {filtered.filter(i => !i.group).length} з {real.length} поз.
-            </span>
+            )}
           </div>
-        )}
+
+          {view === 'cards' && (
+            <>
+              <FilterChip value={fOp} onChange={setFOp} label="Операція" options={fOps} />
+              <FilterChip value={fExec} onChange={setFExec} label="Виконавець" options={fExecs} />
+              <FilterChip value={fStatus} onChange={setFStatus} label="Статус" options={fStatuses} />
+            </>
+          )}
+
+          {/* Тип файлу — такої колонки в таблиці немає, тому чіпи лишаються */}
+          {fKinds.length > 1 && fKinds.map(({ key, count }) => {
+            const meta = GROUP_META[key as keyof typeof GROUP_META];
+            const on = fKind === key;
+            return (
+              <button key={key} onClick={() => setFKind(on ? '' : key)}
+                className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-colors whitespace-nowrap"
+                style={on ? { background: meta.color, color: '#fff' } : { background: meta.bg, color: meta.color }}
+                title={meta.label}>
+                {key === 'pdf' ? 'PDF' : key === 'dxf' ? 'DXF' : key === '3d' ? '3D' : 'Інші'} · {count}
+              </button>
+            );
+          })}
+
+          {activeFilters.filter(f => f.key !== 'q' && f.key !== 'kind').map(f => (
+            <button key={f.key} onClick={f.clear}
+              className="flex items-center gap-1 px-2 py-1.5 rounded-xl text-[11px] font-bold press"
+              style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
+              title="Прибрати фільтр">
+              {f.label}
+              <X size={11} />
+            </button>
+          ))}
+
+          {filterCount > 0 && (
+            <>
+              <button onClick={clearFilters}
+                className="text-[11px] font-bold px-2 py-1.5 rounded-xl press" style={{ color: 'var(--ink-3)' }}>
+                Скинути
+              </button>
+              <span className="text-[11px] font-semibold tabular-nums ml-auto" style={{ color: 'var(--ink-2)' }}>
+                {filtered.filter(i => !i.group).length} з {real.length} поз.
+              </span>
+            </>
+          )}
+        </div>
 
         <OrderInsights
           order={header.projectId}
@@ -576,6 +602,7 @@ export default function OrderPage({
             lists={lists}
             mode={tableMode}
             grouped={byAsm}
+            purchasedBy={purchByAsm}
             onSave={(row, field, value) => onUpdateRow(row, field, value)}
             onAddOp={setAddOpItem}
             selected={selected}
@@ -603,6 +630,17 @@ export default function OrderPage({
                 <span className="text-[12px] font-bold">{label}</span>
                 <span className="ml-auto text-[11px] font-semibold opacity-70">{list.length} поз.</span>
               </div>
+
+              {/* Покупні цієї збірки — своїх карток вони не мають */}
+              {byAsm && !!purchByAsm.get(label)?.length && (
+                <div className="flex items-start gap-2 px-3 py-2 rounded-xl mb-2 bg-[#FFF8F2]">
+                  <ShoppingCart size={13} className="flex-shrink-0 mt-[2px]" style={{ color: '#EA580C' }} />
+                  <p className="text-[11px]" style={{ color: 'var(--ink-2)' }}>
+                    <span className="font-bold" style={{ color: '#C2410C' }}>Покупні: </span>
+                    {purchByAsm.get(label)!.map(p => `${p.name} — ${p.total} шт`).join(' · ')}
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 {list.slice(0, limits[key] ?? PAGE).map(item => {
