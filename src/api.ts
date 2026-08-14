@@ -15,7 +15,7 @@ import {
   FolderFile, BillingData, CommerceContext, CommerceResult, DocType, CreateOrderResult,
   BillingOverview, DistributionData, DistributeParams, DistributeResult, CalcData,
   NestItemsData, NestPrice, ContractorsData, KanbanBoardData, CalcOverview, StaffData,
-  PriceData, PurchasedData,
+  PriceData, PurchasedData, OrderAiSummary,
 } from './types';
 
 /** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
@@ -422,6 +422,11 @@ export const api = {
   /** Точність у цифрах: скільки рядків пішло без правок. */
   aiStats(): Promise<{ items: number; corrected: number; accuracy: number | null; files: number; cost: number }> {
     return post('erp.aiStats');
+  },
+
+  /** Що система вже прочитала з креслень цього замовлення — одним запитом. */
+  aiOrder(order: string): Promise<OrderAiSummary> {
+    return post('erp.aiOrder', { order });
   },
 
   /** Покупні вироби замовлення (аркуш «Покупні»). */

@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft, RefreshCw, FolderOpen, FileText, Ruler, Box, Paperclip,
   ExternalLink, User, Search, Printer, X, Send, Tags, Rocket, Paintbrush, Receipt,
-  FolderTree, Calculator, Scissors, Wrench, Layers, ShoppingCart, Blocks,
+  FolderTree, Calculator, Scissors, Wrench, Layers, ShoppingCart, Blocks, SlidersHorizontal,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
 import ItemsTable, { TableMode } from '../components/ItemsTable';
@@ -25,6 +25,7 @@ import CalcSheet from '../components/CalcSheet';
 import NestingSheet from '../components/NestingSheet';
 import PurchasedSheet from '../components/PurchasedSheet';
 import AssemblySheet from '../components/AssemblySheet';
+import OrderInsights, { GAP_FIELDS } from '../components/OrderInsights';
 import { AiBadge } from '../components/Sidebar';
 import { OrderDetail, OrderItem, Lists, statusStyle, fileKind } from '../types';
 
@@ -154,13 +155,16 @@ export default function OrderPage({
     typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'table' : 'cards'
   );
   const [byAsm, setByAsm] = useState(false);   // групувати позиції по збірках
+  const [showFilters, setShowFilters] = useState(false);
+  const [gap, setGap] = useState('');          // «показати рядки, де цього поля немає»
+  const [insightsTick, setInsightsTick] = useState(0);
 
   const { header, items } = detail;
   const st = statusStyle(header.status);
 
   // Новий пошук/фільтр або інше замовлення — показуємо знову з першої сторінки
-  useEffect(() => { setLimits({}); }, [q, fOp, fExec, fStatus, fKind, header.headerRow]);
-  useEffect(() => { setFOp(''); setFExec(''); setFStatus(''); setFKind(''); setQ(''); setSelected(new Set()); }, [header.headerRow]);
+  useEffect(() => { setLimits({}); }, [q, fOp, fExec, fStatus, fKind, gap, header.headerRow]);
+  useEffect(() => { setFOp(''); setFExec(''); setFStatus(''); setFKind(''); setQ(''); setGap(''); setSelected(new Set()); }, [header.headerRow]);
   // Кнопка «Друк креслень + QR» у сайдбарі відкриває вікно друку для цього замовлення
   // Сигнали спрацьовують лише при ЗМІНІ (не при монтуванні компонента —
   // інакше вікна самі відкривались при повторному відкритті замовлення)
@@ -194,7 +198,7 @@ export default function OrderPage({
       .filter(k => counts[k])
       .map(k => ({ key: k as string, count: counts[k] }));
   }, [real]);
-  const hasFilter = !!(q.trim() || fOp || fExec || fStatus || fKind);
+  const hasFilter = !!(q.trim() || fOp || fExec || fStatus || fKind || gap);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -204,10 +208,32 @@ export default function OrderPage({
       if (fExec && i.executor !== fExec) return false;
       if (fStatus && i.rowStatus !== fStatus) return false;
       if (fKind && fileKind(i.name) !== fKind) return false;
+      // «чого бракує»: лишаємо саме ті рядки, де поле порожнє
+      if (gap && String((i as any)[gap] ?? '').trim()) return false;
       if (query && ![i.name, i.id, i.op, i.executor, i.material, i.note, i.assembly].join(' ').toLowerCase().includes(query)) return false;
       return true;
     });
-  }, [items, q, fOp, fExec, fStatus, fKind, hasFilter]);
+  }, [items, q, fOp, fExec, fStatus, fKind, gap, hasFilter]);
+
+  /** Активні фільтри чіпами — щоб було видно стан і зі згорнутою панеллю. */
+  const activeFilters = useMemo(() => {
+    const out: Array<{ key: string; label: string; clear: () => void }> = [];
+    if (q.trim()) out.push({ key: 'q', label: `«${q.trim()}»`, clear: () => setQ('') });
+    if (fOp) out.push({ key: 'op', label: fOp, clear: () => setFOp('') });
+    if (fExec) out.push({ key: 'exec', label: fExec, clear: () => setFExec('') });
+    if (fStatus) out.push({ key: 'st', label: fStatus, clear: () => setFStatus('') });
+    if (fKind) out.push({ key: 'kind', label: fKind.toUpperCase(), clear: () => setFKind('') });
+    if (gap) {
+      const f = GAP_FIELDS.find(x => x.key === gap);
+      out.push({ key: 'gap', label: `без «${f?.label || gap}»`, clear: () => setGap('') });
+    }
+    return out;
+  }, [q, fOp, fExec, fStatus, fKind, gap]);
+
+  const filterCount = activeFilters.length;
+  const clearFilters = () => {
+    setQ(''); setFOp(''); setFExec(''); setFStatus(''); setFKind(''); setGap('');
+  };
 
   const groups = useMemo(() => {
     const acc: Record<string, OrderItem[]> = { pdf: [], dxf: [], '3d': [], other: [] };
@@ -459,52 +485,88 @@ export default function OrderPage({
           ))}
         </div>
 
-        {/* Фільтри: пошук + операція / виконавець / статус (обидва вигляди) */}
-        <div className={`order-3 lg:order-2 w-full lg:w-auto lg:flex-1 lg:min-w-0 flex items-center gap-1.5 flex-nowrap overflow-x-auto lg:overflow-visible no-scrollbar ${view === 'table' ? 'lg:justify-end' : 'lg:justify-start'}`}>
-          <div className="relative flex-1 min-w-[150px] flex-shrink-0 lg:flex-none lg:w-[230px]">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              value={q}
-              onChange={e => setQ(e.target.value)}
-              placeholder="Пошук деталі…"
-              className="w-full pl-7 pr-6 py-1.5 rounded-xl bg-gray-50 ring-1 ring-gray-200/80 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[12px]"
-            />
-            {q && (
-              <button onClick={() => setQ('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400" aria-label="Очистити">
-                <X size={13} />
-              </button>
-            )}
-          </div>
-          <FilterChip value={fOp} onChange={setFOp} label="Операція" options={fOps} />
-          <FilterChip value={fExec} onChange={setFExec} label="Виконавець" options={fExecs} />
-          <FilterChip value={fStatus} onChange={setFStatus} label="Статус" options={fStatuses} />
-          {/* Тип файлу: PDF / DXF / 3D / інші — лише ті, що є в замовленні */}
-          {fKinds.length > 1 && fKinds.map(({ key, count }) => {
-            const meta = GROUP_META[key as keyof typeof GROUP_META];
-            const on = fKind === key;
-            return (
-              <button key={key} onClick={() => setFKind(on ? '' : key)}
-                className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-colors whitespace-nowrap"
-                style={on ? { background: meta.color, color: '#fff' } : { background: meta.bg, color: meta.color }}
-                title={meta.label}>
-                {key === 'pdf' ? 'PDF' : key === 'dxf' ? 'DXF' : key === '3d' ? '3D' : 'Інші'} · {count}
-              </button>
-            );
-          })}
-          {hasFilter && (
-            <button onClick={() => { setQ(''); setFOp(''); setFExec(''); setFStatus(''); setFKind(''); }}
-              className="text-[11px] font-bold px-2 py-1.5 rounded-xl press" style={{ color: 'var(--ink-3)' }}>
-              Скинути
-            </button>
-          )}
-          {hasFilter && (
-            <span className="text-[11px] font-semibold tabular-nums ml-auto lg:ml-0 flex-shrink-0" style={{ color: 'var(--ink-2)' }}>
-              {filtered.filter(i => !i.group).length} поз.
-            </span>
-          )}
-        </div>
+        {/* Фільтри — під однією кнопкою; активні висять чіпами нижче */}
+        <button onClick={() => setShowFilters(v => !v)}
+          className="order-2 lg:order-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold flex-shrink-0 press transition-colors"
+          style={filterCount || showFilters
+            ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
+            : { background: '#F1F2F4', color: 'var(--ink-3)' }}>
+          <SlidersHorizontal size={13} />
+          Фільтри{filterCount ? ` · ${filterCount}` : ''}
+        </button>
 
         </div>
+
+        {/* Розгорнута панель фільтрів */}
+        {showFilters && (
+          <div className="px-3 pb-2.5 flex items-center gap-1.5 flex-wrap">
+            <div className="relative flex-1 min-w-[150px] lg:flex-none lg:w-[240px]">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                value={q}
+                onChange={e => setQ(e.target.value)}
+                placeholder="Пошук деталі…"
+                className="w-full pl-7 pr-6 py-1.5 rounded-xl bg-gray-50 ring-1 ring-gray-200/80 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[12px]"
+              />
+              {q && (
+                <button onClick={() => setQ('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400" aria-label="Очистити">
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+            <FilterChip value={fOp} onChange={setFOp} label="Операція" options={fOps} />
+            <FilterChip value={fExec} onChange={setFExec} label="Виконавець" options={fExecs} />
+            <FilterChip value={fStatus} onChange={setFStatus} label="Статус" options={fStatuses} />
+            {/* Тип файлу: PDF / DXF / 3D / інші — лише ті, що є в замовленні */}
+            {fKinds.length > 1 && fKinds.map(({ key, count }) => {
+              const meta = GROUP_META[key as keyof typeof GROUP_META];
+              const on = fKind === key;
+              return (
+                <button key={key} onClick={() => setFKind(on ? '' : key)}
+                  className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-colors whitespace-nowrap"
+                  style={on ? { background: meta.color, color: '#fff' } : { background: meta.bg, color: meta.color }}
+                  title={meta.label}>
+                  {key === 'pdf' ? 'PDF' : key === 'dxf' ? 'DXF' : key === '3d' ? '3D' : 'Інші'} · {count}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Що саме зараз відсіяно — видно й тоді, коли панель згорнута */}
+        {filterCount > 0 && (
+          <div className="px-3 pb-2.5 flex items-center gap-1.5 flex-wrap">
+            {activeFilters.map(f => (
+              <button key={f.key} onClick={f.clear}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold press"
+                style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
+                title="Прибрати фільтр">
+                {f.label}
+                <X size={11} />
+              </button>
+            ))}
+            <button onClick={clearFilters}
+              className="text-[11px] font-bold px-2 py-1 rounded-lg press" style={{ color: 'var(--ink-3)' }}>
+              Скинути все
+            </button>
+            <span className="text-[11px] font-semibold tabular-nums ml-auto" style={{ color: 'var(--ink-2)' }}>
+              {filtered.filter(i => !i.group).length} з {real.length} поз.
+            </span>
+          </div>
+        )}
+
+        <OrderInsights
+          order={header.projectId}
+          items={real}
+          gap={gap}
+          onGap={setGap}
+          onTool={t => {
+            if (t === 'asm') setShowAsm(true);
+            else if (t === 'purch') setShowPurch(true);
+            else setShowCalc(true);
+          }}
+          refreshKey={insightsTick}
+        />
       </div>
 
       {view === 'table' ? (
@@ -910,7 +972,7 @@ export default function OrderPage({
             detail={detail}
             onToast={onToast}
             onMinimize={() => minimize('purch')}
-            onClose={() => { setShowPurch(false); restore('purch'); }}
+            onClose={() => { setShowPurch(false); restore('purch'); setInsightsTick(v => v + 1); }}
           />
         </div>
       )}
@@ -921,9 +983,9 @@ export default function OrderPage({
           <AssemblySheet
             detail={detail}
             onToast={onToast}
-            onRefresh={onRefresh}
+            onRefresh={l => { setInsightsTick(v => v + 1); onRefresh(l); }}
             onMinimize={() => minimize('asm')}
-            onClose={() => { setShowAsm(false); restore('asm'); }}
+            onClose={() => { setShowAsm(false); restore('asm'); setInsightsTick(v => v + 1); }}
           />
         </div>
       )}

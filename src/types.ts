@@ -213,6 +213,21 @@ export interface StaffData {
 export interface PurchasedRow { row: number; [col: string]: string | number }
 export interface PurchasedData { fields: StaffField[]; rows: PurchasedRow[] }
 
+/** Що ШІ вже прочитав із креслень замовлення — для смуги вгорі картки. */
+export interface OrderAiSummary {
+  files: number;          // розібрано креслень
+  cost: number;           // скільки це коштувало, $
+  at: string;             // коли востаннє
+  assemblies: number;     // з них складальних
+  mass: number;           // сумарна маса збірок, кг
+  parts: number;          // позицій складу
+  purchased: number;      // рядків у «Покупні»
+  purchasedTotal: number; // загальна к-сть покупних
+  purchasedAt: string;
+  cutRows: number;        // позицій із порахованим часом порізки
+  bendRows: number;       // позицій із порахованими гібами
+}
+
 /** Прайс і потужності контрагента по одній операції (аркуш «Прайси»). */
 export interface PriceRow { row: number; [col: string]: string | number }
 export interface PriceData { fields: StaffField[]; rows: PriceRow[] }
