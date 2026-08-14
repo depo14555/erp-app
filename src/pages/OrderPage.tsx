@@ -48,7 +48,10 @@ interface Props {
   nestSignal?: number;
   /** Відкрити інструмент одразу після відкриття замовлення (із загального прорахунку). */
   autoOpen?: 'calc' | null;
+  /** Рядок, на якому треба опинитись (з пошуку деталі або QR). */
+  focusRow?: number | null;
   onAutoOpened?: () => void;
+  onFocused?: () => void;
 }
 
 const GROUP_META = {
@@ -106,6 +109,7 @@ export default function OrderPage({
   detail, orderStatusList, rowStatusList, lists, loading,
   onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onBulkStatus, onToast,
   printSignal, billingSignal, techSignal, photoSignal, sendSignal, distrSignal, calcSignal, nestSignal, autoOpen, onAutoOpened,
+  focusRow, onFocused,
 }: Props) {
   const [q, setQ] = useState('');
   const [fOp, setFOp] = useState('');
@@ -234,6 +238,36 @@ export default function OrderPage({
   }
 
   const pct = total > 0 ? Math.round((100 * done) / total) : 0;
+
+  // ── Перехід на конкретну позицію (з пошуку деталі / QR) ──
+  const [flash, setFlash] = useState<number | null>(null);
+  useEffect(() => {
+    if (!focusRow) return;
+    const target = items.find(i => i.row === focusRow);
+    if (!target) return;
+    // фільтри і «показати ще» не мають ховати те, на що ми йдемо
+    setQ(''); setFOp(''); setFExec(''); setFStatus(''); setFKind('');
+    // «Показати ще» не має ховати позицію — піднімаємо ліміт усіх груп
+    setLimits({ pdf: 9999, dxf: 9999, '3d': 9999, other: 9999 });
+    setFlash(focusRow);
+    const timer = setTimeout(() => {
+      const el = document.querySelector(`[data-row="${focusRow}"]`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      onFocused?.();
+    }, 260);
+    const off = setTimeout(() => setFlash(null), 3200);
+    return () => { clearTimeout(timer); clearTimeout(off); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusRow, items]);
+
+  // Клас-спалах вішаємо на елемент напряму — так він працює і в таблиці, і в картках
+  useEffect(() => {
+    if (!flash) return;
+    const el = document.querySelector(`[data-row="${flash}"]`);
+    if (!el) return;
+    el.classList.add('row-flash');
+    return () => el.classList.remove('row-flash');
+  }, [flash, view, tableMode]);
   /** Термін замовлення живе в першому рядку картки — беремо перший заповнений. */
   const deadline = useMemo(() => items.find(i => i.deadline)?.deadline || '', [items]);
 
@@ -446,6 +480,7 @@ export default function OrderPage({
                   return (
                     <div
                       key={item.row}
+                      data-row={item.row}
                       className="bg-white rounded-2xl ring-1 ring-gray-200/70 p-3 cv-auto"
                     >
                       <div className="flex items-start gap-2">

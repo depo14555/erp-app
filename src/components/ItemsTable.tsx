@@ -339,7 +339,7 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
           {shown.map(item => {
             const route = routes.get(item.row);
             return (
-            <tr key={item.row}
+            <tr key={item.row} data-row={item.row}
               className="border-b hairline hover:bg-[#FCFCFD] group"
               style={selected.has(item.row) ? { background: 'var(--accent-soft)' } : undefined}>
               <td className="px-2 py-1.5" style={route ? { boxShadow: `inset 3px 0 0 ${route.color}` } : undefined}>

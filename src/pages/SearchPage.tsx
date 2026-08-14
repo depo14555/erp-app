@@ -10,7 +10,7 @@ import { api } from '../api';
 import { SearchRow, statusStyle } from '../types';
 
 interface Props {
-  onOpenOrder: (headerRow: number) => void;
+  onOpenOrder: (headerRow: number, row?: number) => void;
   onToast: (msg: string, isError?: boolean) => void;
 }
 
@@ -79,7 +79,7 @@ export default function SearchPage({ onOpenOrder, onToast }: Props) {
           return (
             <button
               key={r.row}
-              onClick={() => onOpenOrder(r.headerRow)}
+              onClick={() => onOpenOrder(r.headerRow, r.row)}
               className="w-full text-left bg-white rounded-2xl ring-1 ring-gray-200/70 p-3 active:scale-[0.99] transition-transform cv-auto"
             >
               <div className="flex items-start gap-2">

@@ -294,3 +294,13 @@
     display: none !important;
   }
 }
+
+/* ── Знайдена позиція: спалах, щоб око її зачепило ── */
+@keyframes row-flash {
+  0%   { background-color: #FEF08A; box-shadow: inset 3px 0 0 #F59E0B; }
+  70%  { background-color: #FEF9C3; box-shadow: inset 3px 0 0 #F59E0B; }
+  100% { background-color: transparent; box-shadow: none; }
+}
+.row-flash, .row-flash > td {
+  animation: row-flash 2.6s ease-out 1;
+}

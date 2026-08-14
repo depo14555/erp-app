@@ -15,6 +15,7 @@ import {
   FolderFile, BillingData, CommerceContext, CommerceResult, DocType, CreateOrderResult,
   BillingOverview, DistributionData, DistributeParams, DistributeResult, CalcData,
   NestItemsData, NestPrice, ContractorsData, KanbanBoardData, CalcOverview, StaffData,
+  PriceData,
 } from './types';
 
 /** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
@@ -38,7 +39,7 @@ const CACHE_TTL = 5 * 60 * 1000;
 
 /** Скільки чекати на відповідь — залежить від дії. */
 function timeoutFor(action: string): number {
-  return /^erp\.(techLaunch|mailProcess|execSend|savePdf|bulkUpdate|groupCard|fillAssembly|fileData|techFiles|distribut|nest|calcOverview|contractors|billingOverview)/.test(action)
+  return /^erp\.(techLaunch|mailProcess|execSend|savePdf|bulkUpdate|groupCard|fillAssembly|fileData|techFiles|distribut|nest|calcOverview|contractors|billingOverview|staffPhoto|prices)/.test(action)
     ? LONG_TIMEOUT
     : REQUEST_TIMEOUT;
 }
@@ -81,7 +82,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /** Читання можна безпечно повторити; мутації — ні (щоб не задвоїти запис). */
 function isReadAction(action: string): boolean {
-  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute|calcSave|contractorSave|contractorAddOp|staffSave|boards)/.test(action);
+  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute|calcSave|contractorSave|contractorAddOp|staffSave|staffAddSkill|staffPhoto|priceSave|boards)/.test(action);
 }
 
 function cacheGet<T>(key: string): T | null {
@@ -396,20 +397,44 @@ export const api = {
     return post('erp.contractorSave', { row, values, ops });
   },
 
-  /** Контрагенти: додати нову операцію в матрицю (нова колонка в аркуші). */
-  contractorAddOp(name: string, group: string): Promise<{ ok: boolean; col: number }> {
-    return post('erp.contractorAddOp', { name, group });
+  /** Контрагенти: додати операцію в матрицю або прибрати помилково додану. */
+  contractorAddOp(name: string, group: string, remove = false):
+    Promise<{ ok: boolean; col?: number; removed?: boolean }> {
+    return post('erp.contractorAddOp', { name, group, remove });
   },
 
-  /** Штат працівників: перелік з аркуша «Штат». */
+  /** Прайси і потужності: усі або по одному контрагенту. */
+  prices(contractor = ''): Promise<PriceData> {
+    return post('erp.prices', { contractor });
+  },
+
+  /** Прайс: upsert по парі (контрагент, операція). */
+  priceSave(contractor: string, operation: string, values: Record<string, string>, remove = false):
+    Promise<{ ok: boolean; row?: number; isNew?: boolean; removed?: boolean }> {
+    return post('erp.priceSave', { contractor, operation, values, remove });
+  },
+
+  /** Працівники: перелік з аркуша «Працівники» + матриця кваліфікації. */
   staff(): Promise<StaffData> {
     return post('erp.staff');
   },
 
-  /** Штат: зберегти рядок (row=0 — новий) або видалити (remove). */
-  staffSave(row: number, values: Record<string, string>, remove = false):
+  /** Працівник: зберегти рядок (row=0 — новий), оцінки операцій, або видалити. */
+  staffSave(row: number, values: Record<string, string>, skills?: Record<string, number>, remove = false):
     Promise<{ ok: boolean; row?: number; isNew?: boolean; removed?: boolean }> {
-    return post('erp.staffSave', { row, values, remove });
+    return post('erp.staffSave', { row, values, skills, remove });
+  },
+
+  /** Матриця кваліфікації: додати операцію або прибрати колонку. */
+  staffAddSkill(name: string, remove = false):
+    Promise<{ ok: boolean; col?: number; removed?: boolean }> {
+    return post('erp.staffAddSkill', { name, remove });
+  },
+
+  /** Фото працівника: base64 → Диск, посилання в аркуш. */
+  staffPhoto(row: number, base64: string, mime: string):
+    Promise<{ ok: boolean; photoId: string; url: string }> {
+    return post('erp.staffPhoto', { row, base64, mime });
   },
 
   /** Дошки канбану (спільні): без аргументу — читання, з масивом — запис. */

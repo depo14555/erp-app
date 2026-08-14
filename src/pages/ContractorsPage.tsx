@@ -8,9 +8,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Loader2, Plus, Search, X, Save, ExternalLink, Phone, MapPin, Check, Building2,
+  Wallet, Trash2,
 } from 'lucide-react';
 import { api } from '../api';
-import { ContractorsData, ContractorRow } from '../types';
+import { ContractorsData, ContractorRow, PriceRow } from '../types';
 
 interface Props {
   onToast: (msg: string, err?: boolean) => void;
@@ -30,6 +31,11 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
   const [draftOps, setDraftOps] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [newOp, setNewOp] = useState<{ name: string; group: string } | null>(null);
+  /** Прайс відкритого контрагента: операція → значення колонок 3..11. */
+  const [prices, setPrices] = useState<Record<string, Record<string, string>>>({});
+  const [priceCols, setPriceCols] = useState<Array<{ col: number; label: string }>>([]);
+  const [priceBusy, setPriceBusy] = useState('');
+  const [openPrice, setOpenPrice] = useState('');   // яка операція розгорнута
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -69,6 +75,70 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
     setEdit(r);
     setDraft({ ...r.values });
     setDraftOps(new Set(r.ops));
+    setOpenPrice('');
+    setPrices({});
+    if (r.name) loadPrices(r.name);
+  }
+
+  /** Прайс і потужності контрагента — окремий аркуш «Прайси». */
+  async function loadPrices(name: string) {
+    try {
+      const d = await api.prices(name);
+      setPriceCols(d.fields.filter(f => f.col >= 3 && f.col <= 11));
+      const map: Record<string, Record<string, string>> = {};
+      d.rows.forEach((row: PriceRow) => {
+        const op = String(row[2] ?? '');
+        const vals: Record<string, string> = {};
+        for (let c = 3; c <= 11; c++) vals[c] = String(row[c] ?? '');
+        map[op] = vals;
+      });
+      setPrices(map);
+    } catch (e: any) {
+      onToast(e?.message || 'Не вдалося прочитати прайс', true);
+    }
+  }
+
+  async function savePrice(op: string) {
+    if (!edit?.name) { onToast('Спершу збережіть контрагента', true); return; }
+    setPriceBusy(op);
+    try {
+      await api.priceSave(edit.name, op, prices[op] || {});
+      onToast(`💾 Прайс «${op}» збережено`);
+      await loadPrices(edit.name);
+    } catch (e: any) {
+      onToast(e?.message || 'Не вдалося зберегти прайс', true);
+    } finally {
+      setPriceBusy('');
+    }
+  }
+
+  async function dropPrice(op: string) {
+    if (!edit?.name) return;
+    setPriceBusy(op);
+    try {
+      await api.priceSave(edit.name, op, {}, true);
+      setPrices(p => { const n = { ...p }; delete n[op]; return n; });
+      onToast(`Прайс «${op}» прибрано`);
+    } catch (e: any) {
+      onToast(e?.message || 'Не вдалося прибрати', true);
+    } finally {
+      setPriceBusy('');
+    }
+  }
+
+  /** Помилково додану операцію прибираємо з матриці (колонка аркуша). */
+  async function dropOp(name: string) {
+    setSaving(true);
+    try {
+      await api.contractorAddOp(name, '', true);
+      onToast(`Операцію «${name}» прибрано з матриці`);
+      setDraftOps(prev => { const n = new Set(prev); n.delete(name); return n; });
+      await load();
+    } catch (e: any) {
+      onToast(e?.message || 'Не вдалося прибрати операцію', true);
+    } finally {
+      setSaving(false);
+    }
   }
 
   /** Нова операція = нова колонка в аркуші «Контрагенти». */
@@ -302,18 +372,27 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
                         {names.map(op => {
                           const on = draftOps.has(op);
                           return (
-                            <button key={op}
-                              onClick={() => setDraftOps(prev => {
-                                const n = new Set(prev);
-                                n.has(op) ? n.delete(op) : n.add(op);
-                                return n;
-                              })}
-                              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[12px] font-bold transition-colors"
+                            <span key={op} className="inline-flex items-center rounded-xl"
                               style={on
-                                ? { background: '#ECFDF5', color: '#059669', boxShadow: 'inset 0 0 0 1px #A7F3D0' }
-                                : { background: '#F3F4F6', color: 'var(--ink-3)' }}>
-                              {on && <Check size={12} />} {op}
-                            </button>
+                                ? { background: '#ECFDF5', boxShadow: 'inset 0 0 0 1px #A7F3D0' }
+                                : { background: '#F3F4F6' }}>
+                              <button
+                                onClick={() => setDraftOps(prev => {
+                                  const n = new Set(prev);
+                                  n.has(op) ? n.delete(op) : n.add(op);
+                                  return n;
+                                })}
+                                className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 text-[12px] font-bold transition-colors"
+                                style={{ color: on ? '#059669' : 'var(--ink-3)' }}>
+                                {on && <Check size={12} />} {op}
+                              </button>
+                              <button onClick={() => dropOp(op)} disabled={saving}
+                                className="pr-2 pl-0.5 py-1.5 press" style={{ color: '#CBD5E1' }}
+                                title={`Прибрати операцію «${op}» з матриці (колонку аркуша)`}
+                                aria-label="Прибрати операцію">
+                                <X size={11} />
+                              </button>
+                            </span>
                           );
                         })}
                       </div>
@@ -321,6 +400,84 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
                   ))}
                 </div>
               </div>
+
+              {/* Ціни та потужності — по кожній операції, яку вміє контрагент */}
+              {draftOps.size > 0 && (
+                <div className="rounded-2xl ring-1 ring-gray-200/80 p-3">
+                  <p className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--ink-3)' }}>
+                    <Wallet size={13} /> Ціни та потужності
+                    <span className="font-normal normal-case ml-1" style={{ color: 'var(--ink-3)' }}>
+                      підставлятиметься в прорахунок
+                    </span>
+                  </p>
+                  <div className="space-y-1">
+                    {[...draftOps].map(op => {
+                      const has = !!prices[op];
+                      const on = openPrice === op;
+                      const v = prices[op] || {};
+                      return (
+                        <div key={op} className="rounded-xl" style={{ background: on ? '#FAFBFC' : undefined }}>
+                          <div className="flex items-center gap-2 px-2 py-1.5">
+                            <button onClick={() => setOpenPrice(on ? '' : op)}
+                              className="flex-1 min-w-0 text-left text-[12px] font-semibold press truncate">
+                              {op}
+                            </button>
+                            {has && !on && (
+                              <span className="text-[11.5px] tabular-nums whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
+                                <b>{v[3] || '—'}</b> <span style={{ color: 'var(--ink-3)' }}>{v[4] || ''}</span>
+                                {v[6] ? <span style={{ color: 'var(--ink-3)' }}> · {v[6]}</span> : null}
+                              </span>
+                            )}
+                            {!has && !on && (
+                              <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>ціни немає</span>
+                            )}
+                            <button onClick={() => setOpenPrice(on ? '' : op)}
+                              className="text-[11px] font-bold press flex-shrink-0" style={{ color: 'var(--accent)' }}>
+                              {on ? 'згорнути' : has ? 'змінити' : 'задати'}
+                            </button>
+                          </div>
+
+                          {on && (
+                            <div className="px-2 pb-2.5">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {priceCols.map(f => (
+                                  <label key={f.col}>
+                                    <span className="block text-[10px] mb-0.5" style={{ color: 'var(--ink-3)' }}>{f.label}</span>
+                                    <input value={v[f.col] || ''}
+                                      onChange={e => setPrices(p => ({
+                                        ...p, [op]: { ...(p[op] || {}), [f.col]: e.target.value },
+                                      }))}
+                                      inputMode={[3, 5, 7, 8, 9, 10].includes(f.col) ? 'decimal' : undefined}
+                                      placeholder={f.col === 4 ? 'грн/шт · грн/м · грн/год' : ''}
+                                      className="w-full px-2 py-1.5 rounded-lg bg-white ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 outline-none text-[12px]" />
+                                  </label>
+                                ))}
+                              </div>
+                              <div className="flex items-center gap-2 mt-2">
+                                <button onClick={() => savePrice(op)} disabled={priceBusy === op}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold text-white press disabled:opacity-50"
+                                  style={{ background: 'var(--accent)' }}>
+                                  {priceBusy === op ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                                  Зберегти
+                                </button>
+                                {has && (
+                                  <button onClick={() => dropPrice(op)} disabled={priceBusy === op}
+                                    className="p-1.5 press text-red-500" aria-label="Прибрати прайс" title="Прибрати прайс цієї операції">
+                                    <Trash2 size={13} />
+                                  </button>
+                                )}
+                                {v[12] && (
+                                  <span className="ml-auto text-[10.5px]" style={{ color: 'var(--ink-3)' }}>онов. {v[12]}</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {(edit.tableUrl || edit.invoiceUrl) && (
                 <div className="flex gap-2 flex-wrap">

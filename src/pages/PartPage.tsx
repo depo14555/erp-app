@@ -17,7 +17,7 @@ import StatusPicker from '../components/StatusPicker';
 interface Props {
   partId: string;
   onClose: () => void;
-  onOpenOrder: (headerRow: number) => void;
+  onOpenOrder: (headerRow: number, row?: number) => void;
   onToast: (msg: string, err?: boolean) => void;
 }
 
@@ -135,7 +135,7 @@ export default function PartPage({ partId, onClose, onOpenOrder, onToast }: Prop
         {data && (
           <div className="max-w-[560px] mx-auto p-3 space-y-3">
             {/* Замовлення */}
-            <button onClick={() => onOpenOrder(data.header.headerRow)}
+            <button onClick={() => onOpenOrder(data.header.headerRow, data.item?.row)}
               className="w-full bg-white rounded-2xl ring-1 ring-gray-200/70 p-3 text-left press">
               <p className="text-[10.5px] font-bold uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>Замовлення</p>
               <div className="flex items-center gap-2 mt-1">

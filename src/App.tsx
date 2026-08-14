@@ -107,9 +107,13 @@ export default function App() {
     api.getLists().then(setLists).catch(() => {/* списки не критичні */});
   }, [authed, loadOrders]);
 
-  const openOrder = useCallback(async (headerRow: number, force = false, label?: string) => {
+  /** Рядок, на який треба стати після відкриття (з пошуку деталі або QR). */
+  const [focusRow, setFocusRow] = useState<number | null>(null);
+
+  const openOrder = useCallback(async (headerRow: number, force = false, label?: string, row?: number) => {
     setLoadingLabel(label || 'Відкриваю замовлення…');
     setLoading(true);
+    setFocusRow(row ?? null);
     try {
       setDetail(await api.getOrder(headerRow, force));
     } catch (err: any) {
@@ -297,6 +301,8 @@ export default function App() {
       calcSignal={calcTick}
       nestSignal={nestTick}
       autoOpen={autoOpen}
+      focusRow={focusRow}
+      onFocused={() => setFocusRow(null)}
       onAutoOpened={() => setAutoOpen(null)}
     />
   );
@@ -387,7 +393,9 @@ export default function App() {
       {overlay === 'search' && (
         <PageSheet title="Пошук деталі" subtitle="по всіх замовленнях"
           icon={<ScanSearch size={16} />} onClose={() => setOverlay(null)}>
-          <SearchPage onOpenOrder={hr => { setOverlay(null); setTab('orders'); openOrder(hr); }} onToast={showToast} />
+          <SearchPage
+            onOpenOrder={(hr, row) => { setOverlay(null); setTab('orders'); openOrder(hr, false, 'Відкриваю замовлення…', row); }}
+            onToast={showToast} />
         </PageSheet>
       )}
 
@@ -419,7 +427,7 @@ export default function App() {
         <PartPage
           partId={partId}
           onClose={closePart}
-          onOpenOrder={hr => { closePart(); setTab('orders'); openOrder(hr); }}
+          onOpenOrder={(hr, row) => { closePart(); setTab('orders'); openOrder(hr, false, 'Відкриваю замовлення…', row); }}
           onToast={showToast}
         />
       )}

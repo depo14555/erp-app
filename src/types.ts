@@ -75,8 +75,20 @@ export interface CalcBundle {
   note: string;
 }
 
+/** Що додатково рахуємо по конкретній позиції. */
+export interface CalcRowMeta {
+  /** Скільки гібів на одній деталі (операція «Гнуття»). */
+  bends?: number;
+  /** Ціна за один гіб, грн. */
+  bendPrice?: number;
+  /** Час лазерної порізки однієї деталі, хв (рахується з DXF). */
+  cutMin?: number;
+}
+
 export interface CalcData {
   bundles: CalcBundle[];
+  /** Гіби і час порізки за номером рядка картки. */
+  meta?: Record<string, CalcRowMeta>;
   updatedAt?: string;
   updatedBy?: string;
 }
@@ -173,10 +185,33 @@ export interface ContractorsData {
   rows: ContractorRow[];
 }
 
-/** Штат: працівник із аркуша «Штат». */
+/** Працівник із аркуша «Працівники» (аркуш «Штат» — авторський шаблон, його не чіпаємо). */
 export interface StaffField { col: number; label: string }
-export interface StaffRow { row: number; [col: string]: string | number }
-export interface StaffData { fields: StaffField[]; rows: StaffRow[] }
+/** Рівень володіння операцією: 0 не навчений … 4 може навчити іншого. */
+export interface StaffLevel { v: number; short: string; full: string }
+export interface StaffSkillCol { col: number; name: string }
+export interface StaffRow {
+  row: number;
+  /** Оцінка за операцією: назва → 1..4 (нуль не зберігається). */
+  skills?: Record<string, number>;
+  /** Файл фото на Диску — показуємо через erp.fileData. */
+  photoId?: string;
+  [col: string]: string | number | Record<string, number> | undefined;
+}
+export interface StaffData {
+  fields: StaffField[];
+  skills: StaffSkillCol[];
+  levels: StaffLevel[];
+  /** З якої оцінки працівник вважається носієм операції (2). */
+  levelOk: number;
+  /** Скільки людей володіє операцією (оцінка ≥ levelOk). */
+  carriers: Record<string, number>;
+  rows: StaffRow[];
+}
+
+/** Прайс і потужності контрагента по одній операції (аркуш «Прайси»). */
+export interface PriceRow { row: number; [col: string]: string | number }
+export interface PriceData { fields: StaffField[]; rows: PriceRow[] }
 
 /** Панель бухгалтерії по всіх замовленнях. */
 export interface OverviewInvoice {

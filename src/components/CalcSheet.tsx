@@ -9,11 +9,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   X, Calculator, Loader2, Plus, Trash2, Save, Clock, Layers,
-  ArrowRight, Wallet, CheckSquare, Square,
+  ArrowRight, Wallet, CheckSquare, Square, Scissors, CornerUpRight,
 } from 'lucide-react';
 import { MinimizeButton } from './PageSheet';
 import { api } from '../api';
-import { OrderDetail, OrderItem, CalcBundle, CalcData } from '../types';
+import { OrderDetail, OrderItem, CalcBundle, CalcData, CalcRowMeta } from '../types';
 import { num, qtyOf, timeAllOf } from './ItemsTable';
 
 interface Props {
@@ -38,6 +38,15 @@ function uid(): string {
   return 'b' + Math.random().toString(36).slice(2, 9);
 }
 
+/** Позиція гнеться? Дивимось операцію картки. */
+function isBend(i: OrderItem): boolean {
+  return /гнут|гиб|гіб|бенд/i.test(String(i.op || ''));
+}
+/** Позиція ріжеться лазером? Файл креслення — DXF. */
+function isDxf(i: OrderItem): boolean {
+  return /\.dxf$/i.test(String(i.name || ''));
+}
+
 export default function CalcSheet({ detail, onClose, onMinimize, onToast, onApplied }: Props) {
   const items = useMemo(() => detail.items.filter(i => !i.group), [detail.items]);
   const [bundles, setBundles] = useState<CalcBundle[]>([]);
@@ -48,11 +57,15 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
   const [active, setActive] = useState<string>('');
   /** Ціни, введені тут і ще не записані в картку: row → ціна за 1 шт. */
   const [prices, setPrices] = useState<Record<number, string>>({});
+  /** Гіби і час порізки по рядках. */
+  const [meta, setMeta] = useState<Record<string, CalcRowMeta>>({});
+  const [cutBusy, setCutBusy] = useState('');
 
   useEffect(() => {
     api.calcGet(detail.header.headerRow)
       .then(r => {
         setBundles(r.data?.bundles || []);
+        setMeta(r.data?.meta || {});
         setUpdatedAt(r.data?.updatedAt || '');
         if (r.data?.bundles?.length) setActive(r.data.bundles[0].id);
       })
@@ -72,13 +85,79 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
     return s;
   }, [bundles]);
 
+  const metaOf = (row: number): CalcRowMeta => meta[String(row)] || {};
+  /** Гібів на всю призначену кількість. */
+  const bendsAll = (i: OrderItem) => (metaOf(i.row).bends || 0) * qtyOf(i);
+  /** Вартість гнуття позиції: гіби × ціна за гіб. */
+  const bendSum = (i: OrderItem) => bendsAll(i) * (metaOf(i.row).bendPrice || 0);
+  /** Час порізки позиції, год. */
+  const cutHours = (i: OrderItem) => (metaOf(i.row).cutMin || 0) * qtyOf(i) / 60;
+
   const totals = useMemo(() => {
-    let time = 0, sum = 0;
-    items.forEach(i => { time += timeAllOf(i); sum += sumOf(i); });
+    let time = 0, sum = 0, bends = 0, bendCost = 0, cut = 0;
+    items.forEach(i => {
+      time += timeAllOf(i);
+      sum += sumOf(i);
+      bends += bendsAll(i);
+      bendCost += bendSum(i);
+      cut += cutHours(i);
+    });
     const extras = bundles.reduce((s, b) => s + b.extras.reduce((x, e) => x + (e.sum || 0), 0), 0);
-    return { time, sum, extras, all: sum + extras };
+    return { time, sum, extras, bends, bendCost, cut, all: sum + extras + bendCost };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, prices, bundles]);
+  }, [items, prices, bundles, meta]);
+
+  function setMetaVal(row: number, key: keyof CalcRowMeta, raw: string) {
+    const v = num(raw);
+    setMeta(m => {
+      const cur = { ...(m[String(row)] || {}) };
+      if (v > 0) cur[key] = v; else delete cur[key];
+      const next = { ...m };
+      if (Object.keys(cur).length) next[String(row)] = cur; else delete next[String(row)];
+      return next;
+    });
+  }
+
+  /**
+   * Час лазерної порізки — рахується з самих креслень: довжина різу
+   * ділиться на швидкість для товщини, плюс врізки (кожен замкнений
+   * контур — одна врізка). Ті самі таблиці, що й у модулі розкрою.
+   */
+  async function cutFromDxf() {
+    setCutBusy('Читаю перелік DXF…');
+    try {
+      const list = await api.nestItems(detail.header.headerRow);
+      const dxf = list.items || [];
+      if (!dxf.length) { onToast('У картці немає позицій із DXF-посиланням', true); return; }
+      const nest = await import('../lib/nesting');
+      const next: Record<string, CalcRowMeta> = { ...meta };
+      let done = 0, failed = 0;
+      for (const it of dxf) {
+        setCutBusy(`Рахую ${done + 1} з ${dxf.length}: ${it.fileName}`);
+        try {
+          const fd = await api.fileData(it.fileId);
+          const text = decodeURIComponent(escape(atob(fd.base64)));
+          const parsed: any = (nest as any).parseDxf(text);
+          const key = String(it.thickness || '');
+          const speed = (nest as any).suggestSpeed(key) || 2;         // м/хв
+          const pierce = (nest as any).suggestPierceSec(key) || 0.5;  // с на врізку
+          const min = (parsed.cutLen / 1000) / speed + (parsed.loops || 1) * pierce / 60;
+          const cur = { ...(next[String(it.row)] || {}) };
+          cur.cutMin = Math.round(min * 1000) / 1000;
+          next[String(it.row)] = cur;
+          done++;
+        } catch { failed++; }
+      }
+      setMeta(next);
+      onToast(failed
+        ? `Час порізки порахувано для ${done} з ${dxf.length} (не вдалось: ${failed})`
+        : `✅ Час порізки порахувано для ${done} позицій`, failed > 0);
+    } catch (e: any) {
+      onToast(e?.message || 'Не вдалося порахувати час порізки', true);
+    } finally {
+      setCutBusy('');
+    }
+  }
 
   function bundleSum(b: CalcBundle): number {
     const rows = b.rows.reduce((s, r) => { const i = byRow.get(r); return s + (i ? sumOf(i) : 0); }, 0);
@@ -109,7 +188,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
   async function save() {
     setSaving(true);
     try {
-      const data: CalcData = { bundles };
+      const data: CalcData = { bundles, meta };
       const res = await api.calcSave(detail.header.headerRow, data);
       setUpdatedAt(res.updatedAt);
       const n = res.bundles;
@@ -145,6 +224,26 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
     } finally {
       setSaving(false);
     }
+  }
+
+  /** Ціна за гіб одна на замовлення — тримаємо її в meta кожного гнутого рядка. */
+  const bendPriceAll = useMemo(() => {
+    const vals = items.filter(isBend).map(i => metaOf(i.row).bendPrice).filter(v => v);
+    return vals.length ? String(vals[0]) : '';
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, meta]);
+
+  function applyBendPrice(raw: string) {
+    const v = num(raw);
+    setMeta(m => {
+      const next = { ...m };
+      items.filter(isBend).forEach(i => {
+        const cur = { ...(next[String(i.row)] || {}) };
+        if (v > 0) cur.bendPrice = v; else delete cur.bendPrice;
+        if (Object.keys(cur).length) next[String(i.row)] = cur; else delete next[String(i.row)];
+      });
+      return next;
+    });
   }
 
   function toggleRow(row: number) {
@@ -217,7 +316,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                 <table className="w-full border-collapse text-[12px]">
                   <thead className="sticky top-0 bg-[#FAFBFC] z-10">
                     <tr>
-                      {['', 'Найменування', 'Призн.', 'Час всього', 'Ціна/шт', 'Сума'].map((h, i) => (
+                      {['', 'Найменування', 'Призн.', 'Гібів/шт', 'Порізка хв/шт', 'Час всього', 'Ціна/шт', 'Сума'].map((h, i) => (
                         <th key={i} className="text-left font-semibold text-[10.5px] uppercase tracking-wide text-[var(--ink-3)] px-2 py-2 border-b hairline whitespace-nowrap">
                           {h}
                         </th>
@@ -245,6 +344,37 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                             </span>
                           </td>
                           <td className="px-2 py-1.5 tabular-nums whitespace-nowrap">{qtyOf(i) || '—'}</td>
+
+                          {/* Гіби — лише там, де операція справді гнуття */}
+                          <td className="px-1 py-1 w-[74px]">
+                            {isBend(i) ? (
+                              <input
+                                value={metaOf(i.row).bends ?? ''}
+                                onChange={e => setMetaVal(i.row, 'bends', e.target.value)}
+                                inputMode="decimal" placeholder="0"
+                                title={bendsAll(i) ? `Всього гібів: ${bendsAll(i)}` : 'Кількість гібів на одній деталі'}
+                                className="w-full px-1.5 py-1 rounded-lg bg-amber-50 ring-1 ring-amber-200 focus:ring-2 focus:ring-amber-400 outline-none text-[12px] tabular-nums text-right"
+                              />
+                            ) : (
+                              <span className="block text-center" style={{ color: 'var(--ink-3)' }}>—</span>
+                            )}
+                          </td>
+
+                          {/* Час порізки — лише для DXF */}
+                          <td className="px-1 py-1 w-[84px]">
+                            {isDxf(i) ? (
+                              <input
+                                value={metaOf(i.row).cutMin ?? ''}
+                                onChange={e => setMetaVal(i.row, 'cutMin', e.target.value)}
+                                inputMode="decimal" placeholder="0"
+                                title={cutHours(i) ? `На всі: ${cutHours(i).toFixed(2)} год` : 'Хвилин різу на одну деталь'}
+                                className="w-full px-1.5 py-1 rounded-lg bg-sky-50 ring-1 ring-sky-200 focus:ring-2 focus:ring-sky-400 outline-none text-[12px] tabular-nums text-right"
+                              />
+                            ) : (
+                              <span className="block text-center" style={{ color: 'var(--ink-3)' }}>—</span>
+                            )}
+                          </td>
+
                           <td className="px-2 py-1.5 tabular-nums whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
                             {timeAllOf(i) ? `${timeAllOf(i).toFixed(2)} год` : '—'}
                           </td>
@@ -266,12 +396,41 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                 </table>
               </div>
 
+              {/* Гнуття: одна ціна за гіб на все замовлення */}
+              {totals.bends > 0 && (
+                <div className="flex-shrink-0 border-t hairline px-3 py-2 flex items-center gap-2 flex-wrap bg-amber-50/60">
+                  <span className="flex items-center gap-1.5 text-[11.5px] font-bold" style={{ color: '#92400E' }}>
+                    <CornerUpRight size={13} /> Гнуття: {totals.bends} гібів
+                  </span>
+                  <label className="flex items-center gap-1.5 text-[11.5px]" style={{ color: 'var(--ink-3)' }}>
+                    ціна за гіб
+                    <input
+                      value={bendPriceAll}
+                      onChange={e => applyBendPrice(e.target.value)}
+                      inputMode="decimal" placeholder="0"
+                      className="w-[74px] px-2 py-1 rounded-lg bg-white ring-1 ring-amber-200 focus:ring-2 focus:ring-amber-400 outline-none text-[12px] tabular-nums text-right"
+                    />
+                  </label>
+                  <span className="text-[11.5px] font-bold tabular-nums" style={{ color: '#92400E' }}>
+                    = {money(totals.bendCost)} грн
+                  </span>
+                </div>
+              )}
+
               <div className="flex-shrink-0 border-t hairline px-3 py-2 flex items-center gap-2 flex-wrap">
                 <span className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>
                   Час: <b style={{ color: 'var(--ink-2)' }}>{totals.time.toFixed(1)} год</b> ·
                   Роботи: <b style={{ color: 'var(--ink-2)' }}>{money(totals.sum)}</b> ·
                   Інші: <b style={{ color: 'var(--ink-2)' }}>{money(totals.extras)}</b>
+                  {totals.cut > 0 && <> · Порізка: <b style={{ color: 'var(--ink-2)' }}>{totals.cut.toFixed(2)} год</b></>}
                 </span>
+                <button onClick={cutFromDxf} disabled={!!cutBusy || saving}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-bold press disabled:opacity-50"
+                  style={{ background: '#E0F2FE', color: '#0369A1' }}
+                  title="Прочитати DXF і порахувати час різу за довжиною контурів і врізками">
+                  {cutBusy ? <Loader2 size={12} className="animate-spin" /> : <Scissors size={12} />}
+                  {cutBusy || 'Час порізки з DXF'}
+                </button>
                 <button onClick={applyPrices} disabled={saving || !Object.keys(prices).length}
                   className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-bold press disabled:opacity-40"
                   style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
