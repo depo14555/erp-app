@@ -434,6 +434,15 @@ export const api = {
     return post('erp.purchasedSave', { order, rows });
   },
 
+  /**
+   * Проставити колонку «Збірка» позиціям замовлення.
+   * map: числове ядро децимальника (або нормалізована назва) → назва збірки.
+   */
+  fillAssembly(headerRow: number, map: Record<string, string>):
+    Promise<{ updated: number; unmatched: string[] }> {
+    return post('erp.fillAssembly', { headerRow, map });
+  },
+
   /** Прайси і потужності: усі або по одному контрагенту. */
   prices(contractor = ''): Promise<PriceData> {
     return post('erp.prices', { contractor });

@@ -8,7 +8,7 @@
 import {
   LayoutDashboard, ClipboardList, MessageSquare, Truck, Building2, UserRound,
   LogOut, RefreshCw, Receipt, Printer, Lock, Sparkles,
-  FolderOpen, Rocket, Paintbrush, Send, FolderTree, Calculator, Scissors, ShoppingCart,
+  FolderOpen, Rocket, Paintbrush, Send, FolderTree, Calculator, Scissors, ShoppingCart, Blocks,
 } from 'lucide-react';
 import { AppTab } from '../types';
 import { EnvKey } from '../api';
@@ -46,7 +46,7 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
-export type OrderTool = 'billing' | 'tech' | 'photo' | 'send' | 'print' | 'distr' | 'calc' | 'nest' | 'purch';
+export type OrderTool = 'billing' | 'tech' | 'photo' | 'send' | 'print' | 'distr' | 'calc' | 'nest' | 'purch' | 'asm';
 
 interface Props {
   tab: AppTab;
@@ -74,6 +74,7 @@ const ORDER_TOOLS: ToolItem[] = [
 
 /** Те, що читає креслення само — окремим блоком, щоб було видно, де працює ШІ. */
 const AI_TOOLS: ToolItem[] = [
+  { key: 'asm', label: 'Склад збірок', Icon: Blocks, color: '#7C3AED' },
   { key: 'purch', label: 'Покупні', Icon: ShoppingCart, color: '#EA580C' },
 ];
 

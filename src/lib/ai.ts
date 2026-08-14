@@ -137,6 +137,31 @@ export function driveIdFromUrl(url: string): string {
   return m ? m[0] : '';
 }
 
+/**
+ * Децимальний номер із назви: ТБМД.000000.059 | IB.Mil.2360.01.00.00.003-04 | 000800.012.
+ * Порт extractDecimal_ із хаба — зіставлення має працювати однаково з обох боків.
+ */
+export function extractDecimal(s: string): string {
+  const re = /((?:[A-Za-zА-ЯІЇЄҐа-яіїєґ]{1,12}\.){0,3}(?:\d{2,6}[.\-]){1,7}\d{2,6}(?:-\d{1,3})?)/g;
+  let best = '', m: RegExpExecArray | null;
+  while ((m = re.exec(String(s || ''))) !== null) if (m[1].length > best.length) best = m[1];
+  return best.replace(/^[._\-\s]+|[._\s]+$/g, '');
+}
+
+/**
+ * ЧИСЛОВЕ ЯДРО децимальника: літерний шифр відкидається, бо той самий номер
+ * буває з префіксом і без (IB.Mil.2360.01.00.00.003 ↔ 2360.01.00.00.003).
+ */
+export function decimalCore(s: string): string {
+  return extractDecimal(s).replace(/^(?:[A-Za-zА-ЯІЇЄҐа-яіїєґ]{1,12}[.\-])+/, '').replace(/\s+/g, '');
+}
+
+/** Назва без розширення і розділових — запасний ключ, коли децимальника немає. */
+export function normName(s: string): string {
+  return String(s || '').replace(/\.[A-Za-z0-9]{2,5}$/, '').toLowerCase()
+    .replace(/[^0-9a-zа-яіїєґё]+/g, '');
+}
+
 async function callAI(base64: string, signal?: AbortSignal): Promise<any> {
   const res = await fetch(AI_URL, {
     method: 'POST',

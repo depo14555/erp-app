@@ -6,8 +6,11 @@
 //  з пошуком; текстові поля — інлайн-інпут. Enter/blur зберігає.
 // ================================================================
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ExternalLink, Check, Loader2, Search, CheckSquare, Square, Pencil, Plus, Filter, FolderOpen } from 'lucide-react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ExternalLink, Check, Loader2, Search, CheckSquare, Square, Pencil, Plus, Filter, FolderOpen,
+  Blocks, ChevronDown, ChevronRight,
+} from 'lucide-react';
 import { OrderItem, Lists, statusStyle } from '../types';
 
 type Field = 'op' | 'executor' | 'qty' | 'assignedQty' | 'material' | 'thickness' | 'note' | 'rowStatus'
@@ -56,6 +59,8 @@ interface Props {
   onToggleRow: (row: number) => void;
   /** Вибрати/зняти одразу набір рядків (шапка, Shift-діапазон). */
   onSelectRows: (rows: number[], on: boolean) => void;
+  /** Групувати по збірках: збірка і що в неї входить, «Без збірок» знизу. */
+  grouped?: boolean;
 }
 
 interface PopState {
@@ -66,7 +71,7 @@ interface PopState {
   current: string;
 }
 
-export default function ItemsTable({ items, lists, mode, onSave, onAddOp, selected, onToggleRow, onSelectRows }: Props) {
+export default function ItemsTable({ items, lists, mode, onSave, onAddOp, selected, onToggleRow, onSelectRows, grouped }: Props) {
   const [edit, setEdit] = useState<{ row: number; field: Field } | null>(null);
   const [pop, setPop] = useState<PopState | null>(null);
   const [draft, setDraft] = useState('');
@@ -74,6 +79,8 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
   const inputRef = useRef<HTMLInputElement>(null);
   /** Фільтри колонок: поле → вибрані значення (порожньо = без фільтра). */
   const [colFilters, setColFilters] = useState<Record<string, Set<string>>>({});
+  /** Згорнуті збірки (ключ '' — «Без збірок»). */
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [filterPop, setFilterPop] = useState<{ field: string; label: string; rect: { left: number; top: number; bottom: number } } | null>(null);
   const lastRow = useRef<number | null>(null);
 
@@ -275,6 +282,29 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
   const allShownSelected = shown.length > 0 && shown.every(i => selected.has(i.row));
   const filterCount = Object.values(colFilters).filter(s => s.size).length;
 
+  /**
+   * Групування по збірках: збірка і що в неї входить, «Без збірок» — останнім.
+   * key === null означає «без групування» — тоді шапок немає взагалі.
+   */
+  const blocks = useMemo<Array<{ key: string | null; items: OrderItem[] }>>(() => {
+    if (!grouped) return [{ key: null, items: shown }];
+    const m = new Map<string, OrderItem[]>();
+    shown.forEach(i => {
+      const k = String(i.assembly || '').trim();
+      const a = m.get(k) || [];
+      a.push(i);
+      m.set(k, a);
+    });
+    const named = [...m.keys()].filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, 'uk', { numeric: true }));
+    const out = named.map(k => ({ key: k, items: m.get(k)! }));
+    if (m.has('')) out.push({ key: '', items: m.get('')! });   // порожній ключ = «Без збірок», завжди знизу
+    return out;
+  }, [shown, grouped]);
+
+  const flip = (k: string) =>
+    setCollapsed(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
+
   /** Клік по галочці: Shift — діапазон від попередньої вибраної. */
   function clickRow(e: React.MouseEvent, row: number) {
     if (e.shiftKey && lastRow.current !== null) {
@@ -336,7 +366,36 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
           </tr>
         </thead>
         <tbody>
-          {shown.map(item => {
+          {blocks.map(b => (
+            <Fragment key={b.key ?? '#усі'}>
+
+            {b.key !== null && (
+              <tr className="bg-[#F6F4FF]">
+                <td colSpan={cols.length + 1} className="px-2 py-1.5 border-b hairline">
+                  <span className="flex items-center gap-2">
+                    <button onClick={() => flip(b.key!)} className="p-0.5 press flex-shrink-0"
+                      style={{ color: 'var(--ink-3)' }}
+                      aria-label={collapsed.has(b.key!) ? 'Розгорнути збірку' : 'Згорнути збірку'}>
+                      {collapsed.has(b.key!) ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    <button onClick={() => onSelectRows(b.items.map(i => i.row), !b.items.every(i => selected.has(i.row)))}
+                      className="flex press flex-shrink-0" aria-label="Вибрати збірку"
+                      title="Вибрати всі позиції збірки">
+                      {b.items.every(i => selected.has(i.row))
+                        ? <CheckSquare size={14} className="text-[var(--accent)]" />
+                        : <Square size={14} className="text-gray-300" />}
+                    </button>
+                    <Blocks size={13} className="flex-shrink-0" style={{ color: b.key ? '#7C3AED' : 'var(--ink-3)' }} />
+                    <span className="text-[12px] font-bold truncate">{b.key || 'Без збірок'}</span>
+                    <span className="text-[11px] tabular-nums" style={{ color: 'var(--ink-3)' }}>
+                      {b.items.length} поз.
+                    </span>
+                  </span>
+                </td>
+              </tr>
+            )}
+
+            {(b.key === null || !collapsed.has(b.key)) && b.items.map(item => {
             const route = routes.get(item.row);
             return (
             <tr key={item.row} data-row={item.row}
@@ -432,6 +491,8 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
             </tr>
             );
           })}
+            </Fragment>
+          ))}
         </tbody>
       </table>
 

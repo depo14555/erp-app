@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft, RefreshCw, FolderOpen, FileText, Ruler, Box, Paperclip,
   ExternalLink, User, Search, Printer, X, Send, Tags, Rocket, Paintbrush, Receipt,
-  FolderTree, Calculator, Scissors, Wrench, Layers, ShoppingCart,
+  FolderTree, Calculator, Scissors, Wrench, Layers, ShoppingCart, Blocks,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
 import ItemsTable, { TableMode } from '../components/ItemsTable';
@@ -24,6 +24,7 @@ import DistributionSheet from '../components/DistributionSheet';
 import CalcSheet from '../components/CalcSheet';
 import NestingSheet from '../components/NestingSheet';
 import PurchasedSheet from '../components/PurchasedSheet';
+import AssemblySheet from '../components/AssemblySheet';
 import { AiBadge } from '../components/Sidebar';
 import { OrderDetail, OrderItem, Lists, statusStyle, fileKind } from '../types';
 
@@ -49,6 +50,7 @@ interface Props {
   calcSignal?: number;
   nestSignal?: number;
   purchSignal?: number;
+  asmSignal?: number;
   /** Відкрити інструмент одразу після відкриття замовлення (із загального прорахунку). */
   autoOpen?: 'calc' | null;
   /** Рядок, на якому треба опинитись (з пошуку деталі або QR). */
@@ -84,11 +86,12 @@ const TOOLS: Array<{ key: string; label: string; hint: string; Icon: typeof Rock
   { key: 'send',    label: 'Виконавцю',    hint: 'відправити позиції в його таблицю', Icon: Send, color: '#4F46E5' },
   { key: 'print',   label: 'Друк + QR',    hint: 'пакет креслень для цеху',    Icon: Printer,    color: '#0369A1' },
   { key: 'billing', label: 'Рахунки',      hint: 'оплати і документи',         Icon: Receipt,    color: '#059669' },
+  { key: 'asm',     label: 'Склад збірок', hint: 'що в яку збірку входить',    Icon: Blocks,     color: '#7C3AED', ai: true },
   { key: 'purch',   label: 'Покупні',      hint: 'кріплення зі специфікацій збірок', Icon: ShoppingCart, color: '#EA580C', ai: true },
 ];
 
 /** Вікна інструментів, які можна згорнути (робота продовжується у фоні). */
-type SheetKey = 'print' | 'send' | 'tech' | 'photo' | 'distr' | 'calc' | 'nest' | 'purch';
+type SheetKey = 'print' | 'send' | 'tech' | 'photo' | 'distr' | 'calc' | 'nest' | 'purch' | 'asm';
 const SHEET_META: Record<SheetKey, { label: string; emoji: string }> = {
   print: { label: 'Друк креслень', emoji: '🖨️' },
   send:  { label: 'Відправка виконавцю', emoji: '📤' },
@@ -98,6 +101,7 @@ const SHEET_META: Record<SheetKey, { label: string; emoji: string }> = {
   calc:  { label: 'Прорахунок', emoji: '🧮' },
   nest:  { label: 'Розкрій DXF', emoji: '✂️' },
   purch: { label: 'Покупні', emoji: '🔩' },
+  asm:   { label: 'Склад збірок', emoji: '🧩' },
 };
 
 /** Відкриває вікно лише при ЗМІНІ сигналу, ігноруючи значення на монтуванні. */
@@ -113,7 +117,7 @@ function useOpenSignal(signal: number | undefined, open: () => void) {
 export default function OrderPage({
   detail, orderStatusList, rowStatusList, lists, loading,
   onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onBulkStatus, onToast,
-  printSignal, billingSignal, techSignal, photoSignal, sendSignal, distrSignal, calcSignal, nestSignal, purchSignal, autoOpen, onAutoOpened,
+  printSignal, billingSignal, techSignal, photoSignal, sendSignal, distrSignal, calcSignal, nestSignal, purchSignal, asmSignal, autoOpen, onAutoOpened,
   focusRow, onFocused,
 }: Props) {
   const [q, setQ] = useState('');
@@ -132,6 +136,7 @@ export default function OrderPage({
   const [showCalc, setShowCalc] = useState(false);
   const [showNest, setShowNest] = useState(false);
   const [showPurch, setShowPurch] = useState(false);
+  const [showAsm, setShowAsm] = useState(false);
   const [showTools, setShowTools] = useState(false);   // телефон: усі дії замовлення
   const [tableMode, setTableMode] = useState<TableMode>('prod');
   const [addOpItem, setAddOpItem] = useState<OrderItem | null>(null);
@@ -148,6 +153,7 @@ export default function OrderPage({
   const [view, setView] = useState<'cards' | 'table'>(
     typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'table' : 'cards'
   );
+  const [byAsm, setByAsm] = useState(false);   // групувати позиції по збірках
 
   const { header, items } = detail;
   const st = statusStyle(header.status);
@@ -167,6 +173,7 @@ export default function OrderPage({
   useOpenSignal(calcSignal, () => setShowCalc(true));
   useOpenSignal(nestSignal, () => setShowNest(true));
   useOpenSignal(purchSignal, () => setShowPurch(true));
+  useOpenSignal(asmSignal, () => setShowAsm(true));
   // Прийшли із загального прорахунку — одразу показуємо вікно прорахунку
   useEffect(() => {
     if (autoOpen !== 'calc') return;
@@ -207,6 +214,49 @@ export default function OrderPage({
     filtered.forEach(i => { if (!i.group) acc[fileKind(i.name)].push(i); });
     return acc;
   }, [filtered]);
+
+  /** Чи є взагалі проставлені збірки — від цього залежить, чи показувати перемикач. */
+  const hasAsm = useMemo(() => real.some(i => String(i.assembly || '').trim()), [real]);
+
+  /**
+   * Картки, згруповані по збірках: спершу збірки за назвою, «Без збірок» — знизу.
+   * Це той самий поділ, що й у таблиці, просто в мобільному вигляді.
+   */
+  const asmGroupsRaw = useMemo(() => {
+    const m = new Map<string, OrderItem[]>();
+    filtered.forEach(i => {
+      if (i.group) return;
+      const k = String(i.assembly || '').trim();
+      const a = m.get(k) || [];
+      a.push(i);
+      m.set(k, a);
+    });
+    const named = [...m.keys()].filter(Boolean).sort((a, b) => a.localeCompare(b, 'uk', { numeric: true }));
+    const out = named.map(k => ({ key: k, items: m.get(k)! }));
+    if (m.has('')) out.push({ key: '', items: m.get('')! });
+    return out;
+  }, [filtered]);
+
+  /** Секції списку карток: або по типах файлів, або по збірках. */
+  const sections = useMemo(() => (
+    byAsm
+      ? asmGroupsRaw.map(g => ({
+          key: `asm:${g.key}`,
+          label: g.key || 'Без збірок',
+          Icon: Blocks,
+          color: g.key ? '#5B21B6' : '#455A64',
+          bg: g.key ? '#F3EEFF' : '#F5F5F5',
+          list: g.items,
+        }))
+      : (Object.keys(GROUP_META) as Array<keyof typeof GROUP_META>).map(k => ({
+          key: k as string,
+          label: GROUP_META[k].label,
+          Icon: GROUP_META[k].icon,
+          color: GROUP_META[k].color,
+          bg: GROUP_META[k].bg,
+          list: groups[k],
+        }))
+  ), [byAsm, asmGroupsRaw, groups]);
 
   const done = items.filter(i => !i.group && String(i.rowStatus).includes('Готово')).length;
   const total = items.filter(i => !i.group).length;
@@ -383,6 +433,19 @@ export default function OrderPage({
           </div>
         )}
 
+        {/* Групувати по збірках — показуємо лише коли збірки справді проставлені */}
+        {hasAsm && (
+          <button onClick={() => setByAsm(v => !v)}
+            className="order-2 lg:order-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold flex-shrink-0 press transition-colors"
+            style={byAsm
+              ? { background: '#F3EEFF', color: '#7C3AED' }
+              : { background: '#F1F2F4', color: 'var(--ink-3)' }}
+            title="Групувати позиції по збірках; ті, що не входять у збірки — знизу">
+            <Blocks size={13} />
+            Збірки
+          </button>
+        )}
+
         {/* Картки / Таблиця */}
         <div className="order-2 lg:order-3 flex items-center gap-0.5 p-0.5 rounded-xl bg-[#F1F2F4] flex-shrink-0 ml-auto">
           {(['cards', 'table'] as const).map(v => (
@@ -450,6 +513,7 @@ export default function OrderPage({
             items={filtered.filter(i => !i.group)}
             lists={lists}
             mode={tableMode}
+            grouped={byAsm}
             onSave={(row, field, value) => onUpdateRow(row, field, value)}
             onAddOp={setAddOpItem}
             selected={selected}
@@ -465,19 +529,16 @@ export default function OrderPage({
           <p className="text-center text-gray-400 text-[13px] py-14">У замовленні немає позицій</p>
         )}
 
-        {(Object.keys(GROUP_META) as Array<keyof typeof GROUP_META>).map(key => {
-          const list = groups[key];
+        {sections.map(({ key, label, Icon, color, bg, list }) => {
           if (!list?.length) return null;
-          const meta = GROUP_META[key];
-          const Icon = meta.icon;
           return (
             <div key={key}>
               <div
                 className="flex items-center gap-2 px-3 py-2 rounded-xl mb-2 sticky top-0 z-10"
-                style={{ background: meta.bg, color: meta.color }}
+                style={{ background: bg, color }}
               >
                 <Icon size={14} />
-                <span className="text-[12px] font-bold">{meta.label}</span>
+                <span className="text-[12px] font-bold">{label}</span>
                 <span className="ml-auto text-[11px] font-semibold opacity-70">{list.length} поз.</span>
               </div>
 
@@ -766,6 +827,7 @@ export default function OrderPage({
                     else if (key === 'print') setShowPrint(true);
                     else if (key === 'billing') setShowBilling(true);
                     else if (key === 'purch') setShowPurch(true);
+                    else if (key === 'asm') setShowAsm(true);
                   }}
                   className="flex items-start gap-2.5 p-3 rounded-2xl ring-1 ring-gray-200/70 text-left press active:bg-gray-50">
                   <span className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -849,6 +911,19 @@ export default function OrderPage({
             onToast={onToast}
             onMinimize={() => minimize('purch')}
             onClose={() => { setShowPurch(false); restore('purch'); }}
+          />
+        </div>
+      )}
+
+      {/* Склад збірок: що в яку збірку входить */}
+      {showAsm && (
+        <div className={hide('asm')}>
+          <AssemblySheet
+            detail={detail}
+            onToast={onToast}
+            onRefresh={onRefresh}
+            onMinimize={() => minimize('asm')}
+            onClose={() => { setShowAsm(false); restore('asm'); }}
           />
         </div>
       )}
