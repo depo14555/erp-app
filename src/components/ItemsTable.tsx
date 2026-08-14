@@ -9,8 +9,9 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ExternalLink, Check, Loader2, Search, CheckSquare, Square, Pencil, Plus, Filter, FolderOpen,
-  Blocks, ChevronDown, ChevronRight, ShoppingCart,
+  Blocks, ChevronDown, ChevronRight,
 } from 'lucide-react';
+import PurchasedInline, { PurchLine } from './PurchasedInline';
 import { OrderItem, Lists, statusStyle } from '../types';
 
 type Field = 'op' | 'executor' | 'qty' | 'assignedQty' | 'material' | 'thickness' | 'note' | 'rowStatus'
@@ -62,7 +63,7 @@ interface Props {
   /** Групувати по збірках: збірка і що в неї входить, «Без збірок» знизу. */
   grouped?: boolean;
   /** Покупні по збірках — своїх рядків у картці вони не мають. */
-  purchasedBy?: Map<string, Array<{ name: string; total: string }>>;
+  purchasedBy?: Map<string, PurchLine[]>;
 }
 
 interface PopState {
@@ -399,15 +400,9 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
 
             {/* Покупні цієї збірки — окремих рядків у картці вони не мають */}
             {b.key && !collapsed.has(b.key) && !!purchasedBy?.get(b.key)?.length && (
-              <tr className="bg-[#FFF8F2]">
+              <tr>
                 <td colSpan={cols.length + 1} className="px-2 py-1.5 border-b hairline">
-                  <span className="flex items-start gap-2">
-                    <ShoppingCart size={12} className="flex-shrink-0 mt-[3px]" style={{ color: '#EA580C' }} />
-                    <span className="text-[11px]" style={{ color: 'var(--ink-2)' }}>
-                      <span className="font-bold" style={{ color: '#C2410C' }}>Покупні: </span>
-                      {purchasedBy.get(b.key)!.map(p => `${p.name} — ${p.total} шт`).join(' · ')}
-                    </span>
-                  </span>
+                  <PurchasedInline lines={purchasedBy.get(b.key)!} />
                 </td>
               </tr>
             )}

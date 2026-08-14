@@ -26,6 +26,7 @@ import NestingSheet from '../components/NestingSheet';
 import PurchasedSheet from '../components/PurchasedSheet';
 import AssemblySheet from '../components/AssemblySheet';
 import OrderInsights, { GAP_FIELDS } from '../components/OrderInsights';
+import PurchasedInline, { PurchLine } from '../components/PurchasedInline';
 import { AiBadge } from '../components/Sidebar';
 import { OrderDetail, OrderItem, Lists, PurchasedRow, statusStyle, fileKind } from '../types';
 
@@ -258,14 +259,14 @@ export default function OrderPage({
   }, [header.projectId, insightsTick]);
 
   const purchByAsm = useMemo(() => {
-    const m = new Map<string, Array<{ name: string; total: string }>>();
+    const m = new Map<string, PurchLine[]>();
     purchRows.forEach(r => {
       const asm = String(r['2'] || '').trim();
       if (!asm) return;
       const name = [String(r['6'] || '').trim(), String(r['5'] || '').trim()]
         .filter(Boolean).join(' ');
       const a = m.get(asm) || [];
-      a.push({ name, total: String(r['9'] || '') });
+      a.push({ pos: String(r['4'] || ''), name, total: String(r['9'] || '') });
       m.set(asm, a);
     });
     return m;
@@ -486,42 +487,16 @@ export default function OrderPage({
           </div>
         )}
 
-        {/* Групувати по збірках — показуємо лише коли збірки справді проставлені */}
-        {hasAsm && (
-          <button onClick={() => setByAsm(v => !v)}
-            className="order-2 lg:order-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold flex-shrink-0 press transition-colors"
-            style={byAsm
-              ? { background: '#F3EEFF', color: '#7C3AED' }
-              : { background: '#F1F2F4', color: 'var(--ink-3)' }}
-            title="Групувати позиції по збірках; ті, що не входять у збірки — знизу">
-            <Blocks size={13} />
-            Збірки
-          </button>
-        )}
-
-        {/* Картки / Таблиця */}
-        <div className="order-2 lg:order-3 flex items-center gap-0.5 p-0.5 rounded-xl bg-[#F1F2F4] flex-shrink-0 ml-auto">
-          {(['cards', 'table'] as const).map(v => (
-            <button key={v} onClick={() => setView(v)}
-              className="px-2.5 py-1 rounded-lg text-[11.5px] font-bold transition-all"
-              style={view === v
-                ? { background: '#fff', color: 'var(--ink)', boxShadow: '0 1px 2px rgba(16,24,40,.08)' }
-                : { color: 'var(--ink-3)' }}>
-              {v === 'cards' ? 'Картки' : 'Таблиця'}
-            </button>
-          ))}
-        </div>
-
-        </div>
-
         {/*
-          Один рядок замість панелі фільтрів: пошук, типи файлів і активні
-          фільтри на спільній осі. Операцію/виконавця/статус у таблиці
-          прибрано — вони є прямо в заголовках колонок; у картках заголовків
-          немає, тому там списки лишаються.
+          Пошук, типи файлів і активні фільтри. На ПК стоять у тому самому
+          рядку, що й зони — місця там вистачає; на телефоні переносяться
+          на власний рядок (w-full + order).
+          Операцію/виконавця/статус у таблиці прибрано — вони є прямо
+          в заголовках колонок; у картках заголовків немає, тому там списки
+          лишаються.
         */}
-        <div className="px-3 pb-2.5 flex items-center gap-1.5 flex-wrap">
-          <div className="relative flex-1 min-w-[150px] lg:flex-none lg:w-[240px]">
+        <div className="order-3 lg:order-2 w-full lg:w-auto lg:flex-1 lg:min-w-0 flex items-center gap-1.5 flex-wrap">
+          <div className="relative flex-1 min-w-[150px] lg:flex-none lg:w-[230px]">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={q}
@@ -574,11 +549,39 @@ export default function OrderPage({
                 className="text-[11px] font-bold px-2 py-1.5 rounded-xl press" style={{ color: 'var(--ink-3)' }}>
                 Скинути
               </button>
-              <span className="text-[11px] font-semibold tabular-nums ml-auto" style={{ color: 'var(--ink-2)' }}>
-                {filtered.filter(i => !i.group).length} з {real.length} поз.
+              <span className="text-[11px] font-semibold tabular-nums" style={{ color: 'var(--ink-2)' }}>
+                {filtered.filter(i => !i.group).length} з {real.length}
               </span>
             </>
           )}
+        </div>
+
+        {/* Групувати по збірках — показуємо лише коли збірки справді проставлені */}
+        {hasAsm && (
+          <button onClick={() => setByAsm(v => !v)}
+            className="order-2 lg:order-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold flex-shrink-0 press transition-colors"
+            style={byAsm
+              ? { background: '#F3EEFF', color: '#7C3AED' }
+              : { background: '#F1F2F4', color: 'var(--ink-3)' }}
+            title="Групувати позиції по збірках; ті, що не входять у збірки — знизу">
+            <Blocks size={13} />
+            Збірки
+          </button>
+        )}
+
+        {/* Картки / Таблиця */}
+        <div className="order-2 lg:order-4 flex items-center gap-0.5 p-0.5 rounded-xl bg-[#F1F2F4] flex-shrink-0 ml-auto lg:ml-0">
+          {(['cards', 'table'] as const).map(v => (
+            <button key={v} onClick={() => setView(v)}
+              className="px-2.5 py-1 rounded-lg text-[11.5px] font-bold transition-all"
+              style={view === v
+                ? { background: '#fff', color: 'var(--ink)', boxShadow: '0 1px 2px rgba(16,24,40,.08)' }
+                : { color: 'var(--ink-3)' }}>
+              {v === 'cards' ? 'Картки' : 'Таблиця'}
+            </button>
+          ))}
+        </div>
+
         </div>
 
         <OrderInsights
@@ -633,12 +636,8 @@ export default function OrderPage({
 
               {/* Покупні цієї збірки — своїх карток вони не мають */}
               {byAsm && !!purchByAsm.get(label)?.length && (
-                <div className="flex items-start gap-2 px-3 py-2 rounded-xl mb-2 bg-[#FFF8F2]">
-                  <ShoppingCart size={13} className="flex-shrink-0 mt-[2px]" style={{ color: '#EA580C' }} />
-                  <p className="text-[11px]" style={{ color: 'var(--ink-2)' }}>
-                    <span className="font-bold" style={{ color: '#C2410C' }}>Покупні: </span>
-                    {purchByAsm.get(label)!.map(p => `${p.name} — ${p.total} шт`).join(' · ')}
-                  </p>
+                <div className="mb-2">
+                  <PurchasedInline lines={purchByAsm.get(label)!} />
                 </div>
               )}
 
