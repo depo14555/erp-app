@@ -226,7 +226,10 @@ export default function AssemblySheet({ detail, onClose, onMinimize, onToast, on
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
 
           {/* ЛІВОРУЧ: які збірки читаємо */}
-          <div className="lg:w-[340px] flex-shrink-0 lg:border-r hairline flex flex-col min-h-0">
+          {/* На телефоні колонка МУСИТЬ стискатись (flex-1), інакше список
+              виїжджає за екран і накриває нижню панель із кнопкою */}
+          <div className={`lg:w-[340px] flex-1 lg:flex-none lg:border-r hairline flex flex-col min-h-0
+            ${groups.length || busy ? 'max-h-[40%] lg:max-h-none' : ''}`}>
             <div className="flex-shrink-0 px-3 py-2 flex items-center gap-2 border-b hairline">
               <button onClick={() => setSel(sel.size === candidates.length ? new Set() : new Set(candidates.map(i => i.row)))}
                 className="p-1 press" aria-label="Вибрати все">
@@ -294,8 +297,10 @@ export default function AssemblySheet({ detail, onClose, onMinimize, onToast, on
             </div>
           </div>
 
-          {/* ПРАВОРУЧ: що в яку збірку входить */}
-          <div className="flex-1 min-w-0 flex flex-col min-h-0">
+          {/* ПРАВОРУЧ: що в яку збірку входить.
+              На телефоні поки нічого не прочитано — панель не займає екран */}
+          <div className={`flex-1 min-w-0 flex-col min-h-0 border-t lg:border-t-0 hairline
+            ${groups.length || busy ? 'flex' : 'hidden lg:flex'}`}>
             {!groups.length && !busy && (
               <div className="flex-1 flex flex-col items-center justify-center gap-2 px-8 text-center">
                 <FileText size={30} className="text-gray-300" />
@@ -417,7 +422,8 @@ export default function AssemblySheet({ detail, onClose, onMinimize, onToast, on
           </div>
         </div>
 
-        <div className="flex-shrink-0 px-4 py-2 border-t hairline flex items-center gap-3">
+        <div className="flex-shrink-0 px-4 py-2 border-t hairline flex items-center gap-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+          style={{ background: 'var(--surface)' }}>
           <p className="text-[10.5px] flex-1" style={{ color: 'var(--ink-3)' }}>
             Спільна деталь лишається за першою збіркою, де вона зустрілась — це видно в списку.
           </p>

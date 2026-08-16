@@ -282,7 +282,10 @@ export default function TmcSheet({ detail, onClose, onMinimize, onToast, onRefre
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
 
           {/* ЛІВОРУЧ: які креслення читаємо */}
-          <div className="lg:w-[330px] flex-shrink-0 lg:border-r hairline flex flex-col min-h-0">
+          {/* На телефоні колонка МУСИТЬ стискатись (flex-1), інакше список
+              виїжджає за екран і накриває нижню панель із кнопкою */}
+          <div className={`lg:w-[330px] flex-1 lg:flex-none lg:border-r hairline flex flex-col min-h-0
+            ${lines.length || busy ? 'max-h-[40%] lg:max-h-none' : ''}`}>
             <div className="flex-shrink-0 px-3 py-2 flex items-center gap-2 border-b hairline">
               <button onClick={() => setSel(sel.size === candidates.length ? new Set() : new Set(candidates.map(i => i.row)))}
                 className="p-1 press" aria-label="Вибрати все">
@@ -350,8 +353,10 @@ export default function TmcSheet({ detail, onClose, onMinimize, onToast, onRefre
             </div>
           </div>
 
-          {/* ПРАВОРУЧ: що зміниться і скільки це важить */}
-          <div className="flex-1 min-w-0 flex flex-col min-h-0">
+          {/* ПРАВОРУЧ: що зміниться і скільки це важить.
+              На телефоні поки нічого не прочитано — панель не займає екран */}
+          <div className={`flex-1 min-w-0 flex-col min-h-0 border-t lg:border-t-0 hairline
+            ${lines.length || busy ? 'flex' : 'hidden lg:flex'}`}>
             {!lines.length && !busy && (
               <div className="flex-1 flex flex-col items-center justify-center gap-2 px-8 text-center">
                 <FileText size={30} style={{ color: 'var(--line-2)' }} />
@@ -516,10 +521,13 @@ export default function TmcSheet({ detail, onClose, onMinimize, onToast, onRefre
           </div>
         </div>
 
-        <div className="flex-shrink-0 px-4 py-2 border-t hairline">
+        <div className="flex-shrink-0 px-4 py-2 border-t hairline pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+          style={{ background: 'var(--surface)' }}>
           <p className="k-label">
             Жовтим — де вже щось вписано руками; такі поля не перезаписуються, поки не дозволите.
-            Повторне читання тих самих файлів безкоштовне — береться з аркуша «Розбір».
+            <span className="hidden lg:inline">
+              {' '}Повторне читання тих самих файлів безкоштовне — береться з аркуша «Розбір».
+            </span>
           </p>
         </div>
       </div>
