@@ -7,7 +7,7 @@
 
 import {
   LayoutDashboard, ClipboardList, MessageSquare, Truck, Building2, UserRound,
-  LogOut, RefreshCw, Receipt, Printer, Lock, Sparkles,
+  LogOut, RefreshCw, Receipt, Printer, Lock, Sparkles, FileInput,
   FolderOpen, Rocket, Paintbrush, Send, FolderTree, Calculator, Scissors, ShoppingCart, Blocks,
 } from 'lucide-react';
 import { AppTab } from '../types';
@@ -204,6 +204,15 @@ export default function Sidebar({ tab, env, onTab, onLocked, order, onOrderTool,
             {tab === 'billing' && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full" style={{ background: 'var(--accent)' }} />}
             <Receipt size={16.5} strokeWidth={tab === 'billing' ? 2.4 : 2} className="flex-shrink-0" />
             <span className={`flex-1 text-[13px] truncate ${tab === 'billing' ? 'font-bold' : 'font-medium'}`}>Рахунки і оплати</span>
+          </button>
+          <button onClick={() => onTab('execinv')}
+            className="w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-xl text-left press transition-colors relative"
+            style={tab === 'execinv'
+              ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
+              : { color: 'var(--ink-2)' }}>
+            {tab === 'execinv' && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full" style={{ background: 'var(--accent)' }} />}
+            <FileInput size={16.5} strokeWidth={tab === 'execinv' ? 2.4 : 2} className="flex-shrink-0" />
+            <span className={`flex-1 text-[13px] truncate ${tab === 'execinv' ? 'font-bold' : 'font-medium'}`}>Рахунки виконавців</span>
           </button>
         </div>
 

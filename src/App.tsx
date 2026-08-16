@@ -23,6 +23,8 @@ import LogisticsPage from './pages/LogisticsPage';
 import MailPage from './pages/MailPage';
 import PartPage from './pages/PartPage';
 import BillingOverviewPage from './pages/BillingOverviewPage';
+import ExecInvoicesPage from './pages/ExecInvoicesPage';
+import { sharedCount } from './lib/shared';
 import PageSheet from './components/PageSheet';
 import CreateOrderSheet from './components/CreateOrderSheet';
 import NotificationsSheet from './components/NotificationsSheet';
@@ -35,7 +37,8 @@ import LoadingBar from './components/LoadingBar';
 
 export default function App() {
   const [authed, setAuthed] = useState(hasToken());
-  const [tab, setTab] = useState<AppTab>('orders');
+  // Прийшли з «Поділитися» — це рахунок від виконавця, одразу в його розділ
+  const [tab, setTab] = useState<AppTab>(() => (sharedCount() ? 'execinv' : 'orders'));
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [pinned, setPinned] = useState<string[]>([]);   // спільні закріплені (projectId)
@@ -239,12 +242,15 @@ export default function App() {
   if (!authed) return <TokenGate onSuccess={() => setAuthed(true)} />;
 
   const title = tab === 'mail' ? 'Вхідні (пошта)'
+    : tab === 'execinv' ? 'Рахунки виконавців'
     : tab === 'billing' ? 'Рахунки і оплати'
     : tab === 'contractors' ? 'Контрагенти'
     : tab === 'staff' ? 'Штат працівників'
     : tab === 'calc' ? 'Прорахунок'
     : (TABS.find(t => t.key === tab)?.label ?? 'ERP');
-  const subtitle = tab === 'mail'
+  const subtitle = tab === 'execinv'
+    ? 'вільні рахунки · прив\'язка до позицій'
+    : tab === 'mail'
     ? 'нові замовлення з Gmail'
     : tab === 'billing'
       ? 'виставлено · оплачено · треба виставити'
@@ -275,6 +281,8 @@ export default function App() {
       <LogisticsPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} refreshSignal={logisticsTick} />
     ) : tab === 'billing' ? (
       <BillingOverviewPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} refreshSignal={overviewTick} />
+    ) : tab === 'execinv' ? (
+      <ExecInvoicesPage onToast={showToast} onOpenOrder={(hr, row) => openOrder(hr, false, undefined, row)} />
     ) : (
       <ChatPage onToast={showToast} />
     )

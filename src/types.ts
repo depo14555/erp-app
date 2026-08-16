@@ -50,6 +50,8 @@ export interface OrderItem {
   executorUrl?: string;
   /** Прорахунок: ціна/сума виконавця, час на 1 шт (колонка «Час на виконання»). */
   execSum?: string;
+  /** Номер рахунка виконавця — заповнюється прив'язкою рахунка. */
+  execInvoice?: string;
   time?: string;
   deadline?: string;
   length?: string;
@@ -127,7 +129,7 @@ export interface ChatMessage {
   itemName: string;
 }
 
-export type AppTab = 'orders' | 'calc' | 'contractors' | 'staff' | 'search' | 'logistics' | 'chat' | 'mail' | 'billing';
+export type AppTab = 'orders' | 'calc' | 'contractors' | 'staff' | 'search' | 'logistics' | 'chat' | 'mail' | 'billing' | 'execinv';
 
 /** Дошка канбану: власні колонки поверх статусів («Пріоритет», «Пауза»…). */
 export interface KanbanBoardData {
@@ -212,6 +214,18 @@ export interface StaffData {
 /** Покупний виріб у зведенні замовлення (аркуш «Покупні»). */
 export interface PurchasedRow { row: number; [col: string]: string | number }
 export interface PurchasedData { fields: StaffField[]; rows: PurchasedRow[] }
+
+/**
+ * Рахунок, який виставив НАМ виконавець (аркуш «Рахунки виконавців»).
+ * Колонки: 1 №, 2 дата, 3 контрагент, 4 сума, 5 файл, 6 ID файлу,
+ * 7 замовлення, 8 статус, 9 позиції (ID), 10 позицій, 11 додано, 12 примітка.
+ */
+export interface ExecInvoice {
+  row: number;
+  url: string;
+  [col: string]: string | number;
+}
+export interface ExecInvoiceData { fields: StaffField[]; rows: ExecInvoice[] }
 
 /** Що ШІ вже прочитав із креслень замовлення — для смуги вгорі картки. */
 export interface OrderAiSummary {

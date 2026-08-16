@@ -37,9 +37,28 @@ export default defineConfig({
           { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // Рахунок від виконавця «шариться» з месенджера прямо в додаток.
+        // POST з файлом ловить share-target-sw.js (сторінка його не бачить).
+        share_target: {
+          action: '/share-target',
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            title: 'title',
+            text: 'text',
+            url: 'url',
+            files: [{
+              name: 'file',
+              accept: ['application/pdf', 'image/jpeg', 'image/png', 'image/*'],
+            }],
+          },
+        },
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        // Наш обробник POST /share-target; маршрути workbox слухають лише GET,
+        // тому вони не конфліктують
+        importScripts: ['share-target-sw.js'],
         // pdfjs-воркер і великі чанки перевищують дефолтний ліміт прекешу 2MB
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [

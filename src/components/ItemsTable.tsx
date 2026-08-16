@@ -479,6 +479,13 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
                         : <span className="text-[12px]">{item.invoiceNum}</span>
                     ) : <span style={{ color: 'var(--ink-3)' }}>—</span>}
                   </td>
+                  <td className="px-3 py-1.5 whitespace-nowrap">
+                    {item.execInvoice
+                      ? <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700">
+                          {item.execInvoice}
+                        </span>
+                      : <span style={{ color: 'var(--ink-3)' }}>—</span>}
+                  </td>
                   <td className="px-1 py-1">{cell(item, 'note')}</td>
                 </>
               ) : (
@@ -585,7 +592,9 @@ const COLS_BUH: Col[] = [
   { key: 'clientPrice', label: 'Ціна', w: 'w-[90px]' },
   { key: 'clientSum', label: 'Сума', w: 'w-[100px]' },
   { key: 'payStatus', label: 'Оплата', w: 'w-[160px]', filter: true },
-  { key: 'invoice', label: 'Рахунок', w: 'w-[110px]' },
+  { key: 'invoice', label: 'Рахунок клієнту', w: 'w-[120px]' },
+  // Рахунок, який виставив нам виконавець — заповнюється прив'язкою
+  { key: 'execInvoice', label: 'Рахунок від викон.', w: 'w-[130px]', filter: true },
   { key: 'note', label: 'Примітка', w: 'min-w-[140px]' },
 ];
 

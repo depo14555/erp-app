@@ -15,7 +15,7 @@ import {
   FolderFile, BillingData, CommerceContext, CommerceResult, DocType, CreateOrderResult,
   BillingOverview, DistributionData, DistributeParams, DistributeResult, CalcData,
   NestItemsData, NestPrice, ContractorsData, KanbanBoardData, CalcOverview, StaffData,
-  PriceData, PurchasedData, OrderAiSummary,
+  PriceData, PurchasedData, OrderAiSummary, ExecInvoiceData,
 } from './types';
 
 /** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
@@ -39,7 +39,7 @@ const CACHE_TTL = 5 * 60 * 1000;
 
 /** Скільки чекати на відповідь — залежить від дії. */
 function timeoutFor(action: string): number {
-  return /^erp\.(techLaunch|mailProcess|execSend|savePdf|bulkUpdate|groupCard|fillAssembly|fileData|techFiles|distribut|nest|calcOverview|contractors|billingOverview|staffPhoto|prices|aiParse|purchased)/.test(action)
+  return /^erp\.(techLaunch|mailProcess|execSend|savePdf|bulkUpdate|groupCard|fillAssembly|fileData|techFiles|distribut|nest|calcOverview|contractors|billingOverview|staffPhoto|prices|aiParse|purchased|invoice)/.test(action)
     ? LONG_TIMEOUT
     : REQUEST_TIMEOUT;
 }
@@ -82,7 +82,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /** Читання можна безпечно повторити; мутації — ні (щоб не задвоїти запис). */
 function isReadAction(action: string): boolean {
-  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute|calcSave|contractorSave|contractorAddOp|staffSave|staffAddSkill|staffPhoto|priceSave|aiParseSave|aiCorrect|purchasedSave|boards)/.test(action);
+  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute|calcSave|contractorSave|contractorAddOp|staffSave|staffAddSkill|staffPhoto|priceSave|aiParseSave|aiCorrect|purchasedSave|invoiceAdd|invoiceUpdate|invoiceLink|invoiceUnlink|invoiceDelete|boards)/.test(action);
 }
 
 function cacheGet<T>(key: string): T | null {
@@ -422,6 +422,39 @@ export const api = {
   /** Точність у цифрах: скільки рядків пішло без правок. */
   aiStats(): Promise<{ items: number; corrected: number; accuracy: number | null; files: number; cost: number }> {
     return post('erp.aiStats');
+  },
+
+  /** Рахунки виконавців: '' — усі, 'вільний' — ще не прив'язані. */
+  invoicesGet(status = ''): Promise<ExecInvoiceData> {
+    return post('erp.invoicesGet', { status });
+  },
+
+  /** Новий рахунок: файл лягає на Диск, рядок — у реєстр. */
+  invoiceAdd(p: {
+    base64: string; mime: string; fileName: string;
+    number?: string; date?: string; contractor?: string; sum?: string; note?: string;
+  }): Promise<{ row: number; fileId: string; url: string; name: string }> {
+    return post('erp.invoiceAdd', p);
+  },
+
+  /** Правка полів рахунка в реєстрі. */
+  invoiceUpdate(row: number, fields: Record<string, string>): Promise<{ ok: boolean; updated: number }> {
+    return post('erp.invoiceUpdate', { row, fields });
+  },
+
+  /** Прив'язати рахунок до позицій: номер посиланням лягає в їхні рядки. */
+  invoiceLink(row: number, rows: number[]): Promise<{ ok: boolean; linked: number; ids: string[] }> {
+    return post('erp.invoiceLink', { row, rows });
+  },
+
+  /** Відв'язати: номер із позицій знімається, рахунок знову вільний. */
+  invoiceUnlink(row: number): Promise<{ ok: boolean; cleared: number }> {
+    return post('erp.invoiceUnlink', { row });
+  },
+
+  /** Прибрати рахунок зовсім: рядок реєстру + файл у кошик Диска. */
+  invoiceDelete(row: number): Promise<{ ok: boolean }> {
+    return post('erp.invoiceDelete', { row });
   },
 
   /** Що система вже прочитала з креслень цього замовлення — одним запитом. */
