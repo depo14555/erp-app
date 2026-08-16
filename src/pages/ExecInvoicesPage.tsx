@@ -17,6 +17,7 @@ import {
   FileText, Check, Share2, Trash2,
 } from 'lucide-react';
 import { api } from '../api';
+import StampStrip from '../components/StampStrip';
 import { ExecInvoice, Order, OrderItem } from '../types';
 import { takeSharedFiles, sharedCount, clearShareParam, fileToShared, SharedFile } from '../lib/shared';
 
@@ -111,16 +112,12 @@ export default function ExecInvoicesPage({ onToast, onOpenOrder }: Props) {
     <div className="h-full overflow-y-auto">
       <div className="px-3 lg:px-5 py-3 max-w-[1180px] mx-auto">
 
-        <div className="flex items-center gap-2 mb-3">
-          <span className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-            <Receipt size={17} />
+        <div className="flex items-center gap-2 mb-2.5">
+          <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ background: 'var(--green-bg)', color: 'var(--green)' }}>
+            <Receipt size={16} />
           </span>
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-[15px] leading-tight">Рахунки виконавців</p>
-            <p className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>
-              вільних {free.length}{freeSum ? ` на ${money(freeSum)} грн` : ''} · прив'язаних {linked.length}
-            </p>
-          </div>
+          <p className="font-extrabold text-[14px] flex-1">Рахунки виконавців</p>
           <input ref={fileRef} type="file" accept="application/pdf,image/*" className="hidden" onChange={pickFile} />
           <button onClick={() => fileRef.current?.click()}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12.5px] font-bold text-white press"
@@ -128,6 +125,12 @@ export default function ExecInvoicesPage({ onToast, onOpenOrder }: Props) {
             <Plus size={14} /> Додати рахунок
           </button>
         </div>
+
+        <StampStrip className="mb-3" cells={[
+          { k: 'Вільних', v: String(free.length), hot: free.length > 0 },
+          { k: 'На суму', v: freeSum ? `${money(freeSum)} грн` : '—' },
+          { k: 'Прив’язаних', v: String(linked.length) },
+        ]} />
 
         <div className="flex items-center gap-2 mb-3 p-2.5 rounded-xl bg-blue-50/60">
           <Share2 size={14} className="flex-shrink-0 text-blue-600" />

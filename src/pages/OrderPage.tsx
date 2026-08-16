@@ -598,6 +598,7 @@ export default function OrderPage({
           onTool={t => {
             if (t === 'asm') setShowAsm(true);
             else if (t === 'purch') setShowPurch(true);
+            else if (t === 'tmc') setShowTmc(true);
             else setShowCalc(true);
           }}
           refreshKey={insightsTick}

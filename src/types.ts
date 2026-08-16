@@ -240,6 +240,8 @@ export interface OrderAiSummary {
   purchasedAt: string;
   cutRows: number;        // позицій із порахованим часом порізки
   bendRows: number;       // позицій із порахованими гібами
+  /** Маса кожного прочитаного креслення, кг за штуку: ID файлу → маса. */
+  masses: Record<string, number>;
 }
 
 /** Прайс і потужності контрагента по одній операції (аркуш «Прайси»). */

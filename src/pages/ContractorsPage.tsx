@@ -313,7 +313,7 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {data.fields.map(f => (
                   <label key={f.col} className={isLong(f.col) ? 'sm:col-span-2' : ''}>
-                    <span className="block text-[10.5px] font-bold uppercase tracking-wide mb-1" style={{ color: 'var(--ink-3)' }}>
+                    <span className="k-label block mb-1">
                       {f.label}
                     </span>
                     {isLong(f.col) ? (
@@ -333,7 +333,7 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
               {/* Матриця операцій */}
               <div>
                 <div className="flex items-center gap-2 mb-1.5">
-                  <p className="text-[10.5px] font-bold uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>
+                  <p className="k-head">
                     Що вміє робити
                   </p>
                   <button onClick={() => setNewOp({ name: '', group: opGroups[0]?.[0] || '' })}

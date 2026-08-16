@@ -16,6 +16,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Blocks, ShoppingCart, Weight, Scissors } from 'lucide-react';
 import { api } from '../api';
+import { driveIdFromUrl } from '../lib/ai';
+import { num } from './ItemsTable';
 import { OrderItem, OrderAiSummary } from '../types';
 
 /** Поля, повнота яких має значення для запуску в роботу. */
@@ -36,7 +38,7 @@ interface Props {
   /** Активний фільтр «показати рядки, де цього поля немає». */
   gap: string;
   onGap: (field: string) => void;
-  onTool: (t: 'asm' | 'purch' | 'calc') => void;
+  onTool: (t: 'asm' | 'purch' | 'calc' | 'tmc') => void;
   /** Змінюється після записів у картку — привід перечитати зведення. */
   refreshKey?: number;
 }
@@ -81,6 +83,26 @@ export default function OrderInsights({ order, items, gap, onGap, onTool, refres
     setOpen(v => { localStorage.setItem(OPEN_KEY, v ? '0' : '1'); return !v; });
   }
 
+  /**
+   * Маса металу в замовленні. Рахуємо ТУТ, а не в хабі: тільки клієнт
+   * знає кількості й бачить, що та сама деталь стоїть у кількох
+   * рядках-операціях — інакше вага множиться на число операцій.
+   */
+  const metal = useMemo(() => {
+    const masses = ai?.masses || {};
+    if (!Object.keys(masses).length) return { kg: 0, files: 0 };
+    const seen = new Set<string>();
+    let kg = 0;
+    items.forEach(i => {
+      const id = driveIdFromUrl(i.url || '');
+      const m = id ? masses[id] : 0;
+      if (!m || seen.has(id)) return;
+      seen.add(id);
+      kg += m * (num(i.assignedQty) || num(i.qty) || 1);
+    });
+    return { kg, files: seen.size };
+  }, [ai, items]);
+
   const tiles = [
     {
       key: 'asm', Icon: Blocks, label: 'Збірки',
@@ -93,9 +115,10 @@ export default function OrderInsights({ order, items, gap, onGap, onTool, refres
       tool: 'purch' as const,
     },
     {
-      key: 'mass', Icon: Weight, label: 'Маса збірок',
-      value: ai?.mass ? `${ai.mass} кг` : '',
-      tool: 'asm' as const,
+      key: 'mass', Icon: Weight, label: 'Маса металу',
+      // Лічильник поруч із вагою: скільки креслень її дали
+      value: metal.kg ? `${metal.kg.toFixed(1)} кг · ${metal.files} крес.` : '',
+      tool: 'tmc' as const,
     },
     {
       key: 'cut', Icon: Scissors, label: 'Порізка і гіби',

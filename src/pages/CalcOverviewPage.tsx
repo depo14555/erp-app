@@ -10,6 +10,7 @@ import {
   Loader2, Calculator, ChevronDown, ChevronRight, Clock, Wallet, ArrowRight, Search,
 } from 'lucide-react';
 import { api } from '../api';
+import StampStrip from '../components/StampStrip';
 import { CalcOverview, Order } from '../types';
 
 interface Props {
@@ -74,39 +75,18 @@ export default function CalcOverviewPage({ orders: allOrders, onOpenOrder, onToa
         <div className="flex-1 overflow-y-auto px-3 lg:px-5 py-3">
           <div className="max-w-[1100px] mx-auto w-full space-y-4">
 
-            {/* Підсумки */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5">
-              <div className="bg-white rounded-2xl ring-1 ring-gray-200/70 p-3.5">
-                <p className="text-[10.5px] font-bold uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>Прораховано всього</p>
-                <p className="text-[22px] font-bold tabular-nums mt-1 text-teal-600">{money(data.totals.sum)} <span className="text-[12px]">грн</span></p>
-                <p className="text-[10.5px]" style={{ color: 'var(--ink-3)' }}>{data.orders.length} замовлень</p>
-              </div>
-              <div className="bg-white rounded-2xl ring-1 ring-gray-200/70 p-3.5">
-                <p className="text-[10.5px] font-bold uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>Час у роботі</p>
-                <p className="text-[22px] font-bold tabular-nums mt-1" style={{ color: 'var(--ink)' }}>
-                  {totalTime.toFixed(1)} <span className="text-[12px]">год</span>
-                </p>
-                <p className="text-[10.5px]" style={{ color: 'var(--ink-3)' }}>за призначеними кількостями</p>
-              </div>
-              <div className="bg-white rounded-2xl ring-1 ring-gray-200/70 p-3.5 col-span-2 lg:col-span-1">
-                <p className="text-[10.5px] font-bold uppercase tracking-wide mb-1.5" style={{ color: 'var(--ink-3)' }}>За видами робіт</p>
-                <div className="space-y-1">
-                  {data.totals.byKind.slice(0, 4).map(k => (
-                    <button key={k.kind} onClick={() => setKind(kind === k.kind ? '' : k.kind)}
-                      className="w-full flex items-center gap-2 text-[11.5px] press rounded-lg">
-                      <span className="flex-1 truncate text-left"
-                        style={{ color: kind === k.kind ? 'var(--accent)' : 'var(--ink-2)', fontWeight: kind === k.kind ? 700 : 400 }}>
-                        {k.kind || 'Без виду'}
-                      </span>
-                      <span className="tabular-nums font-semibold">{money(k.sum)}</span>
-                    </button>
-                  ))}
-                  {!data.totals.byKind.length && (
-                    <p className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>ще нічого не прораховано</p>
-                  )}
-                </div>
-              </div>
-            </div>
+            {/* Підсумки — штамп на всю ширину */}
+            <StampStrip cells={[
+              { k: 'Прораховано', v: `${money(data.totals.sum)} грн`, sub: `${data.orders.length} замовлень` },
+              { k: 'Час у роботі', v: `${totalTime.toFixed(1)} год`, sub: 'за призначеними к-стями' },
+              ...data.totals.byKind.slice(0, 4).map(k => ({
+                k: k.kind || 'Без виду',
+                v: `${money(k.sum)} грн`,
+                hot: kind === k.kind,
+                onClick: () => setKind(kind === k.kind ? '' : k.kind),
+                title: kind === k.kind ? 'Зняти фільтр' : `Показати лише «${k.kind}»`,
+              })),
+            ]} />
 
             {/* Пошук */}
             <div className="flex items-center gap-2 flex-wrap">
@@ -131,7 +111,8 @@ export default function CalcOverviewPage({ orders: allOrders, onOpenOrder, onToa
               {orders.map(o => {
                 const isOpen = open.has(o.projectId);
                 return (
-                  <div key={o.projectId} className="bg-white rounded-2xl ring-1 ring-gray-200/70 overflow-hidden">
+                  <div key={o.projectId} className="bg-white rounded-[11px] overflow-hidden border"
+                    style={{ borderColor: 'var(--line)' }}>
                     <button
                       onClick={() => setOpen(prev => {
                         const n = new Set(prev);
@@ -145,12 +126,12 @@ export default function CalcOverviewPage({ orders: allOrders, onOpenOrder, onToa
                         <span className="block font-bold text-[13.5px] truncate">
                           {o.orderNum || o.projectId}{o.client ? ` · ${o.client}` : ''}
                         </span>
-                        <span className="block text-[11px]" style={{ color: 'var(--ink-3)' }}>
+                        <span className="k-label block truncate normal-case tracking-normal">
                           {o.bundles.length} груп{o.time ? ` · ${o.time.toFixed(1)} год` : ''}
                           {o.updatedAt ? ` · оновлено ${o.updatedAt}` : ''}
                         </span>
                       </span>
-                      <span className="text-[14px] font-bold tabular-nums flex-shrink-0">{money(o.sum)} грн</span>
+                      <span className="k-value text-[14px] flex-shrink-0">{money(o.sum)} грн</span>
                       {o.headerRow > 0 && (
                         <span
                           role="button" tabIndex={0}

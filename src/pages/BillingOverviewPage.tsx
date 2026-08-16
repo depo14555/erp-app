@@ -10,6 +10,7 @@ import {
   Loader2, ExternalLink, FileText, Banknote, CheckCircle2, Receipt, FileCog,
 } from 'lucide-react';
 import { api } from '../api';
+import StampStrip from '../components/StampStrip';
 import { BillingOverview } from '../types';
 
 interface Props {
@@ -54,24 +55,14 @@ export default function BillingOverviewPage({ onOpenOrder, onToast, refreshSigna
         <div className="flex-1 overflow-y-auto px-3 lg:px-5 py-3">
           <div className="max-w-[1100px] mx-auto w-full space-y-4">
 
-            {/* Підсумки */}
-            <div className="grid grid-cols-3 gap-2.5">
-              <div className="bg-white rounded-2xl ring-1 ring-gray-200/70 p-3.5">
-                <p className="text-[10.5px] font-bold uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>Очікує оплати</p>
-                <p className="text-[22px] font-bold tabular-nums mt-1 text-amber-600">{money(data.totals.unpaidSum)} <span className="text-[12px]">грн</span></p>
-                <p className="text-[10.5px]" style={{ color: 'var(--ink-3)' }}>{unpaid.length} рахунків</p>
-              </div>
-              <div className="bg-white rounded-2xl ring-1 ring-gray-200/70 p-3.5">
-                <p className="text-[10.5px] font-bold uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>Треба виставити</p>
-                <p className="text-[22px] font-bold tabular-nums mt-1 text-blue-600">{data.totals.toInvoiceCount} <span className="text-[12px]">поз.</span></p>
-                <p className="text-[10.5px]" style={{ color: 'var(--ink-3)' }}>у {data.toInvoice.length} замовленнях</p>
-              </div>
-              <div className="bg-white rounded-2xl ring-1 ring-gray-200/70 p-3.5">
-                <p className="text-[10.5px] font-bold uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>Оплачено</p>
-                <p className="text-[22px] font-bold tabular-nums mt-1 text-emerald-600">{money(data.totals.paidSum)} <span className="text-[12px]">грн</span></p>
-                <p className="text-[10.5px]" style={{ color: 'var(--ink-3)' }}>{paid.length} рахунків</p>
-              </div>
-            </div>
+            {/* Підсумки — штамп на всю ширину */}
+            <StampStrip cells={[
+              { k: 'Очікує оплати', v: `${money(data.totals.unpaidSum)} грн`,
+                sub: `${unpaid.length} рахунків`, hot: data.totals.unpaidSum > 0 },
+              { k: 'Треба виставити', v: `${data.totals.toInvoiceCount} поз.`,
+                sub: `у ${data.toInvoice.length} замовленнях`, hot: data.totals.toInvoiceCount > 0 },
+              { k: 'Оплачено', v: `${money(data.totals.paidSum)} грн`, sub: `${paid.length} рахунків` },
+            ]} />
 
             {/* Треба виставити */}
             {data.toInvoice.length > 0 && (

@@ -385,7 +385,7 @@ export default function StaffPage({ onToast, refreshSignal }: Props) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 flex-1 min-w-0">
                   {data.fields.filter(f => f.col <= 10).map(f => (
                     <label key={f.col} className={f.col === 10 ? 'sm:col-span-2' : ''}>
-                      <span className="block text-[10.5px] font-bold uppercase tracking-wide mb-1" style={{ color: 'var(--ink-3)' }}>
+                      <span className="k-label block mb-1">
                         {f.label}
                       </span>
                       {f.col === 10 ? (
@@ -420,13 +420,13 @@ export default function StaffPage({ onToast, refreshSignal }: Props) {
 
               {/* Паспортні дані */}
               <div className="rounded-2xl ring-1 ring-gray-200/80 p-3">
-                <p className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--ink-3)' }}>
+                <p className="k-head flex items-center gap-1.5 mb-2">
                   <ScrollText size={13} /> Документи
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   {data.fields.filter(f => DOC_COLS.includes(f.col)).map(f => (
                     <label key={f.col} className={f.col === 16 ? 'sm:col-span-3' : ''}>
-                      <span className="block text-[10.5px] font-bold uppercase tracking-wide mb-1" style={{ color: 'var(--ink-3)' }}>
+                      <span className="k-label block mb-1">
                         {f.label}
                       </span>
                       <input value={draft[f.col] || ''}
@@ -441,7 +441,7 @@ export default function StaffPage({ onToast, refreshSignal }: Props) {
               {/* Матриця кваліфікації */}
               <div className="rounded-2xl ring-1 ring-gray-200/80 p-3">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <p className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wide" style={{ color: 'var(--ink-3)' }}>
+                  <p className="k-head flex items-center gap-1.5">
                     <GraduationCap size={13} /> Матриця кваліфікації
                   </p>
                   <button onClick={() => setNewSkill('')}
