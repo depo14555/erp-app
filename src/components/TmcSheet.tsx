@@ -35,6 +35,8 @@ interface Props {
   onMinimize?: () => void;
   onToast: (msg: string, err?: boolean) => void;
   onRefresh: (label?: string) => void;
+  /** Прочитали нові креслення — смузі вгорі є що перерахувати. */
+  onParsed?: () => void;
 }
 
 /** Позиції з кресленням, з якого взагалі є що читати. */
@@ -65,7 +67,7 @@ interface Line {
 
 const DENSITY = 7850; // сталь, кг/м³ — для звірки ваги з геометрії
 
-export default function TmcSheet({ detail, onClose, onMinimize, onToast, onRefresh }: Props) {
+export default function TmcSheet({ detail, onClose, onMinimize, onToast, onRefresh, onParsed }: Props) {
   const order = detail.header.projectId;
   const candidates = useMemo(() => detail.items.filter(hasDrawing), [detail.items]);
 
@@ -105,6 +107,7 @@ export default function TmcSheet({ detail, onClose, onMinimize, onToast, onRefre
         signal: abort.current.signal,
       });
       setParsed(res);
+      onParsed?.();          // маса вгорі має перерахуватись одразу, а не при закритті
       const bad = res.filter(r => r.error);
       const spent = res.reduce((s, r) => s + r.cost, 0);
       const cached = res.filter(r => r.fromCache).length;

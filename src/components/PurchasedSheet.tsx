@@ -31,6 +31,8 @@ interface Props {
   onClose: () => void;
   onMinimize?: () => void;
   onToast: (msg: string, err?: boolean) => void;
+  /** Прочитали нові креслення — смузі вгорі є що перерахувати. */
+  onParsed?: () => void;
 }
 
 /** Позиція зведення: одна номенклатура в межах однієї збірки. */
@@ -68,7 +70,7 @@ function isAssemblyRow(i: OrderItem): boolean {
     && /сл\.?\s*-?\s*св|слюсар|зварюв|збир/i.test(String(i.op || ''));
 }
 
-export default function PurchasedSheet({ detail, onClose, onMinimize, onToast }: Props) {
+export default function PurchasedSheet({ detail, onClose, onMinimize, onToast, onParsed }: Props) {
   const order = detail.header.projectId;
   const candidates = useMemo(() => detail.items.filter(isAssemblyRow), [detail.items]);
 
@@ -108,6 +110,7 @@ export default function PurchasedSheet({ detail, onClose, onMinimize, onToast }:
         signal: abort.current.signal,
       });
       setParsed(res);
+      onParsed?.();          // смуга вгорі має перерахуватись одразу
       const bad = res.filter(r => r.error);
       const spent = res.reduce((s, r) => s + r.cost, 0);
       const cached = res.filter(r => r.fromCache).length;

@@ -41,20 +41,44 @@ interface Props {
   onTool: (t: 'asm' | 'purch' | 'calc' | 'tmc') => void;
   /** Змінюється після записів у картку — привід перечитати зведення. */
   refreshKey?: number;
+  /** Маси зі штампів (fileId → кг) — щоб сторінка могла зважити вибране. */
+  onMasses?: (m: Record<string, number>) => void;
 }
 
 const OPEN_KEY = 'erp-insights-open';
 
-export default function OrderInsights({ order, items, gap, onGap, onTool, refreshKey }: Props) {
+/**
+ * Вага набору позицій за штампами. Та сама деталь стоїть у кількох
+ * рядках-операціях (маршрут) — креслення важить один раз, інакше вага
+ * помножилась би на число операцій.
+ */
+export function weighItems(items: OrderItem[], masses: Record<string, number>) {
+  const seen = new Set<string>();      // креслення, які вже зважили
+  const missing = new Set<string>();   // креслення без маси у штампі
+  let kg = 0;
+  items.forEach(i => {
+    const id = driveIdFromUrl(i.url || '');
+    if (!id) return;
+    const m = masses[id];
+    if (!m) { missing.add(id); return; }
+    if (seen.has(id)) return;
+    seen.add(id);
+    kg += m * (num(i.assignedQty) || num(i.qty) || 1);
+  });
+  return { kg, files: seen.size, missing: missing.size };
+}
+
+export default function OrderInsights({ order, items, gap, onGap, onTool, refreshKey, onMasses }: Props) {
   const [open, setOpen] = useState(() => localStorage.getItem(OPEN_KEY) !== '0');
   const [ai, setAi] = useState<OrderAiSummary | null>(null);
 
   useEffect(() => {
     let alive = true;
     api.aiOrder(order)
-      .then(d => { if (alive) setAi(d); })
+      .then(d => { if (alive) { setAi(d); onMasses?.(d.masses || {}); } })
       .catch(() => { /* зведення не критичне — екран працює й без нього */ });
     return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order, refreshKey]);
 
   /** Скільки рядків мають кожне поле заповненим. */
@@ -88,20 +112,7 @@ export default function OrderInsights({ order, items, gap, onGap, onTool, refres
    * знає кількості й бачить, що та сама деталь стоїть у кількох
    * рядках-операціях — інакше вага множиться на число операцій.
    */
-  const metal = useMemo(() => {
-    const masses = ai?.masses || {};
-    if (!Object.keys(masses).length) return { kg: 0, files: 0 };
-    const seen = new Set<string>();
-    let kg = 0;
-    items.forEach(i => {
-      const id = driveIdFromUrl(i.url || '');
-      const m = id ? masses[id] : 0;
-      if (!m || seen.has(id)) return;
-      seen.add(id);
-      kg += m * (num(i.assignedQty) || num(i.qty) || 1);
-    });
-    return { kg, files: seen.size };
-  }, [ai, items]);
+  const metal = useMemo(() => weighItems(items, ai?.masses || {}), [ai, items]);
 
   const tiles = [
     {

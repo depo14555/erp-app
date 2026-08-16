@@ -147,14 +147,15 @@ export default function DistributionSheet({ detail, onClose, onMinimize, onToast
 
         {/* Шапка */}
         <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b hairline flex items-center gap-2.5">
-          <span className="w-9 h-9 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center">
+          <span className="w-9 h-9 rounded-xl flex items-center justify-center"
+            style={{ background: 'var(--violet-bg)', color: 'var(--violet)' }}>
             <FolderTree size={16} />
           </span>
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-[15px] leading-tight">Розподіл КД</p>
-            <p className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>
+            <p className="font-extrabold text-[14px] leading-tight">Розподіл КД</p>
+            <p className="k-label truncate">
               {detail.header.orderNum || detail.header.projectId}
-              {data ? ` · груп: ${data.groups.length} · позицій: ${data.groups.reduce((s, g) => s + g.items.length, 0)}` : ''}
+              {data ? ` · груп ${data.groups.length} · позицій ${data.groups.reduce((s, g) => s + g.items.length, 0)}` : ''}
             </p>
           </div>
           {onMinimize && <MinimizeButton onClick={onMinimize} />}
@@ -167,8 +168,8 @@ export default function DistributionSheet({ detail, onClose, onMinimize, onToast
 
         {phase === 'load' && (
           <div className="p-10 flex flex-col items-center gap-2">
-            <Loader2 size={24} className="animate-spin text-violet-600" />
-            <p className="text-[12px]" style={{ color: 'var(--ink-3)' }}>Читаю позиції картки…</p>
+            <Loader2 size={24} className="animate-spin" style={{ color: 'var(--violet)' }} />
+            <p className="k-label">Читаю позиції картки…</p>
           </div>
         )}
 
@@ -180,10 +181,10 @@ export default function DistributionSheet({ detail, onClose, onMinimize, onToast
               <div className="flex-shrink-0 px-4 pt-2.5 flex flex-wrap gap-1.5">
                 {MODES.map(m => (
                   <button key={m.key} onClick={() => setMode(m.key)} title={m.hint}
-                    className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-colors"
+                    className="px-2.5 py-1.5 rounded-[8px] text-[11px] font-bold transition-colors"
                     style={mode === m.key
-                      ? { background: 'var(--ink)', color: '#fff' }
-                      : { background: '#F3F4F6', color: 'var(--ink-2)' }}>
+                      ? { background: 'var(--ink)', color: 'var(--surface)' }
+                      : { background: 'var(--surface)', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
                     {m.label}
                   </button>
                 ))}
@@ -201,8 +202,10 @@ export default function DistributionSheet({ detail, onClose, onMinimize, onToast
                           if (next.has(t)) next.delete(t); else next.add(t);
                           return next;
                         })}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-colors max-w-[190px]"
-                        style={on ? { background: 'var(--accent-soft)', color: 'var(--accent)' } : { background: '#F9FAFB', color: 'var(--ink-3)' }}>
+                        className="flex items-center gap-1 px-2 py-1 rounded-[8px] text-[11px] font-semibold transition-colors max-w-[190px]"
+                        style={on
+                          ? { background: 'var(--accent-soft)', color: 'var(--accent)', boxShadow: 'inset 0 0 0 1px var(--accent)' }
+                          : { background: 'var(--surface)', color: 'var(--ink-3)', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
                         {on ? <CheckSquare size={12} /> : <Square size={12} />}
                         <span className="truncate">{t}</span>
                       </button>
@@ -218,17 +221,22 @@ export default function DistributionSheet({ detail, onClose, onMinimize, onToast
                   const isOpen = open === k;
                   const active = inScope(g);
                   return (
-                    <div key={k} className={`rounded-2xl ring-1 transition-colors ${active ? 'ring-violet-200 bg-violet-50/40' : 'ring-gray-200/70 bg-white opacity-55'}`}>
+                    <div key={k} className="rounded-[10px] transition-colors"
+                      style={active
+                        ? { boxShadow: 'inset 0 0 0 1px var(--violet-line)', background: 'var(--surface)' }
+                        : { boxShadow: 'inset 0 0 0 1px var(--line)', background: 'var(--surface)', opacity: 0.5 }}>
                       <button onClick={() => setOpen(isOpen ? '' : k)}
                         className="w-full flex items-center gap-2 px-2.5 py-2 text-left press">
-                        <User size={14} className="flex-shrink-0 text-violet-600" />
+                        <User size={14} className="flex-shrink-0" style={{ color: 'var(--violet)' }} />
                         <span className="flex-1 min-w-0">
                           <span className="block text-[12.5px] font-bold truncate">{g.executor}</span>
-                          <span className="block text-[10.5px] truncate" style={{ color: 'var(--ink-3)' }}>
+                          <span className="block k-label truncate">
                             <Wrench size={9} className="inline -mt-0.5" /> {g.operation} · {g.items.length} поз. · {g.files} файлів · {g.qty} шт
                           </span>
                         </span>
-                        {isOpen ? <ChevronDown size={14} className="text-gray-300 flex-shrink-0" /> : <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />}
+                        {isOpen
+                          ? <ChevronDown size={14} className="flex-shrink-0" style={{ color: 'var(--ink-3)' }} />
+                          : <ChevronRight size={14} className="flex-shrink-0" style={{ color: 'var(--ink-3)' }} />}
                       </button>
 
                       {isOpen && (
@@ -238,18 +246,20 @@ export default function DistributionSheet({ detail, onClose, onMinimize, onToast
                             const on = preview?.row === it.row;
                             return (
                               <button key={it.row} onClick={() => loadPreview(it)}
-                                className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-xl text-left press hover:bg-white"
-                                style={on ? { background: '#fff', boxShadow: 'inset 0 0 0 1px var(--accent)' } : undefined}>
-                                <FileText size={12} className="flex-shrink-0" style={{ color: isPdf ? '#0D47A1' : 'var(--ink-3)' }} />
+                                className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-[8px] text-left press"
+                                style={on
+                                  ? { background: 'var(--accent-soft)', boxShadow: 'inset 0 0 0 1px var(--accent)' }
+                                  : { background: 'var(--bg)', boxShadow: 'inset 0 0 0 1px var(--paper-line)' }}>
+                                <FileText size={12} className="flex-shrink-0" style={{ color: isPdf ? 'var(--blue)' : 'var(--ink-3)' }} />
                                 <span className="flex-1 min-w-0">
                                   <span className="block text-[11.5px] truncate">{it.name}</span>
                                   {(it.material || it.thickness) && (
-                                    <span className="block text-[10px]" style={{ color: 'var(--ink-3)' }}>
+                                    <span className="block k-label">
                                       {[it.material, it.thickness && `S${it.thickness}`].filter(Boolean).join(' · ')}
                                     </span>
                                   )}
                                 </span>
-                                <span className="text-[10.5px] font-bold tabular-nums flex-shrink-0" style={{ color: 'var(--ink-2)' }}>
+                                <span className="k-value text-[10.5px] flex-shrink-0">
                                   {it.qty} шт
                                 </span>
                                 {isPdf ? (
@@ -263,7 +273,7 @@ export default function DistributionSheet({ detail, onClose, onMinimize, onToast
                                     <ExternalLink size={12} />
                                   </a>
                                 ) : (
-                                  <span className="text-[10px] text-amber-600 flex-shrink-0">без файлу</span>
+                                  <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--amber)' }}>без файлу</span>
                                 )}
                               </button>
                             );
@@ -281,7 +291,8 @@ export default function DistributionSheet({ detail, onClose, onMinimize, onToast
                 )}
 
                 {data.noExec.length > 0 && (
-                  <div className="mt-2 p-2.5 rounded-xl bg-amber-50 text-amber-800 text-[11px] leading-relaxed flex gap-2">
+                  <div className="mt-2 p-2.5 rounded-[10px] text-[11px] leading-relaxed flex gap-2"
+                    style={{ background: 'var(--amber-bg)', color: 'var(--amber)', boxShadow: 'inset 0 0 0 1px var(--amber-line)' }}>
                     <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
                     <span>
                       Поза розподілом {data.noExec.length} поз. — не заповнені виконавець / операція / кількість:
@@ -294,34 +305,38 @@ export default function DistributionSheet({ detail, onClose, onMinimize, onToast
               {/* Налаштування + запуск */}
               <div className="flex-shrink-0 p-3 border-t hairline space-y-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[11px] font-semibold" style={{ color: 'var(--ink-3)' }}>Наряд:</span>
+                  <span className="k-label">Наряд:</span>
                   {([['excel', '📊 Специфікація'], ['doc', '📝 Google Doc']] as const).map(([v, label]) => (
                     <button key={v} onClick={() => setDocFormat(v)}
-                      className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-colors"
-                      style={docFormat === v ? { background: 'var(--accent-soft)', color: 'var(--accent)' } : { background: '#F3F4F6', color: 'var(--ink-2)' }}>
+                      className="px-2.5 py-1.5 rounded-[8px] text-[11px] font-bold transition-colors"
+                      style={docFormat === v
+                        ? { background: 'var(--accent-soft)', color: 'var(--accent)', boxShadow: 'inset 0 0 0 1px var(--accent)' }
+                        : { background: 'var(--surface)', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
                       {label}
                     </button>
                   ))}
                   <button onClick={() => setSendToExecutor(v => !v)}
-                    className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-colors"
-                    style={sendToExecutor ? { background: '#ECFDF5', color: '#059669' } : { background: '#F3F4F6', color: 'var(--ink-3)' }}>
+                    className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] text-[11px] font-bold transition-colors"
+                    style={sendToExecutor
+                      ? { background: 'var(--green-bg)', color: 'var(--green)', boxShadow: 'inset 0 0 0 1px var(--green-line)' }
+                      : { background: 'var(--surface)', color: 'var(--ink-3)', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
                     {sendToExecutor ? <CheckSquare size={12} /> : <Square size={12} />} Відправити виконавцям
                   </button>
                 </div>
                 <button onClick={run} disabled={!scope.groups}
-                  className="w-full py-3 rounded-2xl font-bold text-[14px] text-white press disabled:opacity-40"
-                  style={{ background: '#7C3AED' }}>
+                  className="w-full py-3 rounded-[10px] font-bold text-[14px] press disabled:opacity-40"
+                  style={{ background: 'var(--violet)', color: 'var(--surface)' }}>
                   📂 Розподілити · {scope.groups} груп ({scope.items} поз., {scope.files} файлів)
                 </button>
-                <p className="text-[10.5px] text-center" style={{ color: 'var(--ink-3)' }}>
+                <p className="k-label text-center">
                   Папки Виконавець → Операція на Диску · колонка «Виконавець» стане посиланням на папку
                 </p>
               </div>
             </div>
 
             {/* ПРАВА КОЛОНКА (десктоп): перегляд креслення */}
-            <div className="hidden lg:flex flex-col min-h-0 border-l hairline bg-gray-50">
-              <div className="flex-shrink-0 px-3 py-2 border-b hairline bg-white flex items-center gap-2">
+            <div className="hidden lg:flex flex-col min-h-0 border-l hairline" style={{ background: 'var(--bg)' }}>
+              <div className="flex-shrink-0 px-3 py-2 border-b hairline flex items-center gap-2" style={{ background: 'var(--surface)' }}>
                 <Eye size={14} className="text-[var(--accent)] flex-shrink-0" />
                 <p className="flex-1 text-[12px] font-semibold truncate">
                   {preview ? preview.name : 'Клікніть по файлу — креслення з\'явиться тут'}
@@ -340,9 +355,10 @@ export default function DistributionSheet({ detail, onClose, onMinimize, onToast
                     <p className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>Відкриваю креслення…</p>
                   </div>
                 )}
-                {previewError && <p className="text-[12px] text-red-600 mt-16">{previewError}</p>}
+                {previewError && <p className="text-[12px] mt-16" style={{ color: 'var(--accent)' }}>{previewError}</p>}
                 {!previewLoading && !previewError && pages?.map((src, i) => (
-                  <img key={i} src={src} alt={`стор. ${i + 1}`} className="max-w-full shadow-md rounded-sm bg-white" />
+                  <img key={i} src={src} alt={`стор. ${i + 1}`} className="max-w-full rounded-sm"
+                    style={{ background: '#fff', boxShadow: '0 1px 3px rgba(27,31,36,.16)' }} />
                 ))}
                 {!preview && !previewLoading && (
                   <div className="text-center mt-20" style={{ color: 'var(--ink-3)' }}>
@@ -357,9 +373,9 @@ export default function DistributionSheet({ detail, onClose, onMinimize, onToast
 
         {phase === 'work' && (
           <div className="p-10 flex flex-col items-center gap-3">
-            <Loader2 size={28} className="animate-spin text-violet-600" />
+            <Loader2 size={28} className="animate-spin" style={{ color: 'var(--violet)' }} />
             <p className="text-[13px] font-bold">Копіюю КД і формую наряди…</p>
-            <p className="text-[11.5px] text-center" style={{ color: 'var(--ink-3)' }}>
+            <p className="text-[11.5px] text-center" style={{ color: 'var(--ink-2)' }}>
               Великі замовлення можуть зайняти хвилину-дві — не закривайте вікно
             </p>
           </div>
@@ -368,24 +384,27 @@ export default function DistributionSheet({ detail, onClose, onMinimize, onToast
         {phase === 'done' && result && (
           <div className="p-6 space-y-3 overflow-y-auto">
             <div className="text-center">
-              <div className="w-12 h-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center mx-auto text-[22px]">✅</div>
+              <div className="w-12 h-12 rounded-[10px] flex items-center justify-center mx-auto text-[22px]"
+                style={{ background: 'var(--green-bg)', boxShadow: 'inset 0 0 0 1px var(--green-line)' }}>✅</div>
               <p className="font-bold text-[15px] mt-2">Розподілено: {result.folders.length} папок</p>
-              <p className="text-[11.5px] mt-0.5" style={{ color: 'var(--ink-3)' }}>
+              <p className="text-[11.5px] mt-0.5" style={{ color: 'var(--ink-2)' }}>
                 Скопійовано файлів: {result.filesCount}
                 {result.sent ? ` · відправлено виконавцям: ${result.sent} поз.` : ''}
               </p>
             </div>
             {result.warning && (
-              <div className="p-2.5 rounded-xl bg-amber-50 text-amber-800 text-[11.5px]">{result.warning}</div>
+              <div className="p-2.5 rounded-[10px] text-[11.5px]"
+                style={{ background: 'var(--amber-bg)', color: 'var(--amber)', boxShadow: 'inset 0 0 0 1px var(--amber-line)' }}>{result.warning}</div>
             )}
             <div className="space-y-1">
               {result.folders.map(f => (
                 <a key={f.executor + f.operation} href={f.url} target="_blank" rel="noreferrer"
-                  className="flex items-center gap-2 px-2.5 py-2 rounded-xl ring-1 ring-gray-200/70 press hover:bg-gray-50">
-                  <FolderTree size={14} className="text-violet-600 flex-shrink-0" />
+                  className="flex items-center gap-2 px-2.5 py-2 rounded-[10px] press"
+                  style={{ boxShadow: 'inset 0 0 0 1px var(--line)' }}>
+                  <FolderTree size={14} className="flex-shrink-0" style={{ color: 'var(--violet)' }} />
                   <span className="flex-1 min-w-0">
                     <span className="block text-[12.5px] font-semibold truncate">{f.executor} → {f.operation}</span>
-                    <span className="block text-[10.5px]" style={{ color: 'var(--ink-3)' }}>{f.items} поз. · {f.files} файлів</span>
+                    <span className="block k-label">{f.items} поз. · {f.files} файлів</span>
                   </span>
                   <ExternalLink size={13} style={{ color: 'var(--ink-3)' }} />
                 </a>
@@ -393,11 +412,11 @@ export default function DistributionSheet({ detail, onClose, onMinimize, onToast
             </div>
             {result.mainFolderUrl && (
               <a href={result.mainFolderUrl} target="_blank" rel="noreferrer"
-                className="block text-center text-[12px] font-bold py-2 rounded-2xl press" style={{ color: 'var(--accent)' }}>
+                className="block text-center text-[12px] font-bold py-2 rounded-[10px] press" style={{ color: 'var(--accent)' }}>
                 Відкрити спільну папку розподілу ↗
               </a>
             )}
-            <button onClick={onClose} className="w-full py-2.5 rounded-2xl font-bold text-[13px] text-white press" style={{ background: 'var(--accent)' }}>
+            <button onClick={onClose} className="w-full py-2.5 rounded-[10px] font-bold text-[13px] press" style={{ background: 'var(--accent)', color: '#fff' }}>
               Готово
             </button>
           </div>

@@ -26,7 +26,7 @@ import NestingSheet from '../components/NestingSheet';
 import PurchasedSheet from '../components/PurchasedSheet';
 import AssemblySheet from '../components/AssemblySheet';
 import TmcSheet from '../components/TmcSheet';
-import OrderInsights, { GAP_FIELDS } from '../components/OrderInsights';
+import OrderInsights, { GAP_FIELDS, weighItems } from '../components/OrderInsights';
 import DrawingPane from '../components/DrawingPane';
 import PurchasedInline, { PurchLine } from '../components/PurchasedInline';
 import { AiBadge } from '../components/Sidebar';
@@ -176,6 +176,7 @@ export default function OrderPage({
   const [preview, setPreview] = useState<OrderItem | null>(null);  // креслення збоку
   const [gap, setGap] = useState('');          // «показати рядки, де цього поля немає»
   const [insightsTick, setInsightsTick] = useState(0);
+  const [masses, setMasses] = useState<Record<string, number>>({});  // fileId → кг зі штампа
 
   const { header, items } = detail;
   const st = statusStyle(header.status);
@@ -206,6 +207,11 @@ export default function OrderPage({
   }, [autoOpen, header.headerRow]);
 
   const real = useMemo(() => items.filter(i => !i.group), [items]);
+  /** Скільки важить те, що зараз відмічено галочками (за штампами ТМЦ). */
+  const selKg = useMemo(
+    () => weighItems(real.filter(i => selected.has(i.row)), masses),
+    [real, selected, masses],
+  );
   const fOps = useMemo(() => distinct(real.map(i => i.op)), [real]);
   const fExecs = useMemo(() => distinct(real.map(i => i.executor)), [real]);
   const fStatuses = useMemo(() => distinct(real.map(i => i.rowStatus)), [real]);
@@ -602,6 +608,7 @@ export default function OrderPage({
             else setShowCalc(true);
           }}
           refreshKey={insightsTick}
+          onMasses={setMasses}
         />
       </div>
 
@@ -796,6 +803,19 @@ export default function OrderPage({
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 bg-gray-900 text-white rounded-2xl shadow-2xl pl-4 pr-1.5 py-1.5 animate-sheet-up">
           <span className="text-[12.5px] font-bold tabular-nums whitespace-nowrap">
             {selected.size} вибрано
+            {/* Вага вибраного: маршрутні рядки одного креслення важать один раз */}
+            {selKg.kg > 0 ? (
+              <span className="font-mono font-normal text-white/60"
+                title={`${selKg.files} креслень зі штампом · маршрутні рядки рахуються один раз`
+                  + (selKg.missing ? ` · ще ${selKg.missing} без маси — прочитайте «ТМЦ і вага»` : '')}>
+                {' · '}{selKg.kg.toFixed(1)} кг{selKg.missing ? ' +' : ''}
+              </span>
+            ) : selKg.missing > 0 && (
+              <span className="font-mono font-normal text-white/40"
+                title="Маса береться зі штампа — відкрийте «ТМЦ і вага»">
+                {' · '}маси немає
+              </span>
+            )}
           </span>
           <button onClick={() => setPickBulk(true)} disabled={bulkBusy}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-bold bg-white/10 hover:bg-white/20 press whitespace-nowrap disabled:opacity-50">
@@ -1032,6 +1052,7 @@ export default function OrderPage({
           <PurchasedSheet
             detail={detail}
             onToast={onToast}
+            onParsed={() => setInsightsTick(v => v + 1)}
             onMinimize={() => minimize('purch')}
             onClose={() => { setShowPurch(false); restore('purch'); setInsightsTick(v => v + 1); }}
           />
@@ -1045,6 +1066,7 @@ export default function OrderPage({
             detail={detail}
             onToast={onToast}
             onRefresh={l => { setInsightsTick(v => v + 1); onRefresh(l); }}
+            onParsed={() => setInsightsTick(v => v + 1)}
             onMinimize={() => minimize('asm')}
             onClose={() => { setShowAsm(false); restore('asm'); setInsightsTick(v => v + 1); }}
           />
@@ -1058,6 +1080,7 @@ export default function OrderPage({
             detail={detail}
             onToast={onToast}
             onRefresh={l => { setInsightsTick(v => v + 1); onRefresh(l); }}
+            onParsed={() => setInsightsTick(v => v + 1)}
             onMinimize={() => minimize('tmc')}
             onClose={() => { setShowTmc(false); restore('tmc'); setInsightsTick(v => v + 1); }}
           />

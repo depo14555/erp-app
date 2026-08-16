@@ -34,13 +34,13 @@ interface FileState {
 }
 
 const EXT_META: Record<string, { Icon: typeof FileText; color: string }> = {
-  pdf: { Icon: FileText, color: '#0D47A1' },
-  dxf: { Icon: Ruler, color: '#E65100' },
-  dwg: { Icon: Ruler, color: '#E65100' },
-  step: { Icon: Box, color: '#1B5E20' },
-  stp: { Icon: Box, color: '#1B5E20' },
-  igs: { Icon: Box, color: '#1B5E20' },
-  iges: { Icon: Box, color: '#1B5E20' },
+  pdf: { Icon: FileText, color: 'var(--blue)' },
+  dxf: { Icon: Ruler, color: 'var(--accent)' },
+  dwg: { Icon: Ruler, color: 'var(--accent)' },
+  step: { Icon: Box, color: 'var(--green)' },
+  stp: { Icon: Box, color: 'var(--green)' },
+  igs: { Icon: Box, color: 'var(--green)' },
+  iges: { Icon: Box, color: 'var(--green)' },
 };
 
 export default function TechLaunchSheet({ detail, onClose, onMinimize, onToast, onLaunched }: Props) {
@@ -172,14 +172,15 @@ export default function TechLaunchSheet({ detail, onClose, onMinimize, onToast, 
 
         {/* Шапка */}
         <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b hairline flex items-center gap-2.5">
-          <span className="w-9 h-9 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+          <span className="w-9 h-9 rounded-xl flex items-center justify-center"
+            style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
             <Rocket size={16} />
           </span>
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-[15px] leading-tight">Тех.запуск</p>
-            <p className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>
+            <p className="font-extrabold text-[14px] leading-tight">Тех.запуск</p>
+            <p className="k-label truncate">
               {detail.header.orderNum || detail.header.projectId}
-              {data ? ` · файлів у папці: ${data.files.length}` : ''}
+              {data ? ` · файлів у папці ${data.files.length}` : ''}
             </p>
           </div>
           {onMinimize && <MinimizeButton onClick={onMinimize} />}
@@ -200,11 +201,14 @@ export default function TechLaunchSheet({ detail, onClose, onMinimize, onToast, 
             <div className="flex flex-col min-h-0">
               <div className="flex-shrink-0 px-4 pt-2.5 flex items-center gap-1.5">
                 <input value={q} onChange={e => setQ(e.target.value)} placeholder="Пошук файлу…"
-                  className="flex-1 min-w-0 px-3 py-1.5 rounded-xl bg-gray-50 ring-1 ring-gray-200/80 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[12px]" />
+                  className="flex-1 min-w-0 px-3 py-1.5 rounded-[8px] outline-none text-[12px]"
+                  style={{ background: 'var(--surface)', boxShadow: 'inset 0 0 0 1px var(--line)' }} />
                 {[['', 'Всі'], ['pdf', 'PDF'], ['dxf', 'DXF'], ['3d', '3D']].map(([v, label]) => (
                   <button key={v} onClick={() => setFExt(v)}
-                    className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-colors flex-shrink-0"
-                    style={fExt === v ? { background: 'var(--ink)', color: '#fff' } : { background: '#F3F4F6', color: 'var(--ink-2)' }}>
+                    className="px-2.5 py-1.5 rounded-[8px] text-[11px] font-bold transition-colors flex-shrink-0"
+                    style={fExt === v
+                      ? { background: 'var(--ink)', color: 'var(--surface)' }
+                      : { background: 'var(--surface)', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
                     {label}
                   </button>
                 ))}
@@ -218,19 +222,25 @@ export default function TechLaunchSheet({ detail, onClose, onMinimize, onToast, 
                   const already = inTable.has(f.name.toLowerCase());
                   const active = preview?.id === f.id;
                   return (
-                    <div key={f.id} className={`rounded-2xl ring-1 transition-colors ${s.ops.size ? 'ring-orange-200 bg-orange-50/40' : active ? 'ring-blue-300 bg-blue-50/40' : 'ring-gray-200/70 bg-white'}`}>
+                    <div key={f.id} className="rounded-[10px] transition-colors"
+                      style={s.ops.size
+                        ? { boxShadow: 'inset 0 0 0 1px var(--accent)', background: 'var(--accent-soft)' }
+                        : active
+                          ? { boxShadow: 'inset 0 0 0 1px var(--blue-line)', background: 'var(--blue-bg)' }
+                          : { boxShadow: 'inset 0 0 0 1px var(--line)', background: 'var(--surface)' }}>
                       <button onClick={() => onFileClick(f)}
                         className="w-full flex items-center gap-2 px-2.5 py-2 text-left press">
                         <meta.Icon size={15} style={{ color: meta.color }} className="flex-shrink-0" />
                         <span className="flex-1 min-w-0">
                           <span className="block text-[12px] font-semibold truncate">{f.name}</span>
-                          <span className="block text-[10px] truncate" style={{ color: 'var(--ink-3)' }}>
+                          <span className="block k-label truncate">
                             {f.folderName || '—'}
-                            {already && <span className="text-emerald-600 font-bold"> · вже в таблиці</span>}
+                            {already && <span className="font-bold" style={{ color: 'var(--green)' }}> · вже в таблиці</span>}
                           </span>
                         </span>
                         {s.ops.size > 0 && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-orange-100 text-orange-700 flex-shrink-0">
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-[6px] flex-shrink-0"
+                            style={{ background: 'var(--accent)', color: '#fff' }}>
                             {[...s.ops].join(' · ')}{s.mirror ? ' ×2' : ''}
                           </span>
                         )}
@@ -247,7 +257,9 @@ export default function TechLaunchSheet({ detail, onClose, onMinimize, onToast, 
                             <ExternalLink size={13} />
                           </a>
                         )}
-                        {isOpen ? <ChevronDown size={14} className="text-gray-300 flex-shrink-0" /> : <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />}
+                        {isOpen
+                          ? <ChevronDown size={14} className="flex-shrink-0" style={{ color: 'var(--ink-3)' }} />
+                          : <ChevronRight size={14} className="flex-shrink-0" style={{ color: 'var(--ink-3)' }} />}
                       </button>
 
                       {isOpen && (
@@ -258,12 +270,12 @@ export default function TechLaunchSheet({ detail, onClose, onMinimize, onToast, 
                               const dup = existingSet.has((f.name + '|' + op).toLowerCase());
                               return (
                                 <button key={op} onClick={() => toggleOp(f.id, op)}
-                                  className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-colors"
+                                  className="px-2.5 py-1.5 rounded-[8px] text-[11px] font-bold transition-colors"
                                   style={on
                                     ? { background: 'var(--accent)', color: '#fff' }
                                     : dup
-                                      ? { background: '#ECFDF5', color: '#059669' }
-                                      : { background: '#F3F4F6', color: 'var(--ink-2)' }}
+                                      ? { background: 'var(--green-bg)', color: 'var(--green)', boxShadow: 'inset 0 0 0 1px var(--green-line)' }
+                                      : { background: 'var(--surface)', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px var(--line)' }}
                                   title={dup ? 'Ця операція вже є в картці — буде пропущена' : ''}>
                                   {op}{dup ? ' ✓' : ''}
                                 </button>
@@ -273,15 +285,19 @@ export default function TechLaunchSheet({ detail, onClose, onMinimize, onToast, 
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <input value={s.qty} onChange={e => patch(f.id, { qty: e.target.value.replace(/\D/g, '') })}
                               placeholder="К-сть" inputMode="numeric"
-                              className="w-[76px] px-2.5 py-1.5 rounded-xl bg-white ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 outline-none text-[12px] tabular-nums" />
+                              className="w-[76px] px-2.5 py-1.5 rounded-[8px] outline-none text-[12px] tabular-nums"
+                              style={{ background: 'var(--surface)', boxShadow: 'inset 0 0 0 1px var(--line-2)' }} />
                             <button onClick={() => patch(f.id, { mirror: !s.mirror })}
-                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-colors"
-                              style={s.mirror ? { background: '#EDE7F6', color: '#4527A0' } : { background: '#F3F4F6', color: 'var(--ink-2)' }}>
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-[8px] text-[11px] font-bold transition-colors"
+                              style={s.mirror
+                                ? { background: 'var(--violet-bg)', color: 'var(--violet)', boxShadow: 'inset 0 0 0 1px var(--violet-line)' }
+                                : { background: 'var(--surface)', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
                               <FlipHorizontal2 size={12} /> Ліва і Права
                             </button>
                             <input value={s.note} onChange={e => patch(f.id, { note: e.target.value })}
                               placeholder="Примітка…"
-                              className="flex-1 min-w-[120px] px-2.5 py-1.5 rounded-xl bg-white ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 outline-none text-[12px]" />
+                              className="flex-1 min-w-[120px] px-2.5 py-1.5 rounded-[8px] outline-none text-[12px]"
+                              style={{ background: 'var(--surface)', boxShadow: 'inset 0 0 0 1px var(--line-2)' }} />
                           </div>
                         </div>
                       )}
@@ -295,19 +311,19 @@ export default function TechLaunchSheet({ detail, onClose, onMinimize, onToast, 
 
               <div className="flex-shrink-0 p-3 border-t hairline pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                 <button onClick={launch} disabled={!planned.rows}
-                  className="w-full py-3 rounded-2xl font-bold text-[14px] text-white press disabled:opacity-40"
-                  style={{ background: '#EA580C' }}>
+                  className="w-full py-3 rounded-[10px] font-bold text-[14px] press disabled:opacity-40"
+                  style={{ background: 'var(--accent)', color: '#fff' }}>
                   🚀 Запустити в таблицю · {planned.rows} рядків ({planned.files} файлів)
                 </button>
-                <p className="text-[10.5px] text-center mt-1.5" style={{ color: 'var(--ink-3)' }}>
+                <p className="k-label text-center mt-1.5">
                   По рядку на кожну операцію · «Ліва і Права» — двома рядками · дублі відсіюються
                 </p>
               </div>
             </div>
 
             {/* ПРАВА КОЛОНКА (десктоп): перегляд креслення */}
-            <div className="hidden lg:flex flex-col min-h-0 border-l hairline bg-gray-50">
-              <div className="flex-shrink-0 px-3 py-2 border-b hairline bg-white flex items-center gap-2">
+            <div className="hidden lg:flex flex-col min-h-0 border-l hairline" style={{ background: 'var(--bg)' }}>
+              <div className="flex-shrink-0 px-3 py-2 border-b hairline flex items-center gap-2" style={{ background: 'var(--surface)' }}>
                 <Eye size={14} className="text-[var(--accent)] flex-shrink-0" />
                 <p className="flex-1 text-[12px] font-semibold truncate">
                   {preview ? preview.name : 'Клікніть по PDF — креслення з\'явиться тут'}
@@ -327,10 +343,11 @@ export default function TechLaunchSheet({ detail, onClose, onMinimize, onToast, 
                   </div>
                 )}
                 {previewError && (
-                  <p className="text-[12px] text-red-600 mt-16">{previewError}</p>
+                  <p className="text-[12px] mt-16" style={{ color: 'var(--accent)' }}>{previewError}</p>
                 )}
                 {!previewLoading && !previewError && pages?.map((src, i) => (
-                  <img key={i} src={src} alt={`стор. ${i + 1}`} className="max-w-full shadow-md rounded-sm bg-white" />
+                  <img key={i} src={src} alt={`стор. ${i + 1}`} className="max-w-full rounded-sm"
+                    style={{ background: '#fff', boxShadow: '0 1px 3px rgba(27,31,36,.16)' }} />
                 ))}
                 {!preview && !previewLoading && (
                   <div className="text-center mt-20" style={{ color: 'var(--ink-3)' }}>
@@ -345,7 +362,7 @@ export default function TechLaunchSheet({ detail, onClose, onMinimize, onToast, 
 
         {phase === 'work' && (
           <div className="p-10 flex flex-col items-center gap-3">
-            <Loader2 size={28} className="animate-spin text-orange-600" />
+            <Loader2 size={28} className="animate-spin" style={{ color: 'var(--accent)' }} />
             <p className="text-[13px] font-bold">Дописую рядки в картку…</p>
           </div>
         )}
@@ -353,14 +370,16 @@ export default function TechLaunchSheet({ detail, onClose, onMinimize, onToast, 
         {phase === 'done' && result && (
           <div className="p-6 space-y-3">
             <div className="text-center">
-              <div className="w-12 h-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center mx-auto text-[22px]">✅</div>
+              <div className="w-12 h-12 rounded-[10px] flex items-center justify-center mx-auto text-[22px]"
+                style={{ background: 'var(--green-bg)', boxShadow: 'inset 0 0 0 1px var(--green-line)' }}>✅</div>
               <p className="font-bold text-[15px] mt-2">Створено {result.created} рядків</p>
-              <p className="text-[11.5px] mt-0.5" style={{ color: 'var(--ink-3)' }}>
+              <p className="text-[11.5px] mt-0.5" style={{ color: 'var(--ink-2)' }}>
                 ID продовжили нумерацію картки, формули підсумків оновлено
               </p>
             </div>
             {result.skipped.length > 0 && (
-              <div className="p-2.5 rounded-xl bg-amber-50 text-amber-800 text-[11px] leading-relaxed">
+              <div className="p-2.5 rounded-[10px] text-[11px] leading-relaxed"
+                style={{ background: 'var(--amber-bg)', color: 'var(--amber)', boxShadow: 'inset 0 0 0 1px var(--amber-line)' }}>
                 Пропущено як дублі ({result.skipped.length}): {result.skipped.slice(0, 5).join('; ')}{result.skipped.length > 5 ? '…' : ''}
               </div>
             )}

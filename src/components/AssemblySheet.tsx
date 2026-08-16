@@ -37,6 +37,8 @@ interface Props {
   onToast: (msg: string, err?: boolean) => void;
   /** Після запису — перечитати картку, щоб колонка «Збірка» з'явилась. */
   onRefresh: (label?: string) => void;
+  /** Прочитали нові креслення — смузі вгорі є що перерахувати. */
+  onParsed?: () => void;
 }
 
 /** Позиції, які є складальними кресленнями. */
@@ -69,7 +71,7 @@ interface Part {
   alsoIn?: string;
 }
 
-export default function AssemblySheet({ detail, onClose, onMinimize, onToast, onRefresh }: Props) {
+export default function AssemblySheet({ detail, onClose, onMinimize, onToast, onRefresh, onParsed }: Props) {
   const order = detail.header.projectId;
   const candidates = useMemo(() => detail.items.filter(isAssemblyRow), [detail.items]);
 
@@ -99,6 +101,7 @@ export default function AssemblySheet({ detail, onClose, onMinimize, onToast, on
         signal: abort.current.signal,
       });
       setParsed(res);
+      onParsed?.();          // смуга вгорі має перерахуватись одразу
       setOpen(new Set(res.filter(r => !r.error).map(r => r.fileId)));
       const bad = res.filter(r => r.error);
       const spent = res.reduce((s, r) => s + r.cost, 0);
