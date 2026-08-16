@@ -78,14 +78,18 @@ const AI_TOOLS: ToolItem[] = [
   { key: 'purch', label: 'Покупні', Icon: ShoppingCart, color: '#EA580C' },
 ];
 
-/** Мітка AI — однакова скрізь, де є ШІ-дія. */
+/**
+ * Мітка AI — однакова скрізь, де є ШІ-дія. Пласка й контурна:
+ * градієнт у робочому інструменті виглядає як прикраса, а мітка
+ * має бути позначкою, а не наліпкою.
+ */
 export function AiBadge({ small }: { small?: boolean } = {}) {
   return (
     <span
-      className={`flex-shrink-0 font-black tracking-[0.06em] rounded-md text-white ${
+      className={`flex-shrink-0 font-bold tracking-[0.08em] rounded ring-1 ${
         small ? 'text-[8px] px-1 py-[1px]' : 'text-[8.5px] px-1.5 py-[1.5px]'
       }`}
-      style={{ background: 'linear-gradient(135deg, #7C3AED, #2563EB)' }}>
+      style={{ background: '#F4F3FF', color: '#5925DC', boxShadow: 'inset 0 0 0 1px #D9D6FE' }}>
       AI
     </span>
   );

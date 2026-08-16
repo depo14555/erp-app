@@ -4,15 +4,20 @@
 
 @layer base {
   :root {
-    /* Мінімалістична палітра: майже-білий фон, hairline-межі, один акцент */
-    --bg: #F6F7F9;
+    /*
+      Інженерна палітра: холодний нейтральний корпус, hairline-межі,
+      один акцент. Колір з'являється тільки там, де щось означає —
+      статус, попередження, гроші. Решта — сірий різної глибини.
+    */
+    --bg: #F9FAFB;
     --surface: #FFFFFF;
-    --line: #E9EBEF;
-    --ink: #0D0E12;
-    --ink-2: #6B7280;
-    --ink-3: #9CA3AF;
-    --accent: #1F6FEB;
-    --accent-soft: #EBF2FE;
+    --line: #EAECF0;         /* звичайна межа */
+    --line-2: #D0D5DD;       /* сильніша: розділювач блоків, шапка таблиці */
+    --ink: #101828;
+    --ink-2: #475467;
+    --ink-3: #98A2B3;
+    --accent: #1570EF;
+    --accent-soft: #EFF8FF;
   }
 
   * {
@@ -40,6 +45,21 @@
   /* Цифри однакової ширини — прогреси, години, лічильники не «стрибають» */
   .tabular-nums {
     font-variant-numeric: tabular-nums;
+  }
+
+  /*
+    У таблицях цифри ЗАВЖДИ моноширинні — стовпчик чисел має читатись
+    як стовпчик, а не як текст. Це головна ознака інженерного інтерфейсу.
+  */
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Однакове кільце фокуса скрізь — важливо, коли працюють з клавіатури */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-radius: 3px;
   }
 }
 
@@ -159,20 +179,24 @@
     animation: slide-in-left 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  /* ── Мінімалістичні примітиви (Pixel / iOS) ── */
+  /* ── Примітиви ── */
   .card {
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 18px;
+    border-radius: 10px;
   }
   .hairline {
     border-color: var(--line);
   }
+  /** Розділювач блоків — помітніший за звичайну межу. */
+  .hairline-2 {
+    border-color: var(--line-2);
+  }
   .press {
-    transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), background-color 0.12s;
+    transition: transform 0.1s cubic-bezier(0.2, 0, 0, 1), background-color 0.1s;
   }
   .press:active {
-    transform: scale(0.985);
+    transform: scale(0.99);
   }
 
   /* Поява списків «сходинками» — картки не з'являються всі разом */

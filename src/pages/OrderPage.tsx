@@ -525,10 +525,14 @@ export default function OrderPage({
             const on = fKind === key;
             return (
               <button key={key} onClick={() => setFKind(on ? '' : key)}
-                className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-colors whitespace-nowrap"
-                style={on ? { background: meta.color, color: '#fff' } : { background: meta.bg, color: meta.color }}
+                className="flex items-center gap-1.5 pl-2 pr-2.5 py-1.5 rounded-md text-[11px] transition-colors whitespace-nowrap bg-white hover:bg-gray-50"
+                style={on
+                  ? { boxShadow: `inset 0 0 0 1.5px ${meta.color}`, color: meta.color }
+                  : { boxShadow: 'inset 0 0 0 1px var(--line)', color: 'var(--ink-2)' }}
                 title={meta.label}>
-                {key === 'pdf' ? 'PDF' : key === 'dxf' ? 'DXF' : key === '3d' ? '3D' : 'Інші'} · {count}
+                <span className="w-1.5 h-1.5 rounded-sm flex-shrink-0" style={{ background: meta.color }} />
+                {key === 'pdf' ? 'PDF' : key === 'dxf' ? 'DXF' : key === '3d' ? '3D' : 'Інші'}
+                <span className="font-bold tabular-nums">{count}</span>
               </button>
             );
           })}

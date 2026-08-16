@@ -124,21 +124,25 @@ export default function OrderInsights({ order, items, gap, onGap, onTool, refres
 
       {open && (
         <>
+          {/*
+            Плитки нейтральні: пораховане позначає колірна смужка зліва
+            й насичена цифра, а не заливка. Заливками екран швидко
+            перетворюється на строкатість.
+          */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 mb-2">
             {tiles.map(({ key, Icon, label, value, tool }) => (
               <button key={key} onClick={() => onTool(tool)}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-left press transition-colors"
-                style={value
-                  ? { background: '#F3EEFF' }
-                  : { background: '#F7F8FA' }}
+                className="flex items-center gap-2 pl-2 pr-2.5 py-1.5 rounded-lg text-left press transition-colors bg-white hover:bg-gray-50"
+                style={{
+                  boxShadow: `inset 0 0 0 1px var(--line), inset 2px 0 0 ${value ? '#6941C6' : 'transparent'}`,
+                }}
                 title={value ? 'Відкрити' : 'Ще не рахували — відкрити і прочитати'}>
                 <Icon size={14} className="flex-shrink-0"
-                  style={{ color: value ? '#7C3AED' : 'var(--ink-3)' }} />
+                  style={{ color: value ? '#6941C6' : 'var(--ink-3)' }} />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[10px] leading-tight"
-                    style={{ color: value ? '#7C3AED' : 'var(--ink-3)' }}>{label}</span>
-                  <span className="block text-[12px] font-bold leading-tight truncate"
-                    style={{ color: value ? '#4C1D95' : 'var(--ink-3)' }}>
+                  <span className="block text-[10px] leading-tight" style={{ color: 'var(--ink-3)' }}>{label}</span>
+                  <span className="block text-[12px] font-bold leading-tight truncate tabular-nums"
+                    style={{ color: value ? 'var(--ink)' : 'var(--ink-3)' }}>
                     {value || 'прочитати'}
                   </span>
                 </span>
@@ -152,21 +156,24 @@ export default function OrderInsights({ order, items, gap, onGap, onTool, refres
               const done = total > 0 && n === total;
               const none = n === 0;
               const on = gap === key;
-              const style = on
-                ? { background: 'var(--accent)', color: '#fff' }
-                : done ? { background: '#ECFDF5', color: '#047857' }
-                : none ? { background: '#FEF2F2', color: '#B91C1C' }
-                : { background: '#FEF3C7', color: '#92400E' };
+              // Стан несе крапка й колір цифри; сам чіп лишається нейтральним
+              const dot = done ? '#079455' : none ? '#D92D20' : '#DC6803';
               return (
                 <button key={key}
                   onClick={() => onGap(on ? '' : key)}
                   disabled={done}
-                  className="px-2 py-1 rounded-lg text-[11px] font-bold tabular-nums press disabled:cursor-default transition-colors"
-                  style={style}
+                  className="flex items-center gap-1.5 pl-1.5 pr-2 py-1 rounded-md text-[11px] press disabled:cursor-default transition-colors bg-white hover:bg-gray-50 disabled:hover:bg-white"
+                  style={on
+                    ? { boxShadow: 'inset 0 0 0 1.5px var(--accent)', background: 'var(--accent-soft)' }
+                    : { boxShadow: 'inset 0 0 0 1px var(--line)' }}
                   title={done
                     ? `${label}: заповнено скрізь`
                     : `Показати рядки, де «${label}» не заповнено`}>
-                  {label} {n}/{total}
+                  <span className="w-1.5 h-1.5 rounded-sm flex-shrink-0" style={{ background: dot }} />
+                  <span style={{ color: 'var(--ink-2)' }}>{label}</span>
+                  <span className="font-bold tabular-nums" style={{ color: done ? 'var(--ink-3)' : dot }}>
+                    {n}/{total}
+                  </span>
                 </button>
               );
             })}
