@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft, RefreshCw, FolderOpen, FileText, Ruler, Box, Paperclip,
   ExternalLink, User, Search, Printer, X, Send, Tags, Rocket, Paintbrush, Receipt,
-  FolderTree, Calculator, Scissors, Wrench, Layers, ShoppingCart, Blocks,
+  FolderTree, Calculator, Scissors, Wrench, Layers, ShoppingCart, Blocks, Scale,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
 import ItemsTable, { TableMode } from '../components/ItemsTable';
@@ -25,6 +25,7 @@ import CalcSheet from '../components/CalcSheet';
 import NestingSheet from '../components/NestingSheet';
 import PurchasedSheet from '../components/PurchasedSheet';
 import AssemblySheet from '../components/AssemblySheet';
+import TmcSheet from '../components/TmcSheet';
 import OrderInsights, { GAP_FIELDS } from '../components/OrderInsights';
 import DrawingPane from '../components/DrawingPane';
 import PurchasedInline, { PurchLine } from '../components/PurchasedInline';
@@ -54,6 +55,7 @@ interface Props {
   nestSignal?: number;
   purchSignal?: number;
   asmSignal?: number;
+  tmcSignal?: number;
   /** Відкрити інструмент одразу після відкриття замовлення (із загального прорахунку). */
   autoOpen?: 'calc' | null;
   /** Рядок, на якому треба опинитись (з пошуку деталі або QR). */
@@ -90,6 +92,7 @@ const TOOLS: Array<{ key: string; label: string; hint: string; Icon: typeof Rock
   { key: 'print',   label: 'Друк + QR',    hint: 'пакет креслень для цеху',    Icon: Printer,    color: '#0369A1' },
   { key: 'billing', label: 'Рахунки',      hint: 'оплати і документи',         Icon: Receipt,    color: '#059669' },
   { key: 'asm',     label: 'Склад збірок', hint: 'що в яку збірку входить',    Icon: Blocks,     color: '#7C3AED', ai: true },
+  { key: 'tmc',     label: 'ТМЦ і вага',   hint: 'матеріал, товщина, маса зі штампа', Icon: Scale, color: '#1B4FD8', ai: true },
   { key: 'purch',   label: 'Покупні',      hint: 'кріплення зі специфікацій збірок', Icon: ShoppingCart, color: '#EA580C', ai: true },
 ];
 
@@ -105,7 +108,7 @@ function StampCell({ k, v, hot, last }: { k: string; v: string; hot?: boolean; l
 }
 
 /** Вікна інструментів, які можна згорнути (робота продовжується у фоні). */
-type SheetKey = 'print' | 'send' | 'tech' | 'photo' | 'distr' | 'calc' | 'nest' | 'purch' | 'asm';
+type SheetKey = 'print' | 'send' | 'tech' | 'photo' | 'distr' | 'calc' | 'nest' | 'purch' | 'asm' | 'tmc';
 const SHEET_META: Record<SheetKey, { label: string; emoji: string }> = {
   print: { label: 'Друк креслень', emoji: '🖨️' },
   send:  { label: 'Відправка виконавцю', emoji: '📤' },
@@ -116,6 +119,7 @@ const SHEET_META: Record<SheetKey, { label: string; emoji: string }> = {
   nest:  { label: 'Розкрій DXF', emoji: '✂️' },
   purch: { label: 'Покупні', emoji: '🔩' },
   asm:   { label: 'Склад збірок', emoji: '🧩' },
+  tmc:   { label: 'ТМЦ і вага', emoji: '⚖️' },
 };
 
 /** Відкриває вікно лише при ЗМІНІ сигналу, ігноруючи значення на монтуванні. */
@@ -131,7 +135,7 @@ function useOpenSignal(signal: number | undefined, open: () => void) {
 export default function OrderPage({
   detail, orderStatusList, rowStatusList, lists, loading,
   onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onBulkStatus, onToast,
-  printSignal, billingSignal, techSignal, photoSignal, sendSignal, distrSignal, calcSignal, nestSignal, purchSignal, asmSignal, autoOpen, onAutoOpened,
+  printSignal, billingSignal, techSignal, photoSignal, sendSignal, distrSignal, calcSignal, nestSignal, purchSignal, asmSignal, tmcSignal, autoOpen, onAutoOpened,
   focusRow, onFocused,
 }: Props) {
   const [q, setQ] = useState('');
@@ -151,6 +155,7 @@ export default function OrderPage({
   const [showNest, setShowNest] = useState(false);
   const [showPurch, setShowPurch] = useState(false);
   const [showAsm, setShowAsm] = useState(false);
+  const [showTmc, setShowTmc] = useState(false);
   const [showTools, setShowTools] = useState(false);   // телефон: усі дії замовлення
   const [tableMode, setTableMode] = useState<TableMode>('prod');
   const [addOpItem, setAddOpItem] = useState<OrderItem | null>(null);
@@ -191,6 +196,7 @@ export default function OrderPage({
   useOpenSignal(nestSignal, () => setShowNest(true));
   useOpenSignal(purchSignal, () => setShowPurch(true));
   useOpenSignal(asmSignal, () => setShowAsm(true));
+  useOpenSignal(tmcSignal, () => setShowTmc(true));
   // Прийшли із загального прорахунку — одразу показуємо вікно прорахунку
   useEffect(() => {
     if (autoOpen !== 'calc') return;
@@ -943,6 +949,7 @@ export default function OrderPage({
                     else if (key === 'billing') setShowBilling(true);
                     else if (key === 'purch') setShowPurch(true);
                     else if (key === 'asm') setShowAsm(true);
+                    else if (key === 'tmc') setShowTmc(true);
                   }}
                   className="flex items-start gap-2.5 p-3 rounded-2xl ring-1 ring-gray-200/70 text-left press active:bg-gray-50">
                   <span className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -1039,6 +1046,19 @@ export default function OrderPage({
             onRefresh={l => { setInsightsTick(v => v + 1); onRefresh(l); }}
             onMinimize={() => minimize('asm')}
             onClose={() => { setShowAsm(false); restore('asm'); setInsightsTick(v => v + 1); }}
+          />
+        </div>
+      )}
+
+      {/* ТМЦ і вага: матеріал, товщина й маса зі штампа креслення */}
+      {showTmc && (
+        <div className={hide('tmc')}>
+          <TmcSheet
+            detail={detail}
+            onToast={onToast}
+            onRefresh={l => { setInsightsTick(v => v + 1); onRefresh(l); }}
+            onMinimize={() => minimize('tmc')}
+            onClose={() => { setShowTmc(false); restore('tmc'); setInsightsTick(v => v + 1); }}
           />
         </div>
       )}

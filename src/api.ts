@@ -39,7 +39,7 @@ const CACHE_TTL = 5 * 60 * 1000;
 
 /** Скільки чекати на відповідь — залежить від дії. */
 function timeoutFor(action: string): number {
-  return /^erp\.(techLaunch|mailProcess|execSend|savePdf|bulkUpdate|groupCard|fillAssembly|fileData|techFiles|distribut|nest|calcOverview|contractors|billingOverview|staffPhoto|prices|aiParse|purchased|invoice)/.test(action)
+  return /^erp\.(techLaunch|mailProcess|execSend|savePdf|bulkUpdate|rowsUpdate|groupCard|fillAssembly|fileData|techFiles|distribut|nest|calcOverview|contractors|billingOverview|staffPhoto|prices|aiParse|purchased|invoice)/.test(action)
     ? LONG_TIMEOUT
     : REQUEST_TIMEOUT;
 }
@@ -82,7 +82,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /** Читання можна безпечно повторити; мутації — ні (щоб не задвоїти запис). */
 function isReadAction(action: string): boolean {
-  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute|calcSave|contractorSave|contractorAddOp|staffSave|staffAddSkill|staffPhoto|priceSave|aiParseSave|aiCorrect|purchasedSave|invoiceAdd|invoiceUpdate|invoiceLink|invoiceUnlink|invoiceDelete|boards)/.test(action);
+  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|rowsUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute|calcSave|contractorSave|contractorAddOp|staffSave|staffAddSkill|staffPhoto|priceSave|aiParseSave|aiCorrect|purchasedSave|invoiceAdd|invoiceUpdate|invoiceLink|invoiceUnlink|invoiceDelete|boards)/.test(action);
 }
 
 function cacheGet<T>(key: string): T | null {
@@ -455,6 +455,16 @@ export const api = {
   /** Прибрати рахунок зовсім: рядок реєстру + файл у кошик Диска. */
   invoiceDelete(row: number): Promise<{ ok: boolean }> {
     return post('erp.invoiceDelete', { row });
+  },
+
+  /**
+   * Записати РІЗНІ значення в багато рядків одним запитом.
+   * bulkUpdate ставить одне значення всім; тут у кожного рядка своє —
+   * матеріал і товщина, прочитані з його власного креслення.
+   */
+  rowsUpdate(rows: Array<{ row: number; fields: Record<string, string> }>):
+    Promise<{ rows: number; cells: number }> {
+    return post('erp.rowsUpdate', { rows });
   },
 
   /** Що система вже прочитала з креслень цього замовлення — одним запитом. */

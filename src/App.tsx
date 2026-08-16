@@ -66,6 +66,7 @@ export default function App() {
   const [nestTick, setNestTick] = useState(0);
   const [purchTick, setPurchTick] = useState(0);   // сайдбар → покупні
   const [asmTick, setAsmTick] = useState(0);       // сайдбар → склад збірок
+  const [tmcTick, setTmcTick] = useState(0);       // сайдбар → ТМЦ і вага
   /** Інструменти замовлень поверх списку: пошук деталі / вхідна пошта. */
   const [overlay, setOverlay] = useState<'search' | 'mail' | null>(null);
   const [mailHidden, setMailHidden] = useState(false);   // пошта згорнута в плашку
@@ -314,6 +315,7 @@ export default function App() {
       nestSignal={nestTick}
       purchSignal={purchTick}
       asmSignal={asmTick}
+      tmcSignal={tmcTick}
       autoOpen={autoOpen}
       focusRow={focusRow}
       onFocused={() => setFocusRow(null)}
@@ -344,6 +346,7 @@ export default function App() {
           else if (t === 'nest') setNestTick(v => v + 1);
           else if (t === 'purch') setPurchTick(v => v + 1);
           else if (t === 'asm') setAsmTick(v => v + 1);
+          else if (t === 'tmc') setTmcTick(v => v + 1);
         }}
         onLogout={logout}
         onRefresh={refreshCurrent}
