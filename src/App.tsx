@@ -39,6 +39,8 @@ export default function App() {
   const [authed, setAuthed] = useState(hasToken());
   // Прийшли з «Поділитися» — це рахунок від виконавця, одразу в його розділ
   const [tab, setTab] = useState<AppTab>(() => (sharedCount() ? 'execinv' : 'orders'));
+  // Згорнута бічна панель — вибір памʼятається між сеансами
+  const [sideMini, setSideMini] = useState(() => localStorage.getItem('erp-side-mini') === '1');
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [pinned, setPinned] = useState<string[]>([]);   // спільні закріплені (projectId)
@@ -347,6 +349,11 @@ export default function App() {
         onRefresh={refreshCurrent}
         onNotifications={() => setShowNotifs(true)}
         loading={loading}
+        collapsed={sideMini}
+        onToggleCollapsed={() => setSideMini(v => {
+          localStorage.setItem('erp-side-mini', v ? '0' : '1');
+          return !v;
+        })}
       />
 
       <div className="flex-1 min-w-0 flex flex-col">

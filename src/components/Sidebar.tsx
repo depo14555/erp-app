@@ -7,7 +7,7 @@
 
 import {
   LayoutDashboard, ClipboardList, MessageSquare, Truck, Building2, UserRound,
-  LogOut, RefreshCw, Receipt, Printer, Lock, FileInput, Bell,
+  LogOut, RefreshCw, Receipt, Printer, Lock, FileInput, Bell, Menu,
   FolderOpen, Rocket, Paintbrush, Send, FolderTree, Calculator, Scissors, ShoppingCart, Blocks,
 } from 'lucide-react';
 import { AppTab } from '../types';
@@ -61,6 +61,9 @@ interface Props {
   onRefresh?: () => void;
   onNotifications?: () => void;
   loading?: boolean;
+  /** Згорнута панель — лише значки; вибір памʼятається між сеансами. */
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
 interface ToolItem { key: OrderTool; label: string; Icon: typeof Receipt; color: string }
@@ -102,8 +105,12 @@ export function AiBadge({ small }: { small?: boolean } = {}) {
   );
 }
 
-/** Підпис розділу: моно з розрядкою і лінійкою до краю — як у штампі. */
-function SecTitle({ children }: { children: React.ReactNode }) {
+/**
+ * Підпис розділу: моно з розрядкою і лінійкою до краю — як у штампі.
+ * У згорнутій панелі напису немає, лишається сама лінійка-роздільник.
+ */
+function SecTitle({ children, mini }: { children: React.ReactNode; mini?: boolean }) {
+  if (mini) return <p className="mx-3 my-2 h-px" style={{ background: 'var(--line)' }} />;
   return (
     <p className="k-label flex items-center gap-2 px-3.5 pt-3 pb-1">
       <span className="whitespace-nowrap">{children}</span>
@@ -114,38 +121,59 @@ function SecTitle({ children }: { children: React.ReactNode }) {
 
 export default function Sidebar({
   tab, env, onTab, onLocked, order, onOrderTool, onLogout,
-  onRefresh, onNotifications, loading,
+  onRefresh, onNotifications, loading, collapsed, onToggleCollapsed,
 }: Props) {
+  /** Спільний вигляд пункту меню: у згорнутій панелі лишається сам значок. */
+  const item = 'w-full flex items-center gap-2 py-[5px] text-left press transition-colors border-l-[3px]';
+  const pad = collapsed ? 'pl-[11px] pr-2 justify-center' : 'pl-[11px] pr-3';
+
   return (
-    <aside className="hidden lg:flex flex-col w-[228px] flex-shrink-0 h-full bg-white border-r hairline">
-      {/* Клеймо системи */}
-      <div className="flex items-center gap-2.5 px-3.5 h-[52px] flex-shrink-0 border-b"
+    <aside className={`hidden lg:flex flex-col flex-shrink-0 h-full bg-white border-r hairline transition-[width] duration-150
+      ${collapsed ? 'w-[52px]' : 'w-[228px]'}`}>
+      {/* Клеймо системи + бургер */}
+      <div className={`flex items-center h-[52px] flex-shrink-0 border-b ${collapsed ? 'justify-center px-1' : 'gap-2.5 px-3.5'}`}
         style={{ borderColor: 'var(--line)' }}>
-        <img src="/icon-192.png" alt="" className="w-[22px] h-[22px] rounded-md flex-shrink-0" />
-        <div className="min-w-0 flex-1">
-          <p className="font-extrabold text-[13px] leading-tight whitespace-nowrap">ERP Металообробка</p>
-          <p className="k-label">{env === 'test' ? 'тестова копія' : 'система керування'}</p>
-        </div>
+        {!collapsed && (
+          <>
+            <img src="/icon-192.png" alt="" className="w-[22px] h-[22px] rounded-md flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="font-extrabold text-[13px] leading-tight whitespace-nowrap">ERP Металообробка</p>
+              <p className="k-label">{env === 'test' ? 'тестова копія' : 'система керування'}</p>
+            </div>
+          </>
+        )}
+        {onToggleCollapsed && (
+          <button onClick={onToggleCollapsed} className="p-1.5 rounded press hover:bg-[var(--bg)] flex-shrink-0"
+            style={{ color: 'var(--ink-2)' }}
+            aria-label={collapsed ? 'Розгорнути меню' : 'Згорнути меню'}
+            title={collapsed ? 'Розгорнути меню' : 'Згорнути меню'}>
+            <Menu size={17} />
+          </button>
+        )}
       </div>
 
       {/* Навігація */}
       <nav className="flex-1 overflow-y-auto thin-scrollbar pb-3">
         {SECTIONS.map(sec => (
           <div key={sec.title}>
-            <SecTitle>{sec.title}</SecTitle>
+            <SecTitle mini={collapsed}>{sec.title}</SecTitle>
             {sec.items.map(({ key, label, Icon, badge, locked }) => {
               const on = tab === key && !locked;
               return (
                 <button key={key} onClick={() => (locked ? onLocked(label) : onTab(key))}
-                  className="w-full flex items-center gap-2 pl-[11px] pr-3 py-[5px] text-left press transition-colors border-l-[3px]"
+                  className={`${item} ${pad}`}
                   style={on
                     ? { borderColor: 'var(--accent)', background: 'var(--accent-soft)', color: 'var(--ink)' }
                     : { borderColor: 'transparent', color: locked ? 'var(--ink-3)' : 'var(--ink)' }}
-                  title={locked ? 'Розділ у тестуванні — скоро буде доступний' : undefined}>
+                  title={locked ? 'Розділ у тестуванні — скоро буде доступний' : label}>
                   <Icon size={15} strokeWidth={2} className="flex-shrink-0" style={{ color: on ? 'var(--accent)' : 'var(--ink-2)' }} />
-                  <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>
-                  {locked && <Lock size={12} className="flex-shrink-0 opacity-70" />}
-                  {badge && <span className="k-chip">{badge}</span>}
+                  {!collapsed && (
+                    <>
+                      <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>
+                      {locked && <Lock size={12} className="flex-shrink-0 opacity-70" />}
+                      {badge && <span className="k-chip">{badge}</span>}
+                    </>
+                  )}
                 </button>
               );
             })}
@@ -155,39 +183,45 @@ export default function Sidebar({
         {/* Інструменти відкритого завдання */}
         {order && (
           <div>
-            <SecTitle>Завдання {order.label}</SecTitle>
+            <SecTitle mini={collapsed}>Завдання {order.label}</SecTitle>
             {ORDER_TOOLS.map(({ key, label, Icon, color }) => (
-              <button key={key} onClick={() => onOrderTool(key)}
-                className="w-full flex items-center gap-2 pl-[11px] pr-3 py-[5px] text-left press border-l-[3px] border-transparent hover:bg-[var(--bg)]">
+              <button key={key} onClick={() => onOrderTool(key)} title={label}
+                className={`${item} ${pad} border-transparent hover:bg-[var(--bg)]`}>
                 <Icon size={15} strokeWidth={2} className="flex-shrink-0" style={{ color }} />
-                <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>
+                {!collapsed && <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>}
               </button>
             ))}
 
             {order.folderUrl && (
-              <a href={order.folderUrl} target="_blank" rel="noreferrer"
-                className="w-full flex items-center gap-2 pl-[11px] pr-3 py-[5px] text-left press border-l-[3px] border-transparent hover:bg-[var(--bg)]"
+              <a href={order.folderUrl} target="_blank" rel="noreferrer" title="Папка на Диску"
+                className={`${item} ${pad} border-transparent hover:bg-[var(--bg)]`}
                 style={{ color: 'var(--ink)' }}>
                 <FolderOpen size={15} strokeWidth={2} className="flex-shrink-0" style={{ color: 'var(--amber)' }} />
-                <span className="flex-1 text-[12.5px] font-semibold truncate">Папка на Диску</span>
+                {!collapsed && <span className="flex-1 text-[12.5px] font-semibold truncate">Папка на Диску</span>}
               </a>
             )}
 
             {/* Функції, що читають креслення самі — окремим розділом */}
-            <SecTitle>Читає креслення</SecTitle>
+            <SecTitle mini={collapsed}>Читає креслення</SecTitle>
             {AI_TOOLS.map(({ key, label, Icon, color }) => (
-              <button key={key} onClick={() => onOrderTool(key)}
-                className="w-full flex items-center gap-2 pl-[11px] pr-3 py-[5px] text-left press border-l-[3px] border-transparent hover:bg-[var(--bg)]">
+              <button key={key} onClick={() => onOrderTool(key)} title={`${label} — читає креслення`}
+                className={`${item} ${pad} border-transparent hover:bg-[var(--bg)] relative`}>
                 <Icon size={15} strokeWidth={2} className="flex-shrink-0" style={{ color }} />
-                <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>
-                <AiBadge small />
+                {collapsed
+                  ? <span className="absolute right-0.5 top-0.5 w-1.5 h-1.5 rounded-sm" style={{ background: 'var(--blue)' }} />
+                  : (
+                    <>
+                      <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>
+                      <AiBadge small />
+                    </>
+                  )}
               </button>
             ))}
           </div>
         )}
 
         <div>
-          <SecTitle>Гроші</SecTitle>
+          <SecTitle mini={collapsed}>Гроші</SecTitle>
           {([
             ['calc', 'Прорахунок', Calculator],
             ['billing', 'Рахунки і оплати', Receipt],
@@ -195,13 +229,13 @@ export default function Sidebar({
           ] as const).map(([key, label, Icon]) => {
             const on = tab === key;
             return (
-              <button key={key} onClick={() => onTab(key)}
-                className="w-full flex items-center gap-2 pl-[11px] pr-3 py-[5px] text-left press transition-colors border-l-[3px]"
+              <button key={key} onClick={() => onTab(key)} title={label}
+                className={`${item} ${pad}`}
                 style={on
                   ? { borderColor: 'var(--accent)', background: 'var(--accent-soft)', color: 'var(--ink)' }
                   : { borderColor: 'transparent', color: 'var(--ink)' }}>
                 <Icon size={15} strokeWidth={2} className="flex-shrink-0" style={{ color: on ? 'var(--accent)' : 'var(--ink-2)' }} />
-                <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>
+                {!collapsed && <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>}
               </button>
             );
           })}
@@ -211,14 +245,14 @@ export default function Sidebar({
 
       {/* Низ: вихід, оновлення даних, події */}
       <div className="flex-shrink-0 border-t hairline p-2">
-        <div className="flex items-center gap-0.5">
-          <button onClick={onLogout}
-            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg press"
+        <div className={`flex items-center gap-0.5 ${collapsed ? 'flex-col' : ''}`}>
+          <button onClick={onLogout} title="Вийти"
+            className={`flex items-center gap-1.5 rounded-lg press ${collapsed ? 'p-1.5' : 'px-2 py-1.5'}`}
             style={{ color: '#C42C2C' }}>
             <LogOut size={13} />
-            <span className="text-[11.5px] font-bold">Вийти</span>
+            {!collapsed && <span className="text-[11.5px] font-bold">Вийти</span>}
           </button>
-          <span className="flex-1" />
+          {!collapsed && <span className="flex-1" />}
           {onRefresh && (
             <button onClick={onRefresh} className="p-1.5 rounded-lg press hover:bg-[var(--bg)]"
               style={{ color: 'var(--ink-2)' }} aria-label="Оновити дані" title="Оновити дані">
@@ -232,9 +266,9 @@ export default function Sidebar({
             </button>
           )}
         </div>
-        <div className="flex items-center gap-1 mt-1 pl-2">
-          <span className="k-label">збірка {__BUILD_TIME__}</span>
-          <span className="flex-1" />
+        <div className={`flex items-center gap-1 mt-1 ${collapsed ? 'justify-center' : 'pl-2'}`}>
+          {!collapsed && <span className="k-label">збірка {__BUILD_TIME__}</span>}
+          {!collapsed && <span className="flex-1" />}
           <button
             onClick={async () => {
               try {
