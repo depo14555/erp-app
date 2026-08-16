@@ -7,7 +7,7 @@
 
 import {
   LayoutDashboard, ClipboardList, MessageSquare, Truck, Building2, UserRound,
-  LogOut, RefreshCw, Receipt, Printer, Lock, Sparkles, FileInput,
+  LogOut, RefreshCw, Receipt, Printer, Lock, FileInput, Bell,
   FolderOpen, Rocket, Paintbrush, Send, FolderTree, Calculator, Scissors, ShoppingCart, Blocks,
 } from 'lucide-react';
 import { AppTab } from '../types';
@@ -57,6 +57,10 @@ interface Props {
   order: { label: string; folderUrl: string } | null;
   onOrderTool: (t: OrderTool) => void;
   onLogout: () => void;
+  /** Оновити дані розділу і показати події — переїхали сюди з верхньої панелі. */
+  onRefresh?: () => void;
+  onNotifications?: () => void;
+  loading?: boolean;
 }
 
 interface ToolItem { key: OrderTool; label: string; Icon: typeof Receipt; color: string }
@@ -79,158 +83,158 @@ const AI_TOOLS: ToolItem[] = [
 ];
 
 /**
- * Мітка AI — однакова скрізь, де є ШІ-дія. Пласка й контурна:
- * градієнт у робочому інструменті виглядає як прикраса, а мітка
- * має бути позначкою, а не наліпкою.
+ * Мітка AI — однакова скрізь, де функція читає креслення сама.
+ * Обведений моно-чіп, як позначення на кресленні, а не наліпка.
  */
 export function AiBadge({ small }: { small?: boolean } = {}) {
   return (
     <span
-      className={`flex-shrink-0 font-bold tracking-[0.08em] rounded ring-1 ${
-        small ? 'text-[8px] px-1 py-[1px]' : 'text-[8.5px] px-1.5 py-[1.5px]'
+      className={`flex-shrink-0 font-mono font-semibold rounded ${
+        small ? 'text-[8px] px-1' : 'text-[8.5px] px-1.5 py-[0.5px]'
       }`}
-      style={{ background: '#F4F3FF', color: '#5925DC', boxShadow: 'inset 0 0 0 1px #D9D6FE' }}>
+      style={{
+        background: 'var(--blue-bg)',
+        color: 'var(--blue)',
+        boxShadow: 'inset 0 0 0 1px var(--blue-line)',
+      }}>
       AI
     </span>
   );
 }
 
-export default function Sidebar({ tab, env, onTab, onLocked, order, onOrderTool, onLogout }: Props) {
+/** Підпис розділу: моно з розрядкою і лінійкою до краю — як у штампі. */
+function SecTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="k-label flex items-center gap-2 px-3.5 pt-3 pb-1">
+      <span className="whitespace-nowrap">{children}</span>
+      <span className="flex-1 h-px" style={{ background: 'var(--line)' }} />
+    </p>
+  );
+}
+
+export default function Sidebar({
+  tab, env, onTab, onLocked, order, onOrderTool, onLogout,
+  onRefresh, onNotifications, loading,
+}: Props) {
   return (
     <aside className="hidden lg:flex flex-col w-[228px] flex-shrink-0 h-full bg-white border-r hairline">
-      {/* Логотип */}
-      <div className="flex items-center gap-2.5 px-4 h-[56px] flex-shrink-0 border-b hairline">
-        <img src="/icon-192.png" alt="" className="w-8 h-8 rounded-xl shadow-sm shadow-blue-600/30 flex-shrink-0" />
+      {/* Клеймо системи */}
+      <div className="flex items-center gap-2.5 px-3.5 h-[52px] flex-shrink-0 border-b"
+        style={{ borderColor: 'var(--line)' }}>
+        <img src="/icon-192.png" alt="" className="w-[22px] h-[22px] rounded-md flex-shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="font-bold text-[12.5px] leading-tight tracking-tight whitespace-nowrap">ERP Металообробка</p>
-          <p className="text-[10px] leading-tight" style={{ color: 'var(--ink-3)' }}>
-            система керування{env === 'test' ? ' · 🧪 тест' : ''}
-          </p>
+          <p className="font-extrabold text-[13px] leading-tight whitespace-nowrap">ERP Металообробка</p>
+          <p className="k-label">{env === 'test' ? 'тестова копія' : 'система керування'}</p>
         </div>
       </div>
 
       {/* Навігація */}
-      <nav className="flex-1 overflow-y-auto thin-scrollbar px-2.5 py-3 space-y-4">
+      <nav className="flex-1 overflow-y-auto thin-scrollbar pb-3">
         {SECTIONS.map(sec => (
           <div key={sec.title}>
-            <p className="px-2 pb-1 text-[9.5px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--ink-3)' }}>
-              {sec.title}
-            </p>
-            <div className="space-y-0.5">
-              {sec.items.map(({ key, label, Icon, badge, locked }) => {
-                const on = tab === key && !locked;
-                return (
-                  <button key={key} onClick={() => (locked ? onLocked(label) : onTab(key))}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-xl text-left press transition-colors relative"
-                    style={on
-                      ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
-                      : { color: locked ? 'var(--ink-3)' : 'var(--ink-2)' }}
-                    title={locked ? 'Розділ у тестуванні — скоро буде доступний' : undefined}>
-                    {on && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full" style={{ background: 'var(--accent)' }} />}
-                    <Icon size={16.5} strokeWidth={on ? 2.4 : 2} className="flex-shrink-0" />
-                    <span className={`flex-1 text-[13px] truncate ${on ? 'font-bold' : 'font-medium'}`}>{label}</span>
-                    {locked && <Lock size={12} className="flex-shrink-0 opacity-70" />}
-                    {badge && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-blue-600/10 text-blue-700">{badge}</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+            <SecTitle>{sec.title}</SecTitle>
+            {sec.items.map(({ key, label, Icon, badge, locked }) => {
+              const on = tab === key && !locked;
+              return (
+                <button key={key} onClick={() => (locked ? onLocked(label) : onTab(key))}
+                  className="w-full flex items-center gap-2 pl-[11px] pr-3 py-[5px] text-left press transition-colors border-l-[3px]"
+                  style={on
+                    ? { borderColor: 'var(--accent)', background: 'var(--accent-soft)', color: 'var(--ink)' }
+                    : { borderColor: 'transparent', color: locked ? 'var(--ink-3)' : 'var(--ink)' }}
+                  title={locked ? 'Розділ у тестуванні — скоро буде доступний' : undefined}>
+                  <Icon size={15} strokeWidth={2} className="flex-shrink-0" style={{ color: on ? 'var(--accent)' : 'var(--ink-2)' }} />
+                  <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>
+                  {locked && <Lock size={12} className="flex-shrink-0 opacity-70" />}
+                  {badge && <span className="k-chip">{badge}</span>}
+                </button>
+              );
+            })}
           </div>
         ))}
 
         {/* Інструменти відкритого завдання */}
         {order && (
-          <div className="rounded-2xl bg-[var(--accent-soft)]/60 p-1.5 -mx-0.5">
-            <p className="px-1.5 pt-1 pb-1 text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--accent)]">
-              Завдання {order.label}
-            </p>
-            <div className="space-y-0.5">
-              {ORDER_TOOLS.map(({ key, label, Icon, color }) => (
-                <button key={key} onClick={() => onOrderTool(key)}
-                  className="w-full flex items-center gap-2.5 px-2 py-[6px] rounded-xl text-left press hover:bg-white/70"
-                  style={{ color: 'var(--ink-2)' }}>
-                  <Icon size={15} strokeWidth={2.1} className="flex-shrink-0" style={{ color }} />
-                  <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>
-                </button>
-              ))}
+          <div>
+            <SecTitle>Завдання {order.label}</SecTitle>
+            {ORDER_TOOLS.map(({ key, label, Icon, color }) => (
+              <button key={key} onClick={() => onOrderTool(key)}
+                className="w-full flex items-center gap-2 pl-[11px] pr-3 py-[5px] text-left press border-l-[3px] border-transparent hover:bg-[var(--bg)]">
+                <Icon size={15} strokeWidth={2} className="flex-shrink-0" style={{ color }} />
+                <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>
+              </button>
+            ))}
 
-              {order.folderUrl && (
-                <a href={order.folderUrl} target="_blank" rel="noreferrer"
-                  className="w-full flex items-center gap-2.5 px-2 py-[6px] rounded-xl text-left press hover:bg-white/70"
-                  style={{ color: 'var(--ink-2)' }}>
-                  <FolderOpen size={15} strokeWidth={2.1} className="flex-shrink-0 text-amber-600" />
-                  <span className="flex-1 text-[12.5px] font-semibold truncate">Папка на Диску</span>
-                </a>
-              )}
+            {order.folderUrl && (
+              <a href={order.folderUrl} target="_blank" rel="noreferrer"
+                className="w-full flex items-center gap-2 pl-[11px] pr-3 py-[5px] text-left press border-l-[3px] border-transparent hover:bg-[var(--bg)]"
+                style={{ color: 'var(--ink)' }}>
+                <FolderOpen size={15} strokeWidth={2} className="flex-shrink-0" style={{ color: 'var(--amber)' }} />
+                <span className="flex-1 text-[12.5px] font-semibold truncate">Папка на Диску</span>
+              </a>
+            )}
 
-              {/* ШІ-функції — окремо, щоб було видно, де креслення читаються самі */}
-              <div className="pt-1.5 mt-1 border-t border-white/70">
-                <p className="px-1.5 pb-1 flex items-center gap-1.5">
-                  <Sparkles size={11} className="text-[#7C3AED]" />
-                  <span className="text-[9.5px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--ink-3)' }}>
-                    Читає креслення
-                  </span>
-                </p>
-                {AI_TOOLS.map(({ key, label, Icon, color }) => (
-                  <button key={key} onClick={() => onOrderTool(key)}
-                    className="w-full flex items-center gap-2.5 px-2 py-[6px] rounded-xl text-left press hover:bg-white/70"
-                    style={{ color: 'var(--ink-2)' }}>
-                    <Icon size={15} strokeWidth={2.1} className="flex-shrink-0" style={{ color }} />
-                    <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>
-                    <AiBadge small />
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* Функції, що читають креслення самі — окремим розділом */}
+            <SecTitle>Читає креслення</SecTitle>
+            {AI_TOOLS.map(({ key, label, Icon, color }) => (
+              <button key={key} onClick={() => onOrderTool(key)}
+                className="w-full flex items-center gap-2 pl-[11px] pr-3 py-[5px] text-left press border-l-[3px] border-transparent hover:bg-[var(--bg)]">
+                <Icon size={15} strokeWidth={2} className="flex-shrink-0" style={{ color }} />
+                <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>
+                <AiBadge small />
+              </button>
+            ))}
           </div>
         )}
 
         <div>
-          <p className="px-2 pb-1 text-[9.5px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--ink-3)' }}>
-            Гроші
-          </p>
-          <button onClick={() => onTab('calc')}
-            className="w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-xl text-left press transition-colors relative"
-            style={tab === 'calc'
-              ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
-              : { color: 'var(--ink-2)' }}>
-            {tab === 'calc' && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full" style={{ background: 'var(--accent)' }} />}
-            <Calculator size={16.5} strokeWidth={tab === 'calc' ? 2.4 : 2} className="flex-shrink-0" />
-            <span className={`flex-1 text-[13px] truncate ${tab === 'calc' ? 'font-bold' : 'font-medium'}`}>Прорахунок</span>
-          </button>
-          <button onClick={() => onTab('billing')}
-            className="w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-xl text-left press transition-colors relative"
-            style={tab === 'billing'
-              ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
-              : { color: 'var(--ink-2)' }}>
-            {tab === 'billing' && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full" style={{ background: 'var(--accent)' }} />}
-            <Receipt size={16.5} strokeWidth={tab === 'billing' ? 2.4 : 2} className="flex-shrink-0" />
-            <span className={`flex-1 text-[13px] truncate ${tab === 'billing' ? 'font-bold' : 'font-medium'}`}>Рахунки і оплати</span>
-          </button>
-          <button onClick={() => onTab('execinv')}
-            className="w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-xl text-left press transition-colors relative"
-            style={tab === 'execinv'
-              ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
-              : { color: 'var(--ink-2)' }}>
-            {tab === 'execinv' && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full" style={{ background: 'var(--accent)' }} />}
-            <FileInput size={16.5} strokeWidth={tab === 'execinv' ? 2.4 : 2} className="flex-shrink-0" />
-            <span className={`flex-1 text-[13px] truncate ${tab === 'execinv' ? 'font-bold' : 'font-medium'}`}>Рахунки виконавців</span>
-          </button>
+          <SecTitle>Гроші</SecTitle>
+          {([
+            ['calc', 'Прорахунок', Calculator],
+            ['billing', 'Рахунки і оплати', Receipt],
+            ['execinv', 'Рахунки виконавців', FileInput],
+          ] as const).map(([key, label, Icon]) => {
+            const on = tab === key;
+            return (
+              <button key={key} onClick={() => onTab(key)}
+                className="w-full flex items-center gap-2 pl-[11px] pr-3 py-[5px] text-left press transition-colors border-l-[3px]"
+                style={on
+                  ? { borderColor: 'var(--accent)', background: 'var(--accent-soft)', color: 'var(--ink)' }
+                  : { borderColor: 'transparent', color: 'var(--ink)' }}>
+                <Icon size={15} strokeWidth={2} className="flex-shrink-0" style={{ color: on ? 'var(--accent)' : 'var(--ink-2)' }} />
+                <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>
+              </button>
+            );
+          })}
         </div>
 
       </nav>
 
-      {/* Низ */}
-      <div className="flex-shrink-0 border-t hairline p-2.5">
-        <div className="flex items-center gap-1">
+      {/* Низ: вихід, оновлення даних, події */}
+      <div className="flex-shrink-0 border-t hairline p-2">
+        <div className="flex items-center gap-0.5">
           <button onClick={onLogout}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-red-600 hover:bg-red-50 press">
+            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg press"
+            style={{ color: '#C42C2C' }}>
             <LogOut size={13} />
             <span className="text-[11.5px] font-bold">Вийти</span>
           </button>
-          <span className="ml-auto text-[9.5px]" style={{ color: 'var(--ink-3)' }}>{__BUILD_TIME__}</span>
+          <span className="flex-1" />
+          {onRefresh && (
+            <button onClick={onRefresh} className="p-1.5 rounded-lg press hover:bg-[var(--bg)]"
+              style={{ color: 'var(--ink-2)' }} aria-label="Оновити дані" title="Оновити дані">
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            </button>
+          )}
+          {onNotifications && (
+            <button onClick={onNotifications} className="p-1.5 rounded-lg press hover:bg-[var(--bg)]"
+              style={{ color: 'var(--ink-2)' }} aria-label="Події" title="Події">
+              <Bell size={14} />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1 mt-1 pl-2">
+          <span className="k-label">збірка {__BUILD_TIME__}</span>
+          <span className="flex-1" />
           <button
             onClick={async () => {
               try {

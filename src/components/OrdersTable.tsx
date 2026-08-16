@@ -1,0 +1,122 @@
+// ================================================================
+//  src/components/OrdersTable.tsx — список замовлень таблицею.
+//
+//  Головний екран читають поглядом згори вниз, тому це таблиця,
+//  а не сітка карток: номер моно, під ним клієнт і примітка,
+//  готовність смужкою з цифрами поруч, прострочений термін —
+//  помаранчевим. Закріплені підняті вгору й підсвічені.
+// ================================================================
+
+import { Order } from '../types';
+import { statusStyle } from '../types';
+
+interface Props {
+  orders: Order[];
+  pinned: Set<string>;
+  activeRow?: number | null;
+  onOpen: (o: Order) => void;
+  onTogglePin: (projectId: string, on: boolean) => void;
+}
+
+/** «31.07.2026» → Date, щоб зрозуміти, чи термін уже минув. */
+function parseDate(s: string): number {
+  const m = String(s || '').match(/(\d{2})\.(\d{2})\.(\d{4})/);
+  return m ? new Date(+m[3], +m[2] - 1, +m[1]).getTime() : 0;
+}
+
+export default function OrdersTable({ orders, pinned, activeRow, onOpen, onTogglePin }: Props) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return (
+    <div className="overflow-x-auto bg-white rounded-[11px] border" style={{ borderColor: 'var(--line)' }}>
+      <table className="w-full border-collapse text-[12.5px]">
+        <thead>
+          <tr className="bg-white">
+            {['', '№ / клієнт', 'Статус', 'Готовність', 'Позицій', 'Запуск', 'Термін', 'ID'].map((h, i) => (
+              <th key={i}
+                className={`k-label px-2.5 py-[7px] whitespace-nowrap ${i === 4 ? 'text-right' : 'text-left'}`}
+                style={{ borderBottom: '1.5px solid var(--ink)' }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {orders.map(o => {
+            const st = statusStyle(o.status);
+            const pin = pinned.has(o.projectId);
+            const pct = o.total ? Math.round((100 * o.done) / o.total) : 0;
+            const dl = parseDate(o.deadline);
+            const late = dl > 0 && dl < today.getTime() && o.done < o.total;
+            return (
+              <tr key={o.headerRow}
+                onClick={() => onOpen(o)}
+                className="k-dash border-b cursor-pointer hover:bg-[#F8FAFB]"
+                style={o.headerRow === activeRow
+                  ? { background: 'var(--accent-soft)' }
+                  : pin ? { background: '#FFFAF7' } : undefined}>
+
+                <td className="px-2 py-[6px]">
+                  <button
+                    onClick={e => { e.stopPropagation(); onTogglePin(o.projectId, !pin); }}
+                    className="w-[13px] h-[13px] rounded-full block press"
+                    style={pin
+                      ? { background: 'var(--accent)', boxShadow: 'inset 0 0 0 1.5px var(--accent)' }
+                      : { boxShadow: 'inset 0 0 0 1.5px var(--line-2)' }}
+                    aria-label={pin ? 'Відкріпити' : 'Закріпити'}
+                    title={pin ? 'Відкріпити' : 'Закріпити вгорі списку'} />
+                </td>
+
+                <td className="px-2.5 py-[6px] min-w-[220px]">
+                  <span className="font-mono text-[13.5px] font-semibold block leading-tight">
+                    {o.orderNum || o.projectId}
+                  </span>
+                  <span className="block text-[10.5px] truncate" style={{ color: 'var(--ink-2)' }}>
+                    {o.client || 'клієнт не вказаний'}{o.note ? ` · ${o.note}` : ''}
+                  </span>
+                </td>
+
+                <td className="px-2.5 py-[6px]">
+                  <span className="k-chip" style={{ background: st.bg, color: st.fg, borderColor: st.fg + '44' }}>
+                    {o.status || 'без статусу'}
+                  </span>
+                </td>
+
+                <td className="px-2.5 py-[6px]">
+                  <span className="flex items-center gap-2">
+                    <span className="w-[88px] h-[3px] flex-shrink-0" style={{ background: 'var(--line)' }}>
+                      <span className="block h-full grow-x"
+                        style={{ width: `${Math.max(pct, o.done ? 2 : 2)}%`, background: o.done ? 'var(--green)' : 'var(--line-2)' }} />
+                    </span>
+                    <span className="font-mono text-[10.5px]" style={{ color: 'var(--ink-2)' }}>
+                      {o.done} / {o.total}
+                    </span>
+                  </span>
+                </td>
+
+                <td className="px-2.5 py-[6px] text-right font-mono text-[12px]">{o.total}</td>
+                <td className="px-2.5 py-[6px] font-mono text-[11.5px]">{o.date || <span className="k-empty">—</span>}</td>
+                <td className="px-2.5 py-[6px] font-mono text-[11.5px]"
+                  style={late ? { color: 'var(--accent)', fontWeight: 600 } : undefined}>
+                  {o.deadline || <span className="k-empty">—</span>}
+                </td>
+                <td className="px-2.5 py-[6px] font-mono text-[11.5px]" style={{ color: 'var(--ink-2)' }}>
+                  {o.projectId}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colSpan={8} className="k-label px-3 py-[7px] normal-case tracking-normal"
+              style={{ borderTop: '1.5px solid var(--ink)', fontSize: '10.5px' }}>
+              Показано {orders.length} замовлень · закріплених {orders.filter(o => pinned.has(o.projectId)).length}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+}

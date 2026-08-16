@@ -177,9 +177,19 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
       return (
         <button
           onClick={e => openEditor(e, item, field)}
-          className="w-full text-left px-2 py-1 rounded-lg text-[11.5px] font-semibold press"
-          style={{ background: value ? st.bg : 'transparent', color: value ? st.fg : 'var(--ink-3)' }}
+          className={`text-left press ${value ? 'k-chip' : 'k-empty px-2'}`}
+          style={value ? { background: st.bg, color: st.fg, borderColor: st.fg + '44' } : undefined}
         >
+          {saving === key ? <Loader2 size={12} className="animate-spin inline" /> : (value || '—')}
+        </button>
+      );
+    }
+
+    // Операція — обведений моно-чіп, як позначення виду обробки на кресленні
+    if (field === 'op') {
+      return (
+        <button onClick={e => openEditor(e, item, field)}
+          className={`text-left press ${value ? 'k-chip' : 'k-empty px-2'}`}>
           {saving === key ? <Loader2 size={12} className="animate-spin inline" /> : (value || '—')}
         </button>
       );
@@ -188,18 +198,22 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
     // Виконавець із посиланням на папку (після розподілу КД) — поруч значок
     const folder = field === 'executor' ? (item.executorUrl || '') : '';
     const isList = !!optionsFor(field)?.length;
+    const numeric = /qty|Qty|[Pp]rice|thickness|time/.test(field);
+    const blank = !value;
     return (
       <span className="flex items-center gap-0.5 w-full">
       <button
         onClick={e => openEditor(e, item, field)}
-        className={`w-full text-left px-2 py-1 rounded-lg text-[12.5px] truncate press hover:bg-gray-50 ${isList ? 'hover:ring-1 hover:ring-gray-200' : ''}`}
-        style={{ color: value ? 'var(--ink)' : 'var(--ink-3)' }}
+        className={`w-full text-left px-1.5 py-[3px] rounded text-[12.5px] truncate press hover:bg-[var(--bg)]
+          ${numeric ? 'font-mono text-[11.5px]' : ''}
+          ${field === 'executor' && value ? 'font-semibold' : ''}
+          ${blank ? 'k-empty text-center' : ''}`}
         title={value}
       >
         {saving === key
           ? <Loader2 size={12} className="animate-spin inline" />
           : (value || '—')}
-        {isList && <span className="float-right text-[8px] opacity-0 group-hover:opacity-40 ml-1 mt-1">▼</span>}
+        {isList && !blank && <span className="float-right text-[8px] opacity-0 group-hover:opacity-40 ml-1 mt-1">▼</span>}
       </button>
       {folder && (
         <a href={folder} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
@@ -235,7 +249,7 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
       <span className="inline-flex items-center gap-1 max-w-full">
         {item.url ? (
           <a href={item.url} target="_blank" rel="noreferrer"
-            className="text-[var(--accent)] hover:underline inline-flex items-start gap-1 min-w-0">
+            className="text-[var(--blue)] hover:underline inline-flex items-start gap-1 min-w-0">
             <span className="line-clamp-1">{item.name}</span>
             <ExternalLink size={11} className="mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
           </a>
@@ -328,8 +342,8 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
     <div className="overflow-auto thin-scrollbar h-full">
       <table className="w-full border-collapse text-[12.5px]">
         <thead className="sticky top-0 z-10">
-          <tr className="bg-[#FAFBFC]">
-            <th className="w-[36px] px-2 py-2 border-b hairline">
+          <tr className="bg-white">
+            <th className="w-[32px] px-2 py-[7px]" style={{ borderBottom: '1.5px solid var(--ink)' }}>
               <button onClick={() => onSelectRows(shown.map(i => i.row), !allShownSelected)}
                 className="flex press" aria-label="Вибрати все видиме"
                 title={allShownSelected ? 'Зняти вибір' : 'Вибрати всі видимі рядки'}>
@@ -342,7 +356,8 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
               const on = !!colFilters[c.key]?.size;
               return (
                 <th key={c.key}
-                  className={`${c.w} text-left font-semibold text-[11px] uppercase tracking-wide text-[var(--ink-3)] px-3 py-2 border-b hairline whitespace-nowrap`}>
+                  className={`${c.w} text-left k-label px-2.5 py-[7px] whitespace-nowrap`}
+                  style={{ borderBottom: '1.5px solid var(--ink)' }}>
                   <span className="inline-flex items-center gap-1">
                     {c.label}
                     {c.filter && (
@@ -373,8 +388,9 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
             <Fragment key={b.key ?? '#усі'}>
 
             {b.key !== null && (
-              <tr className="bg-[#F6F4FF]">
-                <td colSpan={cols.length + 1} className="px-2 py-1.5 border-b hairline">
+              <tr style={{ background: 'var(--violet-bg)' }}>
+                <td colSpan={cols.length + 1} className="px-2 py-[5px] border-y"
+                  style={{ borderColor: 'var(--violet-line)' }}>
                   <span className="flex items-center gap-2">
                     <button onClick={() => flip(b.key!)} className="p-0.5 press flex-shrink-0"
                       style={{ color: 'var(--ink-3)' }}
@@ -388,9 +404,9 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
                         ? <CheckSquare size={14} className="text-[var(--accent)]" />
                         : <Square size={14} className="text-gray-300" />}
                     </button>
-                    <Blocks size={13} className="flex-shrink-0" style={{ color: b.key ? '#7C3AED' : 'var(--ink-3)' }} />
-                    <span className="text-[12px] font-bold truncate">{b.key || 'Без збірок'}</span>
-                    <span className="text-[11px] tabular-nums" style={{ color: 'var(--ink-3)' }}>
+                    <Blocks size={13} className="flex-shrink-0" style={{ color: b.key ? 'var(--violet)' : 'var(--ink-2)' }} />
+                    <span className="text-[12.5px] font-extrabold truncate">{b.key || 'Без збірок'}</span>
+                    <span className="k-chip" style={{ color: 'var(--violet)', borderColor: 'var(--violet-line)', background: 'transparent' }}>
                       {b.items.length} поз.
                     </span>
                   </span>
@@ -411,9 +427,9 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
             const route = routes.get(item.row);
             return (
             <tr key={item.row} data-row={item.row}
-              className="border-b hairline hover:bg-[#FCFCFD] group"
+              className="k-dash border-b hover:bg-[#F8FAFB] group"
               style={selected.has(item.row) ? { background: 'var(--accent-soft)' } : undefined}>
-              <td className="px-2 py-1.5" style={route ? { boxShadow: `inset 3px 0 0 ${route.color}` } : undefined}>
+              <td className="px-2 py-[6px]" style={route ? { boxShadow: `inset 3px 0 0 ${route.color}` } : undefined}>
                 <button onClick={e => clickRow(e, item.row)} className="flex press" aria-label="Вибрати рядок"
                   title="Shift+клік — вибрати діапазон">
                   {selected.has(item.row)
@@ -421,10 +437,10 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
                     : <Square size={15} className="text-gray-300" />}
                 </button>
               </td>
-              <td className="px-3 py-1.5 font-mono text-[11px] text-[var(--ink-3)] whitespace-nowrap">
+              <td className="px-2.5 py-[6px] font-mono text-[11.5px] whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
                 {item.id}
               </td>
-              <td className="px-3 py-1.5">{nameCell(item)}</td>
+              <td className="px-2.5 py-[6px]">{nameCell(item)}</td>
               {log ? (
                 <>
                   <td className="px-1 py-1 tabular-nums">{cell(item, 'qty')}</td>
@@ -473,7 +489,7 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
                     {item.invoiceNum ? (
                       item.invoiceUrl
                         ? <a href={item.invoiceUrl} target="_blank" rel="noreferrer"
-                            className="text-[var(--accent)] hover:underline text-[12px] font-semibold inline-flex items-center gap-1">
+                            className="text-[var(--blue)] hover:underline text-[12px] font-semibold inline-flex items-center gap-1">
                             {item.invoiceNum} <ExternalLink size={10} />
                           </a>
                         : <span className="text-[12px]">{item.invoiceNum}</span>

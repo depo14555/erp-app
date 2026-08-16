@@ -5,19 +5,25 @@
 @layer base {
   :root {
     /*
-      Інженерна палітра: холодний нейтральний корпус, hairline-межі,
-      один акцент. Колір з'являється тільки там, де щось означає —
-      статус, попередження, гроші. Решта — сірий різної глибини.
+      Мова креслення: паперовий фон, штампи в рамці, пунктирні межі
+      рядків, моноширинні підписи. Колір з'являється лише там, де
+      щось означає — стан, попередження, гроші.
     */
-    --bg: #F9FAFB;
+    --bg: #F2F4F6;           /* папір */
     --surface: #FFFFFF;
-    --line: #EAECF0;         /* звичайна межа */
-    --line-2: #D0D5DD;       /* сильніша: розділювач блоків, шапка таблиці */
-    --ink: #101828;
-    --ink-2: #475467;
-    --ink-3: #98A2B3;
-    --accent: #1570EF;
-    --accent-soft: #EFF8FF;
+    --line: #D7DFE6;         /* звичайна межа */
+    --line-2: #AEBAC4;       /* сильніша: рамка штампа, шапка таблиці */
+    --ink: #141D26;
+    --ink-2: #5B6B7A;
+    --ink-3: #AEBAC4;
+    --accent: #FF4F12;       /* акцент — гарячий метал */
+    --accent-soft: #FFEDE6;
+
+    /* Значення, а не прикраса */
+    --blue: #1B4FD8;   --blue-bg: #EDF2FD;   --blue-line: #C6D4F7;
+    --amber: #B97D00;  --amber-bg: #FBF3E0;  --amber-line: #EAD9A8;
+    --green: #177A46;  --green-bg: #E4F4EA;  --green-line: #BBE2CB;
+    --violet: #5B32C4; --violet-bg: #F1ECFD; --violet-line: #D6C9F5;
   }
 
   * {
@@ -28,11 +34,10 @@
   body {
     color: var(--ink);
     background: var(--bg);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-      'Helvetica Neue', Arial, sans-serif;
-    font-feature-settings: 'cv11', 'ss01';
-    font-variation-settings: 'opsz' auto;
-    letter-spacing: -0.011em;
+    font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: 13.5px;
+    line-height: 1.4;
+    letter-spacing: -0.005em;
   }
 
   /* iOS-подібна інерція прокрутки всередині панелей */
@@ -178,6 +183,57 @@
   .animate-slide-in-left {
     animation: slide-in-left 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   }
+
+  /* ══ Мова креслення: спільні примітиви ══ */
+
+  /** Підпис у штампі: моно, великими, з розрядкою. */
+  .k-label {
+    font-family: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    font-size: 8.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  /** Значення у штампі: моно, напівжирне. */
+  .k-value {
+    font-family: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  /** Заголовок блока-штампа. */
+  .k-head {
+    font-family: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  /** Рамка штампа — товща за звичайну межу, як обведення на кресленні. */
+  .k-frame {
+    background: var(--surface);
+    border: 1.5px solid var(--ink);
+    border-radius: 11px;
+  }
+  /** Пунктирна межа — розділювач усередині штампа й між рядками. */
+  .k-dash { border-color: var(--line); border-style: dashed; }
+  /** Операція, тип, режим — обведений моно-чіп. */
+  .k-chip {
+    font-family: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 1px 7px;
+    background: var(--bg);
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  /** Порожня клітинка: одна риска по центру, а не порожнеча. */
+  .k-empty { color: var(--line-2); font-family: 'IBM Plex Mono', ui-monospace, monospace; }
 
   /* ── Примітиви ── */
   .card {

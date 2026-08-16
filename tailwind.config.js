@@ -47,21 +47,22 @@ export default {
        */
       colors: {
         gray: {
-          50: '#F9FAFB',
-          100: '#F2F4F7',
-          200: '#EAECF0',
-          300: '#D0D5DD',
-          400: '#98A2B3',
-          500: '#667085',
-          600: '#475467',
-          700: '#344054',
-          800: '#1D2939',
-          900: '#101828',
+          50: '#F7F9FA',
+          100: '#F2F4F6',
+          200: '#E4EAEF',
+          300: '#D7DFE6',
+          400: '#AEBAC4',
+          500: '#8494A2',
+          600: '#5B6B7A',
+          700: '#3E4C59',
+          800: '#26323D',
+          900: '#141D26',
         },
       },
 
       fontFamily: {
-        mono: ['ui-monospace', 'SFMono-Regular', 'JetBrains Mono', 'Consolas',
+        sans: ['Manrope', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        mono: ['IBM Plex Mono', 'ui-monospace', 'SFMono-Regular', 'Consolas',
                'Liberation Mono', 'monospace'],
       },
     },

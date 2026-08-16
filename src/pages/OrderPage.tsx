@@ -92,6 +92,17 @@ const TOOLS: Array<{ key: string; label: string; hint: string; Icon: typeof Rock
   { key: 'purch',   label: 'Покупні',      hint: 'кріплення зі специфікацій збірок', Icon: ShoppingCart, color: '#EA580C', ai: true },
 ];
 
+/** Клітинка штампа: моно-підпис угорі, значення під ним. */
+function StampCell({ k, v, hot, last }: { k: string; v: string; hot?: boolean; last?: boolean }) {
+  return (
+    <div className={`flex flex-col justify-center px-3.5 py-2 ${last ? '' : 'border-r'}`}
+      style={{ borderColor: 'var(--line)' }}>
+      <span className="k-label whitespace-nowrap">{k}</span>
+      <span className="k-value whitespace-nowrap" style={hot ? { color: 'var(--accent)' } : undefined}>{v}</span>
+    </div>
+  );
+}
+
 /** Вікна інструментів, які можна згорнути (робота продовжується у фоні). */
 type SheetKey = 'print' | 'send' | 'tech' | 'photo' | 'distr' | 'calc' | 'nest' | 'purch' | 'asm';
 const SHEET_META: Record<SheetKey, { label: string; emoji: string }> = {
@@ -401,64 +412,53 @@ export default function OrderPage({
   return (
     <div className="relative flex flex-col h-full bg-[var(--bg)]">
       {/* Шапка замовлення — світла, мінімалістична */}
-      <div className="flex-shrink-0 bg-white border-b hairline">
-        {/* Рядок 1: назад · номер · клієнт · статус · показники · дії */}
-        <div className="flex items-center gap-2 px-2 pt-2 pb-2">
-          <button onClick={onBack} className="p-1.5 press rounded-xl flex-shrink-0" style={{ color: 'var(--accent)' }} aria-label="Назад">
-            <ChevronLeft size={22} strokeWidth={2.2} />
+      <div className="flex-shrink-0 bg-white border-b" style={{ borderColor: 'var(--ink)', borderBottomWidth: 1.5 }}>
+        {/*
+          ШТАМП ЗАМОВЛЕННЯ — як основний напис на кресленні: назва ліворуч,
+          праворуч клітинки з підписами. Дані завжди на тому самому місці.
+        */}
+        <div className="flex items-stretch">
+          <button onClick={onBack} className="px-3 press flex-shrink-0 border-r"
+            style={{ borderColor: 'var(--line)', color: 'var(--ink)' }} aria-label="Назад">
+            <ChevronLeft size={18} strokeWidth={2} />
           </button>
-          <div className="min-w-0">
-            <h1 className="font-bold text-[17px] truncate leading-tight tracking-tight">
+
+          <div className="flex items-center gap-3 px-3.5 py-2 min-w-0 flex-1 border-r" style={{ borderColor: 'var(--line)' }}>
+            <span className="font-mono text-[18px] font-semibold whitespace-nowrap">
               {header.orderNum || header.projectId || 'Замовлення'}
-            </h1>
-            <p className="text-[11.5px] truncate flex items-center gap-1 leading-tight" style={{ color: 'var(--ink-3)' }}>
-              <User size={10} /> {header.client || 'клієнт не вказаний'}
-            </p>
+            </span>
+            <button onClick={() => setPickOrder(true)} className="k-chip press flex-shrink-0"
+              style={{ background: st.bg, color: st.fg, borderColor: st.fg + '55' }}>
+              {header.status || 'без статусу'}
+            </button>
+            <span className="font-extrabold text-[13.5px] truncate pl-3 border-l hidden sm:block"
+              style={{ borderColor: 'var(--line)' }}>
+              {header.client || 'клієнт не вказаний'}
+            </span>
           </div>
 
-          <button onClick={() => setPickOrder(true)}
-            className="px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold press whitespace-nowrap flex-shrink-0"
-            style={{ background: st.bg, color: st.fg }}>
-            {header.status || 'без статусу'} ▾
-          </button>
-
-          <span className="flex-1" />
-
-          {/* Показники замовлення — там, де раніше була самотня смужка прогресу */}
-          <div className="hidden lg:flex items-center gap-5 pr-2 flex-shrink-0">
-            <span className="text-[11.5px] whitespace-nowrap" style={{ color: 'var(--ink-3)' }}>
-              позицій <b className="tabular-nums" style={{ color: 'var(--ink)' }}>{total}</b>
-            </span>
-            <span className="text-[11.5px] whitespace-nowrap" style={{ color: 'var(--ink-3)' }}>
-              готово <b className="tabular-nums" style={{ color: done ? st.solid : 'var(--ink)' }}>{done}</b>
-            </span>
-            {/* Термін проставлений не всюди — тоді показуємо дату запуску */}
-            {(deadline || header.date) && (
-              <span className="text-[11.5px] whitespace-nowrap" style={{ color: 'var(--ink-3)' }}>
-                {deadline ? 'термін' : 'запуск'}{' '}
-                <b className="tabular-nums" style={{ color: 'var(--ink)' }}>{deadline || header.date}</b>
-              </span>
-            )}
+          {/* Клітинки показників — на телефоні лишається тільки готовність */}
+          <div className="hidden lg:flex items-stretch flex-shrink-0">
+            <StampCell k="Позицій" v={String(total)} />
+            <StampCell k="Готово" v={`${done} · ${pct}%`} hot={!done} />
+            <StampCell k={deadline ? 'Термін' : 'Запуск'} v={deadline || header.date || '—'} />
+            <StampCell k="ID" v={header.projectId} last />
           </div>
 
-          {/* Телефон: готовність коротко + усі інструменти під однією кнопкою */}
-          <span className="lg:hidden text-[11.5px] font-bold tabular-nums flex-shrink-0" style={{ color: 'var(--ink-2)' }}>
-            {done}<span style={{ color: 'var(--ink-3)' }}>/{total}</span>
-          </span>
-          <button onClick={() => setShowTools(true)}
-            className="lg:hidden flex items-center gap-1.5 pl-2.5 pr-3 py-1.5 rounded-xl press ring-1 ring-gray-200 flex-shrink-0"
-            style={{ color: 'var(--ink-2)' }} aria-label="Інструменти замовлення">
-            <Wrench size={15} />
-            <span className="text-[12px] font-bold">Дії</span>
-          </button>
-          <button onClick={() => onRefresh()} className="lg:hidden p-2 press rounded-xl flex-shrink-0" style={{ color: 'var(--ink-2)' }} aria-label="Оновити">
-            <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
-          </button>
+          <div className="lg:hidden flex items-center gap-1.5 px-2 flex-shrink-0">
+            <span className="k-value">{done}<span style={{ color: 'var(--ink-3)' }}>/{total}</span></span>
+            <button onClick={() => setShowTools(true)} className="p-2 press" aria-label="Інструменти замовлення">
+              <Wrench size={16} />
+            </button>
+            <button onClick={() => onRefresh()} className="p-2 press" aria-label="Оновити">
+              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            </button>
+          </div>
         </div>
 
-        {/* Прогрес — тонка лінія на всю ширину під шапкою */}
-        <div className="h-[3px] bg-gray-100" title={`Готово ${done} з ${total}`}>
-          <div className="h-full grow-x" style={{ width: `${pct}%`, background: st.solid }} />
+        {/* Прогрес — тонка лінія на всю ширину під штампом */}
+        <div className="h-[2.5px]" style={{ background: 'var(--line)' }} title={`Готово ${done} з ${total}`}>
+          <div className="h-full grow-x" style={{ width: `${pct}%`, background: done ? 'var(--green)' : 'var(--line-2)' }} />
         </div>
 
         {/*
@@ -466,19 +466,18 @@ export default function OrderPage({
           лінію (зони зліва, фільтри справа), на телефоні фільтри переносяться
           на власний рядок — через w-full + order на дочірніх елементах.
         */}
-        <div className="px-3 pt-2 pb-2.5 flex flex-wrap items-center gap-2">
+        <div className="px-3 pt-2 pb-2 flex flex-wrap items-center gap-1.5">
 
         {/* Зони таблиці */}
         {view === 'table' && (
-          <div className="order-1 flex-1 min-w-0 lg:flex-none flex items-center gap-0.5 p-0.5 rounded-xl bg-[#F1F2F4] overflow-x-auto no-scrollbar">
+          <div className="order-1 flex-shrink-0 flex items-center rounded-lg bg-white overflow-hidden"
+            style={{ boxShadow: 'inset 0 0 0 1px var(--line)' }}>
             {ZONES.map(({ key, label, short }) => {
               const on = tableMode === key;
               return (
                 <button key={key} onClick={() => setTableMode(key)} title={label}
-                  className="flex items-center justify-center px-3 py-1.5 rounded-lg text-[11.5px] font-bold transition-all whitespace-nowrap"
-                  style={on
-                    ? { background: '#fff', color: 'var(--ink)', boxShadow: '0 1px 2px rgba(16,24,40,.08)' }
-                    : { color: 'var(--ink-3)' }}>
+                  className="px-2.5 py-[6px] text-[12px] font-bold transition-colors whitespace-nowrap"
+                  style={on ? { background: 'var(--ink)', color: '#fff' } : { color: 'var(--ink-2)' }}>
                   <span className="hidden sm:inline">{label}</span>
                   <span className="sm:hidden">{short}</span>
                 </button>
@@ -495,14 +494,15 @@ export default function OrderPage({
           в заголовках колонок; у картках заголовків немає, тому там списки
           лишаються.
         */}
-        <div className="order-3 lg:order-2 w-full lg:w-auto lg:flex-1 lg:min-w-0 flex items-center gap-1.5 flex-wrap">
-          <div className="relative flex-1 min-w-[150px] lg:flex-none lg:w-[230px]">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+        <div className="order-3 lg:order-2 w-full lg:w-auto lg:flex-1 lg:min-w-0 flex items-center gap-1.5">
+          <div className="relative flex-1 min-w-[120px]">
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--ink-3)' }} />
             <input
               value={q}
               onChange={e => setQ(e.target.value)}
               placeholder="Пошук деталі…"
-              className="w-full pl-7 pr-6 py-1.5 rounded-xl bg-gray-50 ring-1 ring-gray-200/80 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[12px]"
+              className="w-full pl-7 pr-6 py-[6px] rounded-lg bg-white outline-none text-[12.5px]"
+              style={{ boxShadow: 'inset 0 0 0 1px var(--line)' }}
             />
             {q && (
               <button onClick={() => setQ('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400" aria-label="Очистити">
@@ -525,36 +525,31 @@ export default function OrderPage({
             const on = fKind === key;
             return (
               <button key={key} onClick={() => setFKind(on ? '' : key)}
-                className="flex items-center gap-1.5 pl-2 pr-2.5 py-1.5 rounded-md text-[11px] transition-colors whitespace-nowrap bg-white hover:bg-gray-50"
-                style={on
-                  ? { boxShadow: `inset 0 0 0 1.5px ${meta.color}`, color: meta.color }
-                  : { boxShadow: 'inset 0 0 0 1px var(--line)', color: 'var(--ink-2)' }}
+                className="k-chip press flex items-center gap-1.5 flex-shrink-0"
+                style={on ? { borderColor: meta.color, color: meta.color } : undefined}
                 title={meta.label}>
-                <span className="w-1.5 h-1.5 rounded-sm flex-shrink-0" style={{ background: meta.color }} />
+                <span className="w-1.5 h-1.5 flex-shrink-0" style={{ background: meta.color }} />
                 {key === 'pdf' ? 'PDF' : key === 'dxf' ? 'DXF' : key === '3d' ? '3D' : 'Інші'}
-                <span className="font-bold tabular-nums">{count}</span>
+                <span className="font-bold">{count}</span>
               </button>
             );
           })}
 
           {activeFilters.filter(f => f.key !== 'q' && f.key !== 'kind').map(f => (
             <button key={f.key} onClick={f.clear}
-              className="flex items-center gap-1 px-2 py-1.5 rounded-xl text-[11px] font-bold press"
-              style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
+              className="k-chip press flex items-center gap-1 flex-shrink-0"
+              style={{ background: 'var(--accent-soft)', color: 'var(--accent)', borderColor: 'var(--accent)' }}
               title="Прибрати фільтр">
               {f.label}
-              <X size={11} />
+              <X size={10} />
             </button>
           ))}
 
           {filterCount > 0 && (
             <>
-              <button onClick={clearFilters}
-                className="text-[11px] font-bold px-2 py-1.5 rounded-xl press" style={{ color: 'var(--ink-3)' }}>
-                Скинути
-              </button>
-              <span className="text-[11px] font-semibold tabular-nums" style={{ color: 'var(--ink-2)' }}>
-                {filtered.filter(i => !i.group).length} з {real.length}
+              <button onClick={clearFilters} className="k-label press px-1 flex-shrink-0">Скинути</button>
+              <span className="k-label whitespace-nowrap flex-shrink-0" style={{ color: 'var(--ink-2)' }}>
+                {filtered.filter(i => !i.group).length}/{real.length}
               </span>
             </>
           )}
@@ -563,24 +558,23 @@ export default function OrderPage({
         {/* Групувати по збірках — показуємо лише коли збірки справді проставлені */}
         {hasAsm && (
           <button onClick={() => setByAsm(v => !v)}
-            className="order-2 lg:order-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold flex-shrink-0 press transition-colors"
+            className="order-2 lg:order-3 flex items-center gap-1.5 px-2.5 py-[6px] rounded-lg text-[12px] font-bold flex-shrink-0 press transition-colors"
             style={byAsm
-              ? { background: '#F3EEFF', color: '#7C3AED' }
-              : { background: '#F1F2F4', color: 'var(--ink-3)' }}
+              ? { background: 'var(--violet-bg)', color: 'var(--violet)', boxShadow: 'inset 0 0 0 1px var(--violet-line)' }
+              : { background: '#fff', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px var(--line)' }}
             title="Групувати позиції по збірках; ті, що не входять у збірки — знизу">
             <Blocks size={13} />
-            Збірки
+            <span className="hidden xl:inline">Збірки</span>
           </button>
         )}
 
         {/* Картки / Таблиця */}
-        <div className="order-2 lg:order-4 flex items-center gap-0.5 p-0.5 rounded-xl bg-[#F1F2F4] flex-shrink-0 ml-auto lg:ml-0">
+        <div className="order-2 lg:order-4 flex items-center rounded-lg bg-white overflow-hidden flex-shrink-0 ml-auto lg:ml-0"
+          style={{ boxShadow: 'inset 0 0 0 1px var(--line)' }}>
           {(['cards', 'table'] as const).map(v => (
             <button key={v} onClick={() => setView(v)}
-              className="px-2.5 py-1 rounded-lg text-[11.5px] font-bold transition-all"
-              style={view === v
-                ? { background: '#fff', color: 'var(--ink)', boxShadow: '0 1px 2px rgba(16,24,40,.08)' }
-                : { color: 'var(--ink-3)' }}>
+              className="px-2.5 py-[6px] text-[12px] font-bold transition-colors whitespace-nowrap"
+              style={view === v ? { background: 'var(--ink)', color: '#fff' } : { color: 'var(--ink-2)' }}>
               {v === 'cards' ? 'Картки' : 'Таблиця'}
             </button>
           ))}

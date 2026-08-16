@@ -344,23 +344,30 @@ export default function App() {
           else if (t === 'asm') setAsmTick(v => v + 1);
         }}
         onLogout={logout}
+        onRefresh={refreshCurrent}
+        onNotifications={() => setShowNotifs(true)}
+        loading={loading}
       />
 
       <div className="flex-1 min-w-0 flex flex-col">
-        {/* Шапка: на телефоні — гамбургер, на десктопі — заголовок розділу */}
-        {(!detail || window.innerWidth >= 1024) && (
-          <header className="flex-shrink-0 bg-white border-b hairline px-2 lg:px-5 h-[52px] lg:h-[56px] flex items-center gap-2">
+        {/*
+          На десктопі окремої шапки немає: де ти — видно з сайдбара, а що
+          відкрито — зі штампа сторінки. Оновлення й події переїхали в низ
+          сайдбара. На телефоні смужка лишається — там живе гамбургер.
+        */}
+        {!detail && (
+          <header className="lg:hidden flex-shrink-0 bg-white border-b hairline px-2 h-[52px] flex items-center gap-2">
             <button onClick={() => setShowMenu(true)}
-              className="lg:hidden p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Меню">
+              className="p-2 press rounded-xl" style={{ color: 'var(--ink-2)' }} aria-label="Меню">
               <Menu size={20} />
             </button>
             <div className="flex-1 min-w-0">
-              <h1 className="text-[16px] font-bold truncate leading-tight tracking-tight">{title}</h1>
-              <p className="text-[11px] truncate" style={{ color: 'var(--ink-3)' }}>{subtitle}</p>
+              <h1 className="text-[15px] font-extrabold truncate leading-tight">{title}</h1>
+              <p className="k-label truncate">{subtitle}</p>
             </div>
             {env === 'test' && (
-              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-800">
-                <FlaskConical size={11} /> ТЕСТ
+              <span className="k-chip" style={{ color: 'var(--amber)', borderColor: 'var(--amber-line)', background: 'var(--amber-bg)' }}>
+                <FlaskConical size={10} className="inline -mt-0.5 mr-0.5" /> тест
               </span>
             )}
             <button onClick={refreshCurrent}
