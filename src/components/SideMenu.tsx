@@ -1,19 +1,23 @@
 // ================================================================
 //  src/components/SideMenu.tsx — мобільне меню (гамбургер).
-//  Тільки робочий функціонал додатка — без пунктів-заглушок:
-//  розділи + інструменти, знизу вихід/версія/оновлення.
+//
+//  Та сама мова, що й у бічній панелі на ПК: моно-підписи розділів
+//  із лінійкою до краю, активний пункт позначений смужкою зліва,
+//  жодних емодзі-плиток. Тільки робочий функціонал — без заглушок.
 // ================================================================
 
-import { X, ChevronRight, LogOut, FlaskConical, RefreshCw, Lock } from 'lucide-react';
+import {
+  X, LogOut, FlaskConical, RefreshCw, Lock,
+  ClipboardList, MessageSquare, Truck, Building2, UserRound, Calculator,
+  Receipt, FileInput,
+} from 'lucide-react';
 import { AppTab } from '../types';
 import { EnvKey } from '../api';
 
 interface MenuItem {
-  icon: string;
+  Icon: typeof ClipboardList;
   label: string;
-  sub?: string;
   tab?: AppTab;
-  hint?: string;
   locked?: boolean;
 }
 interface MenuGroup { title: string; items: MenuItem[] }
@@ -22,36 +26,36 @@ const GROUPS: MenuGroup[] = [
   {
     title: 'Виробництво',
     items: [
-      { icon: '📋', label: 'Замовлення', sub: 'канбан по статусах, пошук, пошта', tab: 'orders' },
-      { icon: '💬', label: 'Чат виконавців', tab: 'chat' },
-    ],
-  },
-  {
-    title: 'Довідники',
-    items: [
-      { icon: '🤝', label: 'Контрагенти', sub: 'дані, таблиці, матриця операцій', tab: 'contractors' },
-      { icon: '👷', label: 'Штат працівників', sub: 'посада, ставка, контакти', tab: 'staff' },
+      { Icon: ClipboardList, label: 'Замовлення', tab: 'orders' },
+      { Icon: MessageSquare, label: 'Чат виконавців', tab: 'chat' },
     ],
   },
   {
     title: 'Логістика',
     items: [
-      { icon: '🚚', label: 'Відвантаження', sub: 'забрати від виконавців · відвезти клієнту',
-        tab: 'logistics', locked: true },
+      { Icon: Truck, label: 'Відвантаження', tab: 'logistics', locked: true },
+    ],
+  },
+  {
+    title: 'Довідники',
+    items: [
+      { Icon: Building2, label: 'Контрагенти', tab: 'contractors' },
+      { Icon: UserRound, label: 'Штат працівників', tab: 'staff' },
     ],
   },
   {
     title: 'Гроші',
     items: [
-      { icon: '🧮', label: 'Прорахунок', sub: 'усі групи, суми, час', tab: 'calc' },
-      { icon: '🧾', label: 'Рахунки і оплати', sub: 'виставлено · оплачено · треба виставити',
-        tab: 'billing' },
+      { Icon: Calculator, label: 'Прорахунок', tab: 'calc' },
+      { Icon: Receipt, label: 'Рахунки і оплати', tab: 'billing' },
+      { Icon: FileInput, label: 'Рахунки виконавців', tab: 'execinv' },
     ],
   },
 ];
 
 interface Props {
   env: EnvKey;
+  tab?: AppTab;
   onClose: () => void;
   onNavigate: (tab: AppTab) => void;
   onLocked: (label: string) => void;
@@ -59,77 +63,81 @@ interface Props {
   onToast?: (msg: string) => void;
 }
 
-export default function SideMenu({ env, onClose, onNavigate, onLocked, onLogout, onToast }: Props) {
+/** Підпис розділу — моно з розрядкою і лінійкою, як у штампі. */
+function SecTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="k-label flex items-center gap-2 px-3.5 pt-3.5 pb-1.5">
+      <span className="whitespace-nowrap">{children}</span>
+      <span className="flex-1 h-px" style={{ background: 'var(--line)' }} />
+    </p>
+  );
+}
+
+export default function SideMenu({ env, tab, onClose, onNavigate, onLocked, onLogout }: Props) {
   return (
     <div className="fixed inset-0 z-[70] flex">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] animate-fade-in" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40 animate-fade-in" onClick={onClose} />
 
-      <aside className="relative w-[86%] max-w-[330px] h-full flex flex-col shadow-2xl animate-slide-in-left bg-[var(--bg)]">
-        {/* Шапка */}
-        <div className="flex-shrink-0 bg-white px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3 border-b hairline flex items-center gap-2.5">
-          <img src="/icon-192.png" alt="" className="w-10 h-10 rounded-2xl shadow-md shadow-blue-600/25 flex-shrink-0" />
+      <aside className="relative w-[86%] max-w-[300px] h-full flex flex-col shadow-2xl animate-slide-in-left bg-white">
+        {/* Клеймо системи */}
+        <div className="flex-shrink-0 px-3.5 pt-[max(0.9rem,env(safe-area-inset-top))] pb-2.5 border-b flex items-center gap-2.5"
+          style={{ borderColor: 'var(--line)' }}>
+          <img src="/icon-192.png" alt="" className="w-[26px] h-[26px] rounded-md flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-[15.5px] leading-tight tracking-tight">ERP Металообробка</p>
-            <p className="text-[11px] mt-0.5" style={{ color: 'var(--ink-3)' }}>система керування</p>
+            <p className="font-extrabold text-[13.5px] leading-tight">ERP Металообробка</p>
+            <p className="k-label">{env === 'test' ? 'тестова копія' : 'система керування'}</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl press hover:bg-gray-50" style={{ color: 'var(--ink-3)' }} aria-label="Закрити">
-            <X size={19} />
+          <button onClick={onClose} className="p-2 rounded press" style={{ color: 'var(--ink-3)' }} aria-label="Закрити">
+            <X size={18} />
           </button>
         </div>
 
-        {/* Пункти */}
-        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3.5">
+        {/* Розділи */}
+        <div className="flex-1 overflow-y-auto pb-3">
           {GROUPS.map(group => (
             <div key={group.title}>
-              <p className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--ink-3)' }}>
-                {group.title}
-              </p>
-              <div className="bg-white rounded-2xl ring-1 ring-gray-200/60 overflow-hidden divide-y divide-gray-50">
-                {group.items.map(item => (
-                  <button
-                    key={item.label}
+              <SecTitle>{group.title}</SecTitle>
+              {group.items.map(({ Icon, label, tab: t, locked }) => {
+                const on = !!t && tab === t && !locked;
+                return (
+                  <button key={label}
                     onClick={() => {
-                      if (item.locked) { onLocked(item.label); return; }
-                      if (item.tab) onNavigate(item.tab);
-                      if (item.hint) onToast?.(item.hint);
+                      if (locked) { onLocked(label); return; }
+                      if (t) onNavigate(t);
                     }}
-                    className="w-full flex items-center gap-2.5 pl-2.5 pr-3 py-2.5 text-left press hover:bg-gray-50/80 active:bg-gray-100"
-                  >
-                    <span className="w-9 h-9 rounded-xl flex items-center justify-center text-[16px] flex-shrink-0 bg-[var(--accent-soft)]">
-                      {item.icon}
+                    className="w-full flex items-center gap-2.5 pl-[11px] pr-3 py-2 text-left press border-l-[3px] active:bg-[var(--bg)]"
+                    style={on
+                      ? { borderColor: 'var(--accent)', background: 'var(--accent-soft)' }
+                      : { borderColor: 'transparent' }}>
+                    <Icon size={16} strokeWidth={2} className="flex-shrink-0"
+                      style={{ color: on ? 'var(--accent)' : locked ? 'var(--ink-3)' : 'var(--ink-2)' }} />
+                    <span className="flex-1 text-[13px] font-semibold truncate"
+                      style={{ color: locked ? 'var(--ink-3)' : 'var(--ink)' }}>
+                      {label}
                     </span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-[13.5px] font-semibold text-gray-800 truncate">{item.label}</span>
-                      {item.sub && (
-                        <span className="block text-[10.5px] truncate" style={{ color: 'var(--ink-3)' }}>{item.sub}</span>
-                      )}
-                    </span>
-                    {item.locked
-                      ? <Lock size={14} className="text-gray-400 flex-shrink-0" />
-                      : <ChevronRight size={15} className="text-gray-300 flex-shrink-0" />}
+                    {locked && <Lock size={13} className="flex-shrink-0" style={{ color: 'var(--ink-3)' }} />}
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
           ))}
         </div>
 
         {/* Низ */}
-        <div className="flex-shrink-0 bg-white border-t hairline p-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))]">
+        <div className="flex-shrink-0 border-t p-2 pb-[max(0.6rem,env(safe-area-inset-bottom))]"
+          style={{ borderColor: 'var(--line)' }}>
           <div className="flex items-center gap-1">
-            <button
-              onClick={onLogout}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 press"
-            >
+            <button onClick={onLogout}
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg press" style={{ color: '#C42C2C' }}>
               <LogOut size={14} />
               <span className="text-[12px] font-bold">Вийти</span>
             </button>
             {env === 'test' && (
-              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-800">
-                <FlaskConical size={10} /> ТЕСТ
+              <span className="k-chip" style={{ color: 'var(--amber)', borderColor: 'var(--amber-line)', background: 'var(--amber-bg)' }}>
+                <FlaskConical size={10} className="inline -mt-0.5 mr-0.5" /> тест
               </span>
             )}
-            <span className="ml-auto text-[10px]" style={{ color: 'var(--ink-3)' }}>Версія від {__BUILD_TIME__}</span>
+            <span className="flex-1" />
             <button
               onClick={async () => {
                 try {
@@ -140,13 +148,12 @@ export default function SideMenu({ env, onClose, onNavigate, onLocked, onLogout,
                 } catch { /* не критично */ }
                 location.reload();
               }}
-              className="p-1.5 rounded-lg press hover:bg-gray-50"
-              style={{ color: 'var(--ink-3)' }}
-              aria-label="Оновити додаток" title="Оновити додаток"
-            >
-              <RefreshCw size={13} />
+              className="p-1.5 rounded press" style={{ color: 'var(--ink-2)' }}
+              aria-label="Оновити додаток" title="Оновити додаток">
+              <RefreshCw size={14} />
             </button>
           </div>
+          <p className="k-label pl-2 mt-1">збірка {__BUILD_TIME__}</p>
         </div>
       </aside>
     </div>

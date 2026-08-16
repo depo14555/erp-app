@@ -400,6 +400,7 @@ export default function App() {
       {showMenu && (
         <SideMenu
           env={env}
+          tab={tab}
           onClose={() => setShowMenu(false)}
           onNavigate={t => { setTab(t); setDetail(null); setShowMenu(false); }}
           onLocked={l => { setShowMenu(false); lockedTab(l); }}

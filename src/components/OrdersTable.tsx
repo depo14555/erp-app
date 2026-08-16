@@ -7,6 +7,7 @@
 //  помаранчевим. Закріплені підняті вгору й підсвічені.
 // ================================================================
 
+import { Paperclip } from 'lucide-react';
 import { Order } from '../types';
 import { statusStyle } from '../types';
 
@@ -57,15 +58,17 @@ export default function OrdersTable({ orders, pinned, activeRow, onOpen, onToggl
                   ? { background: 'var(--accent-soft)' }
                   : pin ? { background: '#FFFAF7' } : undefined}>
 
-                <td className="px-2 py-[6px]">
+                <td className="px-1.5 py-[6px]">
+                  {/* Скріпка — видно з першого погляду, що замовлення закріплене */}
                   <button
                     onClick={e => { e.stopPropagation(); onTogglePin(o.projectId, !pin); }}
-                    className="w-[13px] h-[13px] rounded-full block press"
-                    style={pin
-                      ? { background: 'var(--accent)', boxShadow: 'inset 0 0 0 1.5px var(--accent)' }
-                      : { boxShadow: 'inset 0 0 0 1.5px var(--line-2)' }}
+                    className="p-1 rounded press block"
+                    style={{ color: pin ? 'var(--accent)' : 'var(--line-2)' }}
                     aria-label={pin ? 'Відкріпити' : 'Закріпити'}
-                    title={pin ? 'Відкріпити' : 'Закріпити вгорі списку'} />
+                    title={pin ? 'Відкріпити' : 'Закріпити вгорі списку'}>
+                    <Paperclip size={14} strokeWidth={pin ? 2.6 : 2}
+                      style={{ transform: pin ? 'rotate(-20deg)' : 'none' }} />
+                  </button>
                 </td>
 
                 <td className="px-2.5 py-[6px] min-w-[220px]">
