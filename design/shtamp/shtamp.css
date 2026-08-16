@@ -1,0 +1,183 @@
+/* ================================================================
+   ШТАМП — мова інтерфейсу ТІТАЛ
+   v1.0 · чистий CSS, без залежностей. Підключається в будь-який
+   проєкт: <link> або import у точці входу.
+
+   Ідея одна: екран — це аркуш робочої документації, а не застосунок.
+   Звідси все інше — штамп замість шапки, моно-підписи великими
+   літерами з розрядкою, пунктирні межі рядків, кремовий папір
+   і колір лише там, де він щось означає.
+   ================================================================ */
+
+:root {
+  /* ── Поверхні ────────────────────────────────────────────────── */
+  --bg: #EDE7DA;           /* стіл, на якому лежить аркуш */
+  --surface: #FDFAF2;      /* сам аркуш: панелі, таблиці, картки */
+  --paper: #FDFAF2;        /* синонім --surface; розділяти не варто */
+  --paper-line: #E6DEC9;   /* межі всередині аркуша */
+
+  /* ── Лінії ───────────────────────────────────────────────────── */
+  --line: #DED6C6;         /* звичайна межа */
+  --line-2: #B7AD99;       /* сильніша: рамка штампа, шапка таблиці */
+
+  /* ── Текст ───────────────────────────────────────────────────── */
+  --ink: #1B1F24;          /* основний */
+  --ink-2: #6A6558;        /* другорядний */
+  --ink-3: #A79E8C;        /* підписи, службове */
+
+  /* ── Акцент: один на всю систему ─────────────────────────────── */
+  --accent: #FF4F12;       /* гарячий метал: дії, попередження, брак даних */
+  --accent-soft: #FFEDE6;
+
+  /* ── Значення, а не прикраса ─────────────────────────────────── */
+  --blue: #1B4FD8;   --blue-bg: #EDF2FD;   --blue-line: #C6D4F7;   /* посилання, ШІ */
+  --amber: #B97D00;  --amber-bg: #FBF3E0;  --amber-line: #EAD9A8;  /* очікування */
+  --green: #177A46;  --green-bg: #E4F4EA;  --green-line: #BBE2CB;  /* готово */
+  --violet: #5B32C4; --violet-bg: #F1ECFD; --violet-line: #D6C9F5; /* групи, збірки */
+
+  /* ── Шрифти ──────────────────────────────────────────────────── */
+  --font-sans: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+
+  /* ── Форма ───────────────────────────────────────────────────── */
+  --r-sm: 5px;
+  --r: 8px;
+  --r-lg: 11px;   /* картки, штампи */
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  line-height: 1.4;
+  letter-spacing: -0.005em;
+}
+
+/* Цифри в таблицях завжди моноширинні: стовпчик чисел має читатись
+   як стовпчик, а не як текст. Це головна ознака інженерного вигляду. */
+table { font-variant-numeric: tabular-nums; }
+
+/* Однакове кільце фокуса — з клавіатури працюють щодня */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ПРИМІТИВИ. Їх вистачає, щоб зібрати будь-який екран.
+   ══════════════════════════════════════════════════════════════ */
+
+/** Підпис у штампі: моно, великими, з розрядкою. */
+.k-label {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/** Значення у штампі: моно, напівжирне. */
+.k-value {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/** Заголовок блока-штампа. */
+.k-head {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/** Рамка штампа — товща за звичайну межу, як обведення на кресленні. */
+.k-frame {
+  background: var(--surface);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--r-lg);
+}
+
+/** Пунктирна межа: між рядками таблиці й усередині штампа. */
+.k-dash { border-color: var(--line); border-style: dashed; }
+
+/** Обведений моно-чіп: операція, тип, режим, статус. */
+.k-chip {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 1px 7px;
+  background: var(--bg);
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/** Порожня клітинка: риска по центру, а не порожнеча. */
+.k-empty {
+  color: var(--line-2);
+  font-family: var(--font-mono);
+  text-align: center;
+}
+
+/** Аркуш із даними. */
+.paper { background: var(--paper); }
+
+/** Таблиця-аркуш: однакова висота рядків — головне для ритму.
+    Довге значення обрізається, а не переносить рядок. */
+.paper-table { background: var(--paper); }
+.paper-table thead th {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-align: left;
+  padding: 7px 10px;
+  white-space: nowrap;
+  border-bottom: 1.5px solid var(--ink);   /* шапка відбита жирно */
+  background: var(--paper);
+}
+.paper-table tbody td {
+  padding: 6px 10px;
+  white-space: nowrap;
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom: 1px dashed var(--paper-line);
+}
+.paper-table tbody tr:hover td { background: #FBF6E8; }
+.paper-table tfoot td {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-2);
+  padding: 7px 12px;
+  border-top: 1.5px solid var(--ink);
+  white-space: normal;
+}
+
+/** Натискання: коротке й ледь помітне. */
+.press { transition: transform .1s cubic-bezier(.2,0,0,1), background-color .1s; }
+.press:active { transform: scale(.99); }
+
+/** Мітка функції, що читає документи сама. */
+.k-ai {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 600;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--blue-bg);
+  color: var(--blue);
+  box-shadow: inset 0 0 0 1px var(--blue-line);
+}

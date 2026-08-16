@@ -26,6 +26,7 @@ import NestingSheet from '../components/NestingSheet';
 import PurchasedSheet from '../components/PurchasedSheet';
 import AssemblySheet from '../components/AssemblySheet';
 import OrderInsights, { GAP_FIELDS } from '../components/OrderInsights';
+import DrawingPane from '../components/DrawingPane';
 import PurchasedInline, { PurchLine } from '../components/PurchasedInline';
 import { AiBadge } from '../components/Sidebar';
 import { OrderDetail, OrderItem, Lists, PurchasedRow, statusStyle, fileKind } from '../types';
@@ -167,6 +168,7 @@ export default function OrderPage({
     typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'table' : 'cards'
   );
   const [byAsm, setByAsm] = useState(false);   // групувати позиції по збірках
+  const [preview, setPreview] = useState<OrderItem | null>(null);  // креслення збоку
   const [gap, setGap] = useState('');          // «показати рядки, де цього поля немає»
   const [insightsTick, setInsightsTick] = useState(0);
 
@@ -175,7 +177,7 @@ export default function OrderPage({
 
   // Новий пошук/фільтр або інше замовлення — показуємо знову з першої сторінки
   useEffect(() => { setLimits({}); }, [q, fOp, fExec, fStatus, fKind, gap, header.headerRow]);
-  useEffect(() => { setFOp(''); setFExec(''); setFStatus(''); setFKind(''); setQ(''); setGap(''); setSelected(new Set()); }, [header.headerRow]);
+  useEffect(() => { setFOp(''); setFExec(''); setFStatus(''); setFKind(''); setQ(''); setGap(''); setSelected(new Set()); setPreview(null); }, [header.headerRow]);
   // Кнопка «Друк креслень + QR» у сайдбарі відкриває вікно друку для цього замовлення
   // Сигнали спрацьовують лише при ЗМІНІ (не при монтуванні компонента —
   // інакше вікна самі відкривались при повторному відкритті замовлення)
@@ -597,19 +599,35 @@ export default function OrderPage({
       </div>
 
       {view === 'table' ? (
-        <div className="flex-1 min-h-0 bg-white">
-          <ItemsTable
-            items={filtered.filter(i => !i.group)}
-            lists={lists}
-            mode={tableMode}
-            grouped={byAsm}
-            purchasedBy={purchByAsm}
-            onSave={(row, field, value) => onUpdateRow(row, field, value)}
-            onAddOp={setAddOpItem}
-            selected={selected}
-            onToggleRow={toggleRow}
-            onSelectRows={selectRows}
-          />
+        <div className="flex-1 min-h-0 bg-white flex">
+          <div className="flex-1 min-w-0 min-h-0">
+            <ItemsTable
+              items={filtered.filter(i => !i.group)}
+              lists={lists}
+              mode={tableMode}
+              grouped={byAsm}
+              purchasedBy={purchByAsm}
+              onSave={(row, field, value) => onUpdateRow(row, field, value)}
+              onAddOp={setAddOpItem}
+              selected={selected}
+              onToggleRow={toggleRow}
+              onSelectRows={selectRows}
+              onPreview={setPreview}
+              previewRow={preview?.row ?? null}
+            />
+          </div>
+
+          {/* Креслення збоку: таблиця лишається на екрані */}
+          {preview && (
+            <div className="hidden lg:block flex-shrink-0 w-[42%] max-w-[760px] min-w-[380px]">
+              <DrawingPane
+                item={preview}
+                items={filtered.filter(i => !i.group)}
+                onPick={setPreview}
+                onClose={() => setPreview(null)}
+              />
+            </div>
+          )}
         </div>
       ) : (
       <>

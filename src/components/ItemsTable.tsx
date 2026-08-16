@@ -12,6 +12,7 @@ import {
   Blocks, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import PurchasedInline, { PurchLine } from './PurchasedInline';
+import { canPreview } from './DrawingPane';
 import { OrderItem, Lists, statusStyle } from '../types';
 
 type Field = 'op' | 'executor' | 'qty' | 'assignedQty' | 'material' | 'thickness' | 'note' | 'rowStatus'
@@ -64,6 +65,10 @@ interface Props {
   grouped?: boolean;
   /** Покупні по збірках — своїх рядків у картці вони не мають. */
   purchasedBy?: Map<string, PurchLine[]>;
+  /** Показати креслення в панелі збоку замість переходу на Диск. */
+  onPreview?: (i: OrderItem) => void;
+  /** Позиція, чиє креслення зараз відкрите. */
+  previewRow?: number | null;
 }
 
 interface PopState {
@@ -74,7 +79,10 @@ interface PopState {
   current: string;
 }
 
-export default function ItemsTable({ items, lists, mode, onSave, onAddOp, selected, onToggleRow, onSelectRows, grouped, purchasedBy }: Props) {
+export default function ItemsTable({
+  items, lists, mode, onSave, onAddOp, selected, onToggleRow, onSelectRows,
+  grouped, purchasedBy, onPreview, previewRow,
+}: Props) {
   const [edit, setEdit] = useState<{ row: number; field: Field } | null>(null);
   const [pop, setPop] = useState<PopState | null>(null);
   const [draft, setDraft] = useState('');
@@ -247,7 +255,24 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
     }
     return (
       <span className="inline-flex items-center gap-1 max-w-full">
-        {item.url ? (
+        {/*
+          Клік по назві показує креслення в панелі збоку — рядок лишається
+          перед очима. Значок поруч веде на Диск, коли треба сам файл.
+        */}
+        {item.url && onPreview && canPreview(item) ? (
+          <>
+            <button onClick={() => onPreview(item)}
+              className="text-[var(--blue)] hover:underline text-left min-w-0 press"
+              title="Показати креслення збоку">
+              <span className="line-clamp-1">{item.name}</span>
+            </button>
+            <a href={item.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
+              className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              style={{ color: 'var(--ink-3)' }} title="Відкрити на Диску">
+              <ExternalLink size={11} />
+            </a>
+          </>
+        ) : item.url ? (
           <a href={item.url} target="_blank" rel="noreferrer"
             className="text-[var(--blue)] hover:underline inline-flex items-start gap-1 min-w-0">
             <span className="line-clamp-1">{item.name}</span>
@@ -431,7 +456,10 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
               style={{
                 borderColor: 'var(--paper-line)',
                 borderStyle: 'dashed',
-                ...(selected.has(item.row) ? { background: 'var(--accent-soft)' } : {}),
+                // Рядок, чиє креслення зараз відкрите збоку — щоб не губився
+                ...(previewRow === item.row
+                  ? { background: 'var(--accent-soft)' }
+                  : selected.has(item.row) ? { background: 'var(--accent-soft)' } : {}),
               }}>
               <td className="px-2 py-[6px]" style={route ? { boxShadow: `inset 3px 0 0 ${route.color}` } : undefined}>
                 <button onClick={e => clickRow(e, item.row)} className="flex press" aria-label="Вибрати рядок"
