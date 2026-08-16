@@ -30,10 +30,10 @@ export default function OrdersTable({ orders, pinned, activeRow, onOpen, onToggl
   today.setHours(0, 0, 0, 0);
 
   return (
-    <div className="overflow-x-auto bg-white rounded-[11px] border" style={{ borderColor: 'var(--line)' }}>
-      <table className="w-full border-collapse text-[12.5px]">
+    <div className="overflow-x-auto paper rounded-[11px] border" style={{ borderColor: 'var(--paper-line)' }}>
+      <table className="w-full border-collapse text-[12.5px] paper-table">
         <thead>
-          <tr className="bg-white">
+          <tr className="paper">
             {['', '№ / клієнт', 'Статус', 'Готовність', 'Позицій', 'Запуск', 'Термін', 'ID'].map((h, i) => (
               <th key={i}
                 className={`k-label px-2.5 py-[7px] whitespace-nowrap ${i === 4 ? 'text-right' : 'text-left'}`}
@@ -53,10 +53,14 @@ export default function OrdersTable({ orders, pinned, activeRow, onOpen, onToggl
             return (
               <tr key={o.headerRow}
                 onClick={() => onOpen(o)}
-                className="k-dash border-b cursor-pointer hover:bg-[#F8FAFB]"
-                style={o.headerRow === activeRow
-                  ? { background: 'var(--accent-soft)' }
-                  : pin ? { background: '#FFFAF7' } : undefined}>
+                className="border-b cursor-pointer"
+                style={{
+                  borderColor: 'var(--paper-line)',
+                  borderStyle: 'dashed',
+                  ...(o.headerRow === activeRow
+                    ? { background: 'var(--accent-soft)' }
+                    : pin ? { background: '#FBF1E6' } : {}),
+                }}>
 
                 <td className="px-1.5 py-[6px]">
                   {/* Скріпка — видно з першого погляду, що замовлення закріплене */}

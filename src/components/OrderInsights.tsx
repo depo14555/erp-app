@@ -121,12 +121,12 @@ export default function OrderInsights({ order, items, gap, onGap, onTool, refres
       {open && (
         <>
           {/* ШТАМП 1: що система вже прочитала з креслень */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 rounded-[11px] overflow-hidden mb-2 bg-white border"
-            style={{ borderColor: 'var(--line)' }}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 rounded-[11px] overflow-hidden mb-2 paper border"
+            style={{ borderColor: 'var(--paper-line)' }}>
             {tiles.map(({ key, Icon, label, value, tool }, i) => (
               <button key={key} onClick={() => onTool(tool)}
-                className="flex items-center gap-2.5 px-3 py-[7px] text-left press hover:bg-[var(--bg)]"
-                style={{ borderRight: i < tiles.length - 1 ? '1px dashed var(--line)' : undefined }}
+                className="flex items-center gap-2.5 px-3 py-[7px] text-left press hover:bg-black/[0.03]"
+                style={{ borderRight: i < tiles.length - 1 ? '1px dashed var(--paper-line)' : undefined }}
                 title={value ? 'Відкрити' : 'Ще не рахували — відкрити і прочитати'}>
                 <span className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0"
                   style={value
@@ -147,8 +147,8 @@ export default function OrderInsights({ order, items, gap, onGap, onTool, refres
           </div>
 
           {/* ШТАМП 2: комплектність специфікації — смужка показує пропорцію */}
-          <div className="k-frame overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-1.5 border-b" style={{ borderColor: 'var(--line)' }}>
+          <div className="k-frame paper overflow-hidden">
+            <div className="flex items-center gap-2 px-3 py-1.5 border-b" style={{ borderColor: 'var(--paper-line)' }}>
               <span className="k-head">Комплектність специфікації</span>
               <span className="k-value ml-auto text-[10.5px]">заповнено {pct}%</span>
             </div>
@@ -161,9 +161,9 @@ export default function OrderInsights({ order, items, gap, onGap, onTool, refres
                 const w = total ? Math.round((100 * n) / total) : 0;
                 return (
                   <button key={key} onClick={() => onGap(on ? '' : key)} disabled={ready}
-                    className="px-2.5 py-[7px] text-left press disabled:cursor-default hover:bg-[var(--bg)] disabled:hover:bg-transparent"
+                    className="px-2.5 py-[7px] text-left press disabled:cursor-default hover:bg-black/[0.03] disabled:hover:bg-transparent"
                     style={{
-                      borderRight: (i + 1) % 8 ? '1px dashed var(--line)' : undefined,
+                      borderRight: (i + 1) % 8 ? '1px dashed var(--paper-line)' : undefined,
                       background: on ? 'var(--accent-soft)' : undefined,
                     }}
                     title={ready ? `${label}: заповнено скрізь` : `Показати рядки, де «${label}» не заповнено`}>

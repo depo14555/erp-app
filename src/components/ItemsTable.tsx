@@ -198,16 +198,16 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
     // Виконавець із посиланням на папку (після розподілу КД) — поруч значок
     const folder = field === 'executor' ? (item.executorUrl || '') : '';
     const isList = !!optionsFor(field)?.length;
-    const numeric = /qty|Qty|[Pp]rice|thickness|time/.test(field);
+    const numeric = NUMERIC.has(field);
     const blank = !value;
     return (
       <span className="flex items-center gap-0.5 w-full">
       <button
         onClick={e => openEditor(e, item, field)}
-        className={`w-full text-left px-1.5 py-[3px] rounded text-[12.5px] truncate press hover:bg-[var(--bg)]
-          ${numeric ? 'font-mono text-[11.5px]' : ''}
+        className={`w-full px-1.5 py-[3px] rounded text-[12.5px] truncate press hover:bg-black/[0.03]
+          ${numeric ? 'font-mono text-[11.5px] text-right' : 'text-left'}
           ${field === 'executor' && value ? 'font-semibold' : ''}
-          ${blank ? 'k-empty text-center' : ''}`}
+          ${blank ? 'k-empty !text-center' : ''}`}
         title={value}
       >
         {saving === key
@@ -339,10 +339,10 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
   }
 
   return (
-    <div className="overflow-auto thin-scrollbar h-full">
-      <table className="w-full border-collapse text-[12.5px]">
+    <div className="overflow-auto thin-scrollbar h-full paper">
+      <table className="w-full border-collapse text-[12.5px] paper-table">
         <thead className="sticky top-0 z-10">
-          <tr className="bg-white">
+          <tr className="paper">
             <th className="w-[32px] px-2 py-[7px]" style={{ borderBottom: '1.5px solid var(--ink)' }}>
               <button onClick={() => onSelectRows(shown.map(i => i.row), !allShownSelected)}
                 className="flex press" aria-label="Вибрати все видиме"
@@ -356,7 +356,7 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
               const on = !!colFilters[c.key]?.size;
               return (
                 <th key={c.key}
-                  className={`${c.w} text-left k-label px-2.5 py-[7px] whitespace-nowrap`}
+                  className={`${c.w} k-label px-2.5 py-[7px] whitespace-nowrap ${NUMERIC.has(c.key) ? 'text-right' : 'text-left'}`}
                   style={{ borderBottom: '1.5px solid var(--ink)' }}>
                   <span className="inline-flex items-center gap-1">
                     {c.label}
@@ -427,8 +427,12 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
             const route = routes.get(item.row);
             return (
             <tr key={item.row} data-row={item.row}
-              className="k-dash border-b hover:bg-[#F8FAFB] group"
-              style={selected.has(item.row) ? { background: 'var(--accent-soft)' } : undefined}>
+              className="border-b group"
+              style={{
+                borderColor: 'var(--paper-line)',
+                borderStyle: 'dashed',
+                ...(selected.has(item.row) ? { background: 'var(--accent-soft)' } : {}),
+              }}>
               <td className="px-2 py-[6px]" style={route ? { boxShadow: `inset 3px 0 0 ${route.color}` } : undefined}>
                 <button onClick={e => clickRow(e, item.row)} className="flex press" aria-label="Вибрати рядок"
                   title="Shift+клік — вибрати діапазон">
@@ -575,6 +579,9 @@ export default function ItemsTable({ items, lists, mode, onSave, onAddOp, select
 }
 
 interface Col { key: string; label: string; w: string; filter?: boolean }
+
+/** Числові колонки вирівнюємо праворуч — стовпчик читається як стовпчик. */
+const NUMERIC = new Set(['qty', 'assignedQty', 'thickness', 'time', 'clientPrice', 'execPrice', 'clientSum', 'execSum']);
 
 const COLS_PROD: Col[] = [
   { key: 'id', label: 'ID', w: 'w-[110px]' },
