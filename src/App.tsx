@@ -116,7 +116,16 @@ export default function App() {
   useEffect(() => {
     if (!authed) return;
     loadOrders();
-    api.getLists().then(setLists).catch(() => {/* списки не критичні */});
+    // Довідники несуть випадаючі списки (статус, операція, виконавець).
+    // Мовчазна невдача колись коштувала дропдаунів у таблиці — тому ретраї.
+    let stop = false;
+    const pull = (left: number) => {
+      api.getLists()
+        .then(l => { if (!stop) setLists(l); })
+        .catch(() => { if (!stop && left > 0) setTimeout(() => pull(left - 1), 4000); });
+    };
+    pull(3);
+    return () => { stop = true; };
   }, [authed, loadOrders]);
 
   /** Рядок, на який треба стати після відкриття (з пошуку деталі або QR). */

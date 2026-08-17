@@ -69,6 +69,8 @@ interface Props {
   onPreview?: (i: OrderItem) => void;
   /** Позиція, чиє креслення зараз відкрите. */
   previewRow?: number | null;
+  /** Статуси рядка зі «Спец.аркуша» — приходять зі списком замовлень. */
+  rowStatusList?: string[];
 }
 
 interface PopState {
@@ -81,7 +83,7 @@ interface PopState {
 
 export default function ItemsTable({
   items, lists, mode, onSave, onAddOp, selected, onToggleRow, onSelectRows,
-  grouped, purchasedBy, onPreview, previewRow,
+  grouped, purchasedBy, onPreview, previewRow, rowStatusList,
 }: Props) {
   const [edit, setEdit] = useState<{ row: number; field: Field } | null>(null);
   const [pop, setPop] = useState<PopState | null>(null);
@@ -100,13 +102,31 @@ export default function ItemsTable({
 
   useEffect(() => { if (edit) inputRef.current?.focus(); }, [edit]);
 
+  /**
+   * Значення, які вже стоять у цій картці. Запасний список на випадок,
+   * коли довідник не приїхав: без нього клітинка ставала звичайним полем
+   * вводу — і замість вибору статусу доводилось друкувати його руками.
+   */
+  const used = useMemo(() => {
+    const pick = (f: Field) => {
+      const s = new Set<string>();
+      items.forEach(i => {
+        const v = String((i as any)[f] ?? '').trim();
+        if (v) s.add(v);
+      });
+      return [...s].sort((a, b) => a.localeCompare(b, 'uk'));
+    };
+    return { op: pick('op'), executor: pick('executor'), material: pick('material'), rowStatus: pick('rowStatus') };
+  }, [items]);
+
   function optionsFor(field: Field): string[] | null {
     if (field === 'payStatus') return PAY_OPTIONS;
-    if (!lists) return null;
-    if (field === 'op') return lists.operations;
-    if (field === 'executor') return lists.executors;
-    if (field === 'rowStatus') return lists.rowStatus;
-    if (field === 'material') return lists.materials;
+    // Довідник → те, що вже вжито в картці → нічого (тоді просто поле вводу)
+    const or = (a: string[] | undefined | null, b: string[]) => (a && a.length ? a : (b.length ? b : null));
+    if (field === 'op') return or(lists?.operations, used.op);
+    if (field === 'executor') return or(lists?.executors, used.executor);
+    if (field === 'rowStatus') return or(rowStatusList?.length ? rowStatusList : lists?.rowStatus, used.rowStatus);
+    if (field === 'material') return or(lists?.materials, used.material);
     return null;
   }
 

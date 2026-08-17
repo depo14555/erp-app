@@ -664,6 +664,7 @@ export default function OrderPage({
                   onSelectRows={selectRows}
                   onPreview={setPreview}
                   previewRow={preview?.row ?? null}
+                  rowStatusList={rowStatusList}
                 />
               );
               return isNarrow
