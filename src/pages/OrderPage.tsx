@@ -9,6 +9,7 @@ import {
   ChevronLeft, RefreshCw, FolderOpen, FileText, Ruler, Box, Paperclip,
   ExternalLink, User, Search, Printer, X, Send, Tags, Rocket, Paintbrush, Receipt,
   FolderTree, Calculator, Scissors, Wrench, Layers, ShoppingCart, Blocks, Scale,
+  LayoutGrid, Table2 as TableIcon,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
 import ItemsTable, { TableMode } from '../components/ItemsTable';
@@ -28,6 +29,7 @@ import AssemblySheet from '../components/AssemblySheet';
 import TmcSheet from '../components/TmcSheet';
 import OrderInsights, { GAP_FIELDS, weighItems } from '../components/OrderInsights';
 import DrawingPane from '../components/DrawingPane';
+import PinchZoom from '../components/PinchZoom';
 import PurchasedInline, { PurchLine } from '../components/PurchasedInline';
 import { AiBadge } from '../components/Sidebar';
 import { OrderDetail, OrderItem, Lists, PurchasedRow, statusStyle, fileKind } from '../types';
@@ -177,6 +179,15 @@ export default function OrderPage({
   const [gap, setGap] = useState('');          // «показати рядки, де цього поля немає»
   const [insightsTick, setInsightsTick] = useState(0);
   const [masses, setMasses] = useState<Record<string, number>>({});  // fileId → кг зі штампа
+  // Вузький екран — таблиця показується в масштабованому шарі
+  const [isNarrow, setIsNarrow] = useState(
+    typeof window !== 'undefined' && window.innerWidth < 1024
+  );
+  useEffect(() => {
+    const onResize = () => setIsNarrow(window.innerWidth < 1024);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const { header, items } = detail;
   const st = statusStyle(header.status);
@@ -459,12 +470,28 @@ export default function OrderPage({
             <StampCell k="ID" v={header.projectId} last />
           </div>
 
-          <div className="lg:hidden flex items-center gap-1.5 px-2 flex-shrink-0">
+          <div className="lg:hidden flex items-center gap-1 px-1.5 flex-shrink-0">
             <span className="k-value">{done}<span style={{ color: 'var(--ink-3)' }}>/{total}</span></span>
-            <button onClick={() => setShowTools(true)} className="p-2 press" aria-label="Інструменти замовлення">
+
+            {/*
+              Вигляд перенесено сюди зі стрічки фільтрів: на телефоні кожен
+              рядок над таблицею — це мінус десяток позицій на екрані.
+            */}
+            <div className="flex items-center rounded-md overflow-hidden mx-0.5"
+              style={{ boxShadow: 'inset 0 0 0 1px var(--line)' }}>
+              {([['cards', LayoutGrid, 'Картки'], ['table', TableIcon, 'Таблиця']] as const).map(([v, Icon, label]) => (
+                <button key={v} onClick={() => setView(v)} title={label} aria-label={label}
+                  className="px-2 py-1.5 press transition-colors"
+                  style={view === v ? { background: 'var(--ink)', color: '#fff' } : { color: 'var(--ink-2)' }}>
+                  <Icon size={14} strokeWidth={2} />
+                </button>
+              ))}
+            </div>
+
+            <button onClick={() => setShowTools(true)} className="p-1.5 press" aria-label="Інструменти замовлення">
               <Wrench size={16} />
             </button>
-            <button onClick={() => onRefresh()} className="p-2 press" aria-label="Оновити">
+            <button onClick={() => onRefresh()} className="p-1.5 press" aria-label="Оновити">
               <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
             </button>
           </div>
@@ -582,8 +609,8 @@ export default function OrderPage({
           </button>
         )}
 
-        {/* Картки / Таблиця */}
-        <div className="order-2 lg:order-4 flex items-center rounded-lg bg-white overflow-hidden flex-shrink-0 ml-auto lg:ml-0"
+        {/* Картки / Таблиця — на телефоні цей перемикач стоїть у шапці */}
+        <div className="order-2 lg:order-4 hidden lg:flex items-center rounded-lg bg-white overflow-hidden flex-shrink-0 ml-auto lg:ml-0"
           style={{ boxShadow: 'inset 0 0 0 1px var(--line)' }}>
           {(['cards', 'table'] as const).map(v => (
             <button key={v} onClick={() => setView(v)}
@@ -614,21 +641,35 @@ export default function OrderPage({
 
       {view === 'table' ? (
         <div className="flex-1 min-h-0 bg-white flex">
-          <div className="flex-1 min-w-0 min-h-0">
-            <ItemsTable
-              items={filtered.filter(i => !i.group)}
-              lists={lists}
-              mode={tableMode}
-              grouped={byAsm}
-              purchasedBy={purchByAsm}
-              onSave={(row, field, value) => onUpdateRow(row, field, value)}
-              onAddOp={setAddOpItem}
-              selected={selected}
-              onToggleRow={toggleRow}
-              onSelectRows={selectRows}
-              onPreview={setPreview}
-              previewRow={preview?.row ?? null}
-            />
+          <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+            {/*
+              На телефоні таблиця не влазить по ширині, тому вона живе
+              в масштабованому шарі: двома пальцями або кнопками знизу.
+              На ПК масштабувати нічого не треба — таблиця як була.
+              Сам ItemsTable один: другий, прихований, дарма перемальовував
+              би сотні рядків.
+            */}
+            {(() => {
+              const table = (
+                <ItemsTable
+                  items={filtered.filter(i => !i.group)}
+                  lists={lists}
+                  mode={tableMode}
+                  grouped={byAsm}
+                  purchasedBy={purchByAsm}
+                  onSave={(row, field, value) => onUpdateRow(row, field, value)}
+                  onAddOp={setAddOpItem}
+                  selected={selected}
+                  onToggleRow={toggleRow}
+                  onSelectRows={selectRows}
+                  onPreview={setPreview}
+                  previewRow={preview?.row ?? null}
+                />
+              );
+              return isNarrow
+                ? <PinchZoom fitKey={`${header.headerRow}:${tableMode}:${byAsm}`}>{table}</PinchZoom>
+                : <div className="flex flex-col flex-1 min-h-0">{table}</div>;
+            })()}
           </div>
 
           {/* Креслення збоку: таблиця лишається на екрані */}

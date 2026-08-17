@@ -25,6 +25,7 @@ import PartPage from './pages/PartPage';
 import BillingOverviewPage from './pages/BillingOverviewPage';
 import ExecInvoicesPage from './pages/ExecInvoicesPage';
 import { sharedCount } from './lib/shared';
+import { watchVisualViewport } from './lib/visualViewport';
 import PageSheet from './components/PageSheet';
 import CreateOrderSheet from './components/CreateOrderSheet';
 import NotificationsSheet from './components/NotificationsSheet';
@@ -79,6 +80,9 @@ export default function App() {
   const isOnline = useOnlineStatus();
   const env = getEnv();
   const showToast = useCallback((msg: string, err?: boolean) => setToast({ msg, err }), []);
+
+  // Екран збільшили пальцями — шторки мають лишатись на видимій частині
+  useEffect(() => watchVisualViewport(), []);
 
   // QR-код з креслення веде на #p=<ID> — відкриваємо деталь поверх додатка
   const [partId, setPartId] = useState<string>(() => readPartHash());

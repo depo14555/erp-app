@@ -9,6 +9,10 @@
 //  Растр робить той самий renderDocument, що й Фотошоп креслень;
 //  розібрані сторінки лежать у module-level кеші, тому повторне
 //  відкриття того самого файла миттєве й не качає його вдруге.
+//
+//  Поки ви дивитесь одне креслення, решта завдання читається у фоні —
+//  по одному файлу, від сусідів назовні. Тому ←/→ показують наступне
+//  креслення миттєво, без «читаю файл…».
 // ================================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -19,12 +23,90 @@ import {
 import { api } from '../api';
 import { OrderItem, fileKind } from '../types';
 
-/** Розібрані сторінки живуть між відкриттями панелі. */
+/** Розібрані сторінки живуть між відкриттями панелі (LRU). */
 const pageCache = new Map<string, string[]>();
+/** Стеля кешу: сторінки лежать як data:URL, тримати весь цех у пам'яті не можна. */
+const CACHE_MAX = 40;
+/** Один файл — один запит, навіть якщо його одночасно просять панель і фон. */
+const inFlight = new Map<string, Promise<string[]>>();
 
 export function driveIdOf(url: string): string {
   const m = String(url || '').match(/[-\w]{25,}/);
   return m ? m[0] : '';
+}
+
+function touch(id: string, urls: string[]) {
+  pageCache.delete(id);
+  pageCache.set(id, urls);
+  while (pageCache.size > CACHE_MAX) {
+    const oldest = pageCache.keys().next().value;
+    if (oldest === undefined) break;
+    pageCache.delete(oldest);
+  }
+}
+
+/** Прочитати файл і розібрати на сторінки — з кешу, якщо вже читали. */
+function renderFile(id: string): Promise<string[]> {
+  const hit = pageCache.get(id);
+  if (hit) { touch(id, hit); return Promise.resolve(hit); }
+  const running = inFlight.get(id);
+  if (running) return running;
+
+  const job = (async () => {
+    const fd = await api.fileData(id);
+    const { renderDocument } = await import('../lib/photoPdf');
+    const rendered = await renderDocument(fd.base64, fd.mime);
+    const urls = rendered.map(p => p.canvas.toDataURL('image/jpeg', 0.85));
+    touch(id, urls);
+    return urls;
+  })().finally(() => inFlight.delete(id));
+
+  inFlight.set(id, job);
+  return job;
+}
+
+// ── Фонове читання решти завдання ──────────────────────────────
+// Черга одна на застосунок і йде ПО ОДНОМУ файлу: растр PDF —
+// важка робота, дві паралельні заморозили б прокрутку таблиці.
+let queue: string[] = [];
+let queueTotal = 0;
+let pumping = false;
+const watchers = new Set<(p: { done: number; total: number }) => void>();
+
+function tell() {
+  const done = queueTotal - queue.length;
+  watchers.forEach(fn => fn({ done, total: queueTotal }));
+}
+
+async function pump() {
+  if (pumping) return;
+  pumping = true;
+  while (queue.length) {
+    const id = queue.shift()!;
+    tell();
+    if (!pageCache.has(id)) {
+      try { await renderFile(id); } catch { /* фон мовчить: файл відкриють — покажемо помилку */ }
+    }
+    // віддати кадр інтерфейсу, інакше гортання смикається
+    await new Promise(r => setTimeout(r, 50));
+  }
+  pumping = false;
+  queueTotal = 0;
+  tell();
+}
+
+/** Поставити в чергу все, що ще не прочитане (порядок = пріоритет). */
+function prefetch(ids: string[]) {
+  const fresh = ids.filter(id => id && !pageCache.has(id) && !queue.includes(id));
+  if (!fresh.length) return;
+  queue = queue.concat(fresh);
+  queueTotal = pumping ? queueTotal + fresh.length : fresh.length;
+  pump();
+}
+
+function watchPrefetch(fn: (p: { done: number; total: number }) => void) {
+  watchers.add(fn);
+  return () => { watchers.delete(fn); };
 }
 
 /** Чи вміємо показати цей файл усередині: PDF і зображення. */
@@ -47,6 +129,7 @@ export default function DrawingPane({ item, items, onPick, onClose }: Props) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [full, setFull] = useState(false);   // вписати / реальний масштаб
+  const [ahead, setAhead] = useState({ done: 0, total: 0 });  // читання наперед
   const box = useRef<HTMLDivElement>(null);
 
   /** Лише ті сусіди, які взагалі можна показати. */
@@ -65,27 +148,35 @@ export default function DrawingPane({ item, items, onPick, onClose }: Props) {
     setPage(0);
     setErr('');
     const hit = pageCache.get(id);
-    if (hit) { setPages(hit); return; }
+    if (hit) { setPages(hit); setBusy(false); return; }
 
     let alive = true;
     setBusy(true);
     setPages([]);
-    (async () => {
-      try {
-        const fd = await api.fileData(id);
-        const { renderDocument } = await import('../lib/photoPdf');
-        const rendered = await renderDocument(fd.base64, fd.mime);
-        const urls = rendered.map(p => p.canvas.toDataURL('image/jpeg', 0.85));
-        pageCache.set(id, urls);
-        if (alive) setPages(urls);
-      } catch (e: any) {
-        if (alive) setErr(e?.message || 'Не вдалося відкрити файл');
-      } finally {
-        if (alive) setBusy(false);
-      }
-    })();
+    renderFile(id)
+      .then(urls => { if (alive) setPages(urls); })
+      .catch(e => { if (alive) setErr(e?.message || 'Не вдалося відкрити файл'); })
+      .finally(() => { if (alive) setBusy(false); });
     return () => { alive = false; };
   }, [item.row, item.url]);
+
+  /**
+   * Фон: коли поточне креслення показане, ставимо в чергу решту —
+   * спершу найближчих сусідів (їх відкриють стрілками), далі назовні.
+   */
+  useEffect(() => {
+    if (busy || at < 0 || shown.length < 2) return;
+    const ids: string[] = [];
+    for (let d = 1; d <= shown.length && ids.length < CACHE_MAX; d++) {
+      const right = shown[(at + d) % shown.length];
+      const left = shown[(at - d + shown.length) % shown.length];
+      if (right) ids.push(driveIdOf(right.url));
+      if (left && left !== right) ids.push(driveIdOf(left.url));
+    }
+    prefetch(ids);
+  }, [busy, at, shown]);
+
+  useEffect(() => watchPrefetch(setAhead), []);
 
   // Клавіші: ←/→ між позиціями, Esc закриває
   useEffect(() => {
@@ -183,6 +274,14 @@ export default function DrawingPane({ item, items, onPick, onClose }: Props) {
         )}
 
         <span className="flex-1" />
+
+        {ahead.total > 0 && ahead.done < ahead.total && (
+          <span className="k-label flex items-center gap-1 mr-1"
+            title="Решта креслень завдання читається у фоні — далі гортання буде миттєвим">
+            <Loader2 size={10} className="animate-spin" />
+            наперед {ahead.done}/{ahead.total}
+          </span>
+        )}
 
         {shown.length > 1 && (
           <>

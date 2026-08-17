@@ -67,6 +67,12 @@ export default function OrderCard({ order, onOpen, active, pinned, onTogglePin }
             <div className="flex items-center justify-between text-[11px] mb-1">
               <span className="text-gray-500 flex items-center gap-1">
                 <Package size={11} /> {order.done} з {order.total} готово
+                {/* Маса зі штампів — та сама цифра, що в таблиці на ПК */}
+                {!!order.massKg && (
+                  <span className="font-mono" style={{ color: 'var(--ink-3)' }}>
+                    · {order.massKg.toFixed(1)} кг
+                  </span>
+                )}
               </span>
               <span className="font-bold tabular-nums" style={{ color: st.fg }}>{pct}%</span>
             </div>

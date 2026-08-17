@@ -86,8 +86,9 @@ export default function OrdersPage({
             style={{ boxShadow: 'inset 0 0 0 1px var(--line)', color: 'var(--ink)' }} title="Нові замовлення з пошти">
             <Inbox size={14} /> <span className="hidden lg:inline">Пошта</span>
           </button>
+          {/* Пошук деталі — на телефоні його заміняє поле пошуку поруч, тому ховаємо */}
           <button onClick={onSearch}
-            className="flex items-center gap-1.5 px-2.5 py-[6px] rounded-lg text-[12px] font-bold press bg-white whitespace-nowrap"
+            className="hidden lg:flex items-center gap-1.5 px-2.5 py-[6px] rounded-lg text-[12px] font-bold press bg-white whitespace-nowrap"
             style={{ boxShadow: 'inset 0 0 0 1px var(--line)', color: 'var(--ink)' }} title="Пошук деталі по всіх замовленнях">
             <ScanSearch size={14} /> <span className="hidden lg:inline">Пошук деталі</span>
           </button>
@@ -99,11 +100,12 @@ export default function OrdersPage({
 
           <div className="flex items-center rounded-lg bg-white overflow-hidden flex-shrink-0"
             style={{ boxShadow: 'inset 0 0 0 1px var(--line)' }}>
+            {/* Таблиця замовлень на телефон не влазить — там лишаються картки й дошки */}
             {([['table', 'Таблиця', List], ['cards', 'Картки', LayoutGrid], ['kanban', 'Дошки', Columns3]] as const).map(([v, label, Icon]) => {
               const on = view === v;
               return (
                 <button key={v} onClick={() => setView(v)}
-                  className="flex items-center gap-1.5 px-2.5 py-[6px] text-[12px] font-bold transition-colors whitespace-nowrap"
+                  className={`items-center gap-1.5 px-2.5 py-[6px] text-[12px] font-bold transition-colors whitespace-nowrap ${v === 'table' ? 'hidden md:flex' : 'flex'}`}
                   style={on ? { background: 'var(--ink)', color: '#fff' } : { color: 'var(--ink-2)' }}
                   title={label}>
                   <Icon size={14} strokeWidth={2} />

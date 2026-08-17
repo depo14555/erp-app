@@ -28,15 +28,16 @@ function parseDate(s: string): number {
 export default function OrdersTable({ orders, pinned, activeRow, onOpen, onTogglePin }: Props) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const totalKg = orders.reduce((s, o) => s + (o.massKg || 0), 0);
 
   return (
     <div className="overflow-x-auto paper rounded-[11px] border" style={{ borderColor: 'var(--paper-line)' }}>
       <table className="w-full border-collapse text-[12.5px] paper-table">
         <thead>
           <tr className="paper">
-            {['', '№ / клієнт', 'Статус', 'Готовність', 'Позицій', 'Запуск', 'Термін', 'ID'].map((h, i) => (
+            {['', '№ / клієнт', 'Статус', 'Готовність', 'Позицій', 'Маса', 'Запуск', 'Термін', 'ID'].map((h, i) => (
               <th key={i}
-                className={`k-label px-2.5 py-[7px] whitespace-nowrap ${i === 4 ? 'text-right' : 'text-left'}`}
+                className={`k-label px-2.5 py-[7px] whitespace-nowrap ${i === 4 || i === 5 ? 'text-right' : 'text-left'}`}
                 style={{ borderBottom: '1.5px solid var(--ink)' }}>
                 {h}
               </th>
@@ -103,6 +104,15 @@ export default function OrdersTable({ orders, pinned, activeRow, onOpen, onToggl
                 </td>
 
                 <td className="px-2.5 py-[6px] text-right font-mono text-[12px]">{o.total}</td>
+
+                {/* Маса металу зі штампів; «—» = штампи цієї картки ще не читали */}
+                <td className="px-2.5 py-[6px] text-right font-mono text-[11.5px] whitespace-nowrap"
+                  title={o.massKg ? `За штампами ${o.massFiles} креслень` : 'Штампи ще не читали — «ТМЦ і вага» в замовленні'}>
+                  {o.massKg
+                    ? <>{o.massKg.toFixed(1)} <span style={{ color: 'var(--ink-3)' }}>кг</span></>
+                    : <span className="k-empty">—</span>}
+                </td>
+
                 <td className="px-2.5 py-[6px] font-mono text-[11.5px]">{o.date || <span className="k-empty">—</span>}</td>
                 <td className="px-2.5 py-[6px] font-mono text-[11.5px]"
                   style={late ? { color: 'var(--accent)', fontWeight: 600 } : undefined}>
@@ -117,9 +127,10 @@ export default function OrdersTable({ orders, pinned, activeRow, onOpen, onToggl
         </tbody>
         <tfoot>
           <tr>
-            <td colSpan={8} className="k-label px-3 py-[7px] normal-case tracking-normal"
+            <td colSpan={9} className="k-label px-3 py-[7px] normal-case tracking-normal"
               style={{ borderTop: '1.5px solid var(--ink)', fontSize: '10.5px' }}>
               Показано {orders.length} замовлень · закріплених {orders.filter(o => pinned.has(o.projectId)).length}
+              {totalKg > 0 && ` · маса за штампами ${totalKg.toFixed(1)} кг`}
             </td>
           </tr>
         </tfoot>

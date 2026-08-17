@@ -14,6 +14,10 @@ export interface Order {
   done: number;
   deadline: string;
   note: string;
+  /** Маса металу за прочитаними штампами, кг (0 — ще не читали). */
+  massKg?: number;
+  /** Скільки креслень дали масу — видно, чи це вся картка. */
+  massFiles?: number;
 }
 
 export interface OrdersResponse {

@@ -68,6 +68,21 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /*
+    ШТОРКИ НА ЗБІЛЬШЕНОМУ ЕКРАНІ. Коли сторінку розтягнули пальцями,
+    fixed рахується від сторінки — вікно виїжджає за край. Змінні --vv-*
+    (їх пише lib/visualViewport.ts) саджають шар рівно на видиму частину;
+    при масштабі 1 це ті самі 0 / 100 %, тобто нічого не змінюється.
+  */
+  .fixed.inset-0 {
+    top: var(--vv-top, 0px);
+    left: var(--vv-left, 0px);
+    right: auto;
+    bottom: auto;
+    width: var(--vv-w, 100%);
+    height: var(--vv-h, 100%);
+  }
+
   /* Однакове кільце фокуса скрізь — важливо, коли працюють з клавіатури */
   :focus-visible {
     outline: 2px solid var(--accent);
