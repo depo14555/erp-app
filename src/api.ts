@@ -487,9 +487,13 @@ export const api = {
     return post('erp.purchasedAll');
   },
 
-  /** Відмітка закупівлі: «Замовлено» / «Куплено» / порожньо. */
-  purchasedStatus(rows: number[], status: string, batch?: string): Promise<{ updated: number; by?: string }> {
-    return post('erp.purchasedStatus', { rows, status, batch });
+  /**
+   * Відмітка закупівлі: статус (Опрацювання / Замовлено / Доставлено або
+   * порожньо) і назва списку-заявки. keepBatch — міняємо лише статус.
+   */
+  purchasedStatus(rows: number[], status: string, batch?: string, keepBatch?: boolean):
+    Promise<{ updated: number; by?: string }> {
+    return post('erp.purchasedStatus', { rows, status, batch, keepBatch });
   },
 
   /**
