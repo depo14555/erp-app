@@ -24,6 +24,7 @@ import MailPage from './pages/MailPage';
 import PartPage from './pages/PartPage';
 import BillingOverviewPage from './pages/BillingOverviewPage';
 import ExecInvoicesPage from './pages/ExecInvoicesPage';
+import PurchasedPage from './pages/PurchasedPage';
 import { sharedCount } from './lib/shared';
 import { watchVisualViewport } from './lib/visualViewport';
 import PageSheet from './components/PageSheet';
@@ -258,13 +259,16 @@ export default function App() {
   if (!authed) return <TokenGate onSuccess={() => setAuthed(true)} />;
 
   const title = tab === 'mail' ? 'Вхідні (пошта)'
+    : tab === 'purch' ? 'Покупні'
     : tab === 'execinv' ? 'Рахунки виконавців'
     : tab === 'billing' ? 'Рахунки і оплати'
     : tab === 'contractors' ? 'Контрагенти'
     : tab === 'staff' ? 'Штат працівників'
     : tab === 'calc' ? 'Прорахунок'
     : (TABS.find(t => t.key === tab)?.label ?? 'ERP');
-  const subtitle = tab === 'execinv'
+  const subtitle = tab === 'purch'
+    ? 'що треба купити по всіх замовленнях'
+    : tab === 'execinv'
     ? 'вільні рахунки · прив\'язка до позицій'
     : tab === 'mail'
     ? 'нові замовлення з Gmail'
@@ -299,6 +303,8 @@ export default function App() {
       <BillingOverviewPage onOpenOrder={hr => openOrder(hr)} onToast={showToast} refreshSignal={overviewTick} />
     ) : tab === 'execinv' ? (
       <ExecInvoicesPage onToast={showToast} onOpenOrder={(hr, row) => openOrder(hr, false, undefined, row)} />
+    ) : tab === 'purch' ? (
+      <PurchasedPage orders={orders} onToast={showToast} onOpenOrder={hr => openOrder(hr)} refreshKey={dirTick} />
     ) : (
       <ChatPage onToast={showToast} />
     )

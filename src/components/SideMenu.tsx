@@ -9,7 +9,7 @@
 import {
   X, LogOut, FlaskConical, RefreshCw, Lock,
   ClipboardList, MessageSquare, Truck, Building2, UserRound, Calculator,
-  Receipt, FileInput,
+  Receipt, FileInput, ShoppingCart,
 } from 'lucide-react';
 import { AppTab } from '../types';
 import { EnvKey } from '../api';
@@ -47,6 +47,7 @@ const GROUPS: MenuGroup[] = [
     title: 'Гроші',
     items: [
       { Icon: Calculator, label: 'Прорахунок', tab: 'calc' },
+      { Icon: ShoppingCart, label: 'Покупні', tab: 'purch' },
       { Icon: Receipt, label: 'Рахунки і оплати', tab: 'billing' },
       { Icon: FileInput, label: 'Рахунки виконавців', tab: 'execinv' },
     ],

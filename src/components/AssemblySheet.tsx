@@ -28,6 +28,7 @@ import {
   parseDrawings, driveIdFromUrl, decimalCore, normName, assemblyLabel,
   ParsedDrawing, ParseProgress,
 } from '../lib/ai';
+import { num } from './ItemsTable';
 import { OrderDetail, OrderItem } from '../types';
 
 interface Props {
@@ -181,12 +182,63 @@ export default function AssemblySheet({ detail, onClose, onMinimize, onToast, on
 
   const matched = groups.reduce((s, g) => s + g.parts.filter(p => p.rows.length).length, 0);
 
+  /**
+   * Скільки збірок роблять. Беремо з рядка самого складального креслення
+   * в картці; якщо там порожньо (а так буває часто) — 1, і цифру можна
+   * виправити руками просто в заголовку збірки.
+   */
+  const [setsRaw, setSetsRaw] = useState<Record<string, string>>({});
+  function setsOf(fileId: string, own: OrderItem | null): number {
+    const manual = setsRaw[fileId];
+    if (manual !== undefined) return num(manual);
+    return num(own?.assignedQty) || num(own?.qty) || 1;
+  }
+
+  /**
+   * КІЛЬКІСТЬ ЗІ СПЕЦИФІКАЦІЇ. У специфікації стоїть, скільки деталі йде
+   * на ОДНУ збірку; множимо на число збірок. Деталь може входити в кілька
+   * збірок — тоді складаємо. Маршрутні рядки (та сама деталь на двох
+   * операціях) отримують ту саму кількість: у картці кожна операція несе
+   * повну кількість.
+   */
+  const qtyPlan = useMemo(() => {
+    const plan = new Map<number, { item: OrderItem; now: string; next: number; from: string[] }>();
+    groups.forEach(g => {
+      const sets = setsOf(g.p.fileId, g.own);
+      if (!sets) return;                       // 0 збірок — рахувати нічого
+      g.parts.forEach(p => {
+        const per = num(p.qty);
+        if (!per || !p.rows.length) return;
+        p.rows.forEach(r => {
+          const cur = plan.get(r.row) || { item: r, now: String(r.qty ?? ''), next: 0, from: [] };
+          cur.next += per * sets;
+          const label = `${g.label}: ${per}×${sets}`;
+          if (!cur.from.includes(label)) cur.from.push(label);
+          plan.set(r.row, cur);
+        });
+      });
+    });
+    return [...plan.values()]
+      .filter(p => p.next > 0 && String(p.next) !== String(num(p.now)))
+      .sort((a, b) => a.item.row - b.item.row);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, setsRaw]);
+
+  const [withQty, setWithQty] = useState(true);
+  const [skipQty, setSkipQty] = useState<Set<number>>(new Set());
+  const qtyToWrite = qtyPlan.filter(p => !skipQty.has(p.item.row));
+
   async function save() {
     if (!Object.keys(map).length) { onToast('Немає що записувати', true); return; }
     setSaving(true);
     try {
       const res = await api.fillAssembly(detail.header.headerRow, map);
-      onToast(`💾 Збірку проставлено ${res.updated} позиціям`);
+      let extra = '';
+      if (withQty && qtyToWrite.length) {
+        const w = await api.rowsUpdate(qtyToWrite.map(p => ({ row: p.item.row, fields: { qty: String(p.next) } })));
+        extra = ` · кількість у ${w.rows} поз.`;
+      }
+      onToast(`💾 Збірку проставлено ${res.updated} позиціям${extra}`);
       onRefresh('Проставляю збірки…');
     } catch (e: any) {
       onToast(e?.message || 'Не вдалося записати', true);
@@ -330,13 +382,72 @@ export default function AssemblySheet({ detail, onClose, onMinimize, onToast, on
                       без збірки: {orphans.length}
                     </span>
                   )}
+                  {/* Кількість зі специфікації: «на 1 збірку» × «скільки збірок» */}
+                  {qtyPlan.length > 0 && (
+                    <button onClick={() => setWithQty(v => !v)}
+                      className="k-chip press flex items-center gap-1.5"
+                      style={withQty
+                        ? { background: 'var(--blue-bg)', color: 'var(--blue)', borderColor: 'var(--blue-line)' }
+                        : undefined}
+                      title="Кількість береться зі специфікації і множиться на число збірок у картці">
+                      {withQty ? <CheckSquare size={11} /> : <Square size={11} />}
+                      і кількість ({qtyToWrite.length})
+                    </button>
+                  )}
                   <button onClick={save} disabled={saving}
                     className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-[12px] press disabled:opacity-50"
                     style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
                     {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-                    Проставити «Збірку» в картці
+                    Записати в картку
                   </button>
                 </div>
+
+                {/* Що саме стане з кількістю — видно ДО запису, рядок можна вимкнути */}
+                {withQty && qtyPlan.length > 0 && (
+                  <div className="flex-shrink-0 border-b hairline max-h-[190px] overflow-y-auto">
+                    <p className="k-head px-3 py-1.5 sticky top-0"
+                      style={{ background: 'var(--blue-bg)', color: 'var(--blue)' }}>
+                      Кількість зі специфікації · {qtyToWrite.length} з {qtyPlan.length}
+                    </p>
+                    <table className="w-full border-collapse text-[12px]">
+                      <tbody>
+                        {qtyPlan.map(p => {
+                          const off = skipQty.has(p.item.row);
+                          return (
+                            <tr key={p.item.row} className="border-t hairline" style={off ? { opacity: 0.45 } : undefined}>
+                              <td className="px-2 py-[4px] w-[30px]">
+                                <button onClick={() => setSkipQty(s => {
+                                  const n = new Set(s);
+                                  n.has(p.item.row) ? n.delete(p.item.row) : n.add(p.item.row);
+                                  return n;
+                                })} className="p-0.5 press" aria-label="Не писати цей рядок">
+                                  {off ? <Square size={12} style={{ color: 'var(--line-2)' }} />
+                                       : <CheckSquare size={12} style={{ color: 'var(--blue)' }} />}
+                                </button>
+                              </td>
+                              <td className="px-1 py-[4px] font-mono text-[10.5px] whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
+                                {p.item.id}
+                              </td>
+                              {/* max-width:0 + width:100% — щоб назва займала все вільне й обрізалась */}
+                              <td className="px-1.5 py-[4px] truncate" style={{ maxWidth: 0, width: '100%' }}
+                                title={p.item.name}>{p.item.name}</td>
+                              <td className="px-1.5 py-[4px] k-label truncate max-w-[190px]" title={p.from.join(' + ')}>
+                                {p.from.join(' + ')}
+                              </td>
+                              <td className="px-1.5 py-[4px] text-right font-mono whitespace-nowrap" style={{ color: 'var(--ink-3)' }}>
+                                {p.now || '—'}
+                              </td>
+                              <td className="px-2 py-[4px] text-right font-mono font-bold whitespace-nowrap"
+                                style={{ color: 'var(--blue)' }}>
+                                → {p.next}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
                 <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
                   {groups.map(g => {
@@ -355,7 +466,19 @@ export default function AssemblySheet({ detail, onClose, onMinimize, onToast, on
                               {g.p.mass && ` · маса ${g.p.mass}`}
                             </span>
                           </span>
-                          <span className="text-[11.5px] font-bold tabular-nums flex-shrink-0" style={{ color: '#7C3AED' }}>
+                          {/* Скільки таких збірок роблять — на це множиться к-сть зі специфікації */}
+                          <span onClick={e => e.stopPropagation()}
+                            className="flex items-center gap-1 flex-shrink-0" title="Скільки збірок у замовленні">
+                            <span className="k-label">×</span>
+                            <input
+                              value={String(setsOf(g.p.fileId, g.own))}
+                              onChange={e => setSetsRaw(s => ({ ...s, [g.p.fileId]: e.target.value.replace(/[^\d.,]/g, '') }))}
+                              inputMode="numeric"
+                              className="w-[46px] px-1.5 py-[3px] rounded-[6px] text-[11.5px] font-mono text-right outline-none"
+                              style={{ background: 'var(--surface)', boxShadow: 'inset 0 0 0 1px var(--line-2)' }} />
+                            <span className="k-label">компл.</span>
+                          </span>
+                          <span className="text-[11.5px] font-bold tabular-nums flex-shrink-0" style={{ color: 'var(--violet)' }}>
                             {inOrder}/{g.parts.length}
                           </span>
                         </button>
@@ -378,8 +501,14 @@ export default function AssemblySheet({ detail, onClose, onMinimize, onToast, on
                                     {part.alsoIn && ` · також у «${part.alsoIn}»`}
                                   </span>
                                 </span>
-                                <span className="text-[11.5px] tabular-nums flex-shrink-0" style={{ color: 'var(--ink-2)' }}>
+                                <span className="text-[11.5px] tabular-nums flex-shrink-0 text-right" style={{ color: 'var(--ink-2)' }}>
                                   {part.qty || '—'} шт
+                                  {/* на скільки це вийде з урахуванням числа збірок */}
+                                  {num(part.qty) > 0 && setsOf(g.p.fileId, g.own) > 1 && (
+                                    <span className="k-label block">
+                                      = {num(part.qty) * setsOf(g.p.fileId, g.own)}
+                                    </span>
+                                  )}
                                 </span>
                                 {part.rows.length
                                   ? <Check size={13} className="text-emerald-600 flex-shrink-0 mt-0.5" />

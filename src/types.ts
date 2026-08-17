@@ -133,7 +133,7 @@ export interface ChatMessage {
   itemName: string;
 }
 
-export type AppTab = 'orders' | 'calc' | 'contractors' | 'staff' | 'search' | 'logistics' | 'chat' | 'mail' | 'billing' | 'execinv';
+export type AppTab = 'orders' | 'calc' | 'contractors' | 'staff' | 'search' | 'logistics' | 'chat' | 'mail' | 'billing' | 'execinv' | 'purch';
 
 /** Дошка канбану: власні колонки поверх статусів («Пріоритет», «Пауза»…). */
 export interface KanbanBoardData {
@@ -218,6 +218,31 @@ export interface StaffData {
 /** Покупний виріб у зведенні замовлення (аркуш «Покупні»). */
 export interface PurchasedRow { row: number; [col: string]: string | number }
 export interface PurchasedData { fields: StaffField[]; rows: PurchasedRow[] }
+
+/**
+ * Рядок закупівлі з іменованими полями — розділ «Покупні» по всіх
+ * замовленнях. status: '' (треба купити) | 'Замовлено' | 'Куплено'.
+ */
+export interface PurchaseLine {
+  row: number;          // рядок аркуша — по ньому ставимо відмітку
+  order: string;        // projectId замовлення
+  assembly: string;
+  file: string;
+  pos: string;
+  code: string;
+  name: string;
+  perOne: string;
+  sets: string;
+  total: string;
+  material: string;
+  confidence: string;
+  page: string;
+  sourceText: string;
+  at: string;
+  status: string;
+  batch: string;        // мітка заявки, якою позицію замовляли
+  by: string;           // хто і коли відмітив
+}
 
 /**
  * Рахунок, який виставив НАМ виконавець (аркуш «Рахунки виконавців»).

@@ -15,7 +15,7 @@ import {
   FolderFile, BillingData, CommerceContext, CommerceResult, DocType, CreateOrderResult,
   BillingOverview, DistributionData, DistributeParams, DistributeResult, CalcData,
   NestItemsData, NestPrice, ContractorsData, KanbanBoardData, CalcOverview, StaffData,
-  PriceData, PurchasedData, OrderAiSummary, ExecInvoiceData,
+  PriceData, PurchasedData, PurchaseLine, OrderAiSummary, ExecInvoiceData,
 } from './types';
 
 /** Середовища: робоча таблиця і тестова копія (щоб не псувати реальні дані). */
@@ -82,7 +82,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 /** Читання можна безпечно повторити; мутації — ні (щоб не задвоїти запис). */
 function isReadAction(action: string): boolean {
-  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|rowsUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute|calcSave|contractorSave|contractorAddOp|staffSave|staffAddSkill|staffPhoto|priceSave|aiParseSave|aiCorrect|purchasedSave|invoiceAdd|invoiceUpdate|invoiceLink|invoiceUnlink|invoiceDelete|boards)/.test(action);
+  return !/^erp\.(set|chatSend|updateRow|bulkUpdate|rowsUpdate|execSend|addPhoto|fillAssembly|groupCard|techLaunch|mailProcess|savePdf|commerceCreate|createOrder|uploadOrderFile|addOperation|pin|distribute|calcSave|contractorSave|contractorAddOp|staffSave|staffAddSkill|staffPhoto|priceSave|aiParseSave|aiCorrect|purchasedSave|purchasedStatus|invoiceAdd|invoiceUpdate|invoiceLink|invoiceUnlink|invoiceDelete|boards)/.test(action);
 }
 
 function cacheGet<T>(key: string): T | null {
@@ -480,6 +480,16 @@ export const api = {
   /** Записати зведення покупних (рядки замовлення перезаписуються). */
   purchasedSave(order: string, rows: any[]): Promise<{ saved: number; at?: string }> {
     return post('erp.purchasedSave', { order, rows });
+  },
+
+  /** Покупні по ВСІХ замовленнях — розділ закупівель. */
+  purchasedAll(): Promise<{ rows: PurchaseLine[]; statuses: string[] }> {
+    return post('erp.purchasedAll');
+  },
+
+  /** Відмітка закупівлі: «Замовлено» / «Куплено» / порожньо. */
+  purchasedStatus(rows: number[], status: string, batch?: string): Promise<{ updated: number; by?: string }> {
+    return post('erp.purchasedStatus', { rows, status, batch });
   },
 
   /**

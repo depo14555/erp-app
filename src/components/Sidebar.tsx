@@ -225,6 +225,7 @@ export default function Sidebar({
           <SecTitle mini={collapsed}>Гроші</SecTitle>
           {([
             ['calc', 'Прорахунок', Calculator],
+            ['purch', 'Покупні', ShoppingCart],
             ['billing', 'Рахунки і оплати', Receipt],
             ['execinv', 'Рахунки виконавців', FileInput],
           ] as const).map(([key, label, Icon]) => {

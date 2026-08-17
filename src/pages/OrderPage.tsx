@@ -302,7 +302,11 @@ export default function OrderPage({
       const name = [String(r['6'] || '').trim(), String(r['5'] || '').trim()]
         .filter(Boolean).join(' ');
       const a = m.get(asm) || [];
-      a.push({ pos: String(r['4'] || ''), name, total: String(r['9'] || '') });
+      // row і status — щоб галочка «куплено» писала прямо в аркуш
+      a.push({
+        pos: String(r['4'] || ''), name, total: String(r['9'] || ''),
+        row: r.row, status: String(r['15'] || ''),
+      });
       m.set(asm, a);
     });
     return m;
