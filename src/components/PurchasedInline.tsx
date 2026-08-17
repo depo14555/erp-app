@@ -65,25 +65,29 @@ export default function PurchasedInline({ lines, onToast }: {
         <ShoppingCart size={12} className="flex-shrink-0" style={{ color: 'var(--amber)' }} />
         <span className="k-head" style={{ color: 'var(--amber)' }}>Покупні до збірки</span>
         <span className="k-label ml-auto">
-          {doneCount ? `є ${doneCount} з ${sorted.length}` : `${sorted.length} найм.`} · {qty} шт
+          {doneCount ? `${doneCount}/${sorted.length} доставлено` : `${sorted.length} найм.`} · {qty} шт
         </span>
       </div>
 
-      <table className="w-full border-collapse text-[12px]">
+      <table className="w-full border-collapse text-[12px]" style={{ tableLayout: 'auto' }}>
         <tbody>
           {sorted.map((l, i) => {
             const st = statusOf(l);
             const done = st === 'Куплено';
             return (
               <tr key={`${l.pos}:${l.name}:${i}`} className="border-t" style={{ borderColor: 'var(--paper-line)' }}>
-                <td className="px-2 py-[4px] w-[34px] text-right font-mono text-[10.5px]" style={{ color: 'var(--ink-3)' }}>
+                <td className="px-2 py-[4px] w-[30px] text-right font-mono text-[10.5px]" style={{ color: 'var(--ink-3)' }}>
                   {l.pos || '—'}
                 </td>
-                <td className="px-1 py-[4px] truncate max-w-0" title={l.name}
-                  style={done ? { color: 'var(--ink-3)', textDecoration: 'line-through' } : undefined}>
+                {/* max-width:0 + width:100% — назва займає все вільне й обрізається,
+                    інакше довгий рядок виштовхує кількість і галочку за край */}
+                <td className="px-1 py-[4px] truncate" style={{
+                  maxWidth: 0, width: '100%',
+                  ...(done ? { color: 'var(--ink-3)', textDecoration: 'line-through' } : {}),
+                }} title={l.name}>
                   {l.name}
                 </td>
-                <td className="px-2 py-[4px] w-[70px] text-right font-mono font-bold whitespace-nowrap">
+                <td className="px-1.5 py-[4px] w-[58px] text-right font-mono font-bold whitespace-nowrap">
                   {l.total} <span className="font-normal" style={{ color: 'var(--ink-3)' }}>шт</span>
                 </td>
                 <td className="px-1.5 py-[4px] w-[30px]">

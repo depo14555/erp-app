@@ -229,13 +229,25 @@ export interface ParseInput { fileId: string; name: string; size: number }
  * Розбір списку креслень. Що вже є в аркуші «Розбір» — не оплачується.
  * Перший новий файл іде сам (прогріває кеш системного промпту),
  * решта — пулом по `concurrency`.
+ *
+ * ОДНЕ КРЕСЛЕННЯ — ОДИН РЕЗУЛЬТАТ. Той самий файл стоїть у картці
+ * кількома рядками (маршрут: лазер → гнуття), тому в списку він
+ * приходить кілька разів. Якби ми віддали його стільки ж разів,
+ * склад збірки й покупні порахувались би подвійно — саме так
+ * колись подвоїлась вага в ТМЦ.
  */
 export async function parseDrawings(
   order: string,
-  files: ParseInput[],
+  input: ParseInput[],
   opts: { onProgress?: (p: ParseProgress) => void; concurrency?: number; signal?: AbortSignal } = {}
 ): Promise<ParsedDrawing[]> {
   const { onProgress, concurrency = 6, signal } = opts;
+  const seen = new Set<string>();
+  const files = input.filter(f => {
+    if (!f.fileId || seen.has(f.fileId)) return false;
+    seen.add(f.fileId);
+    return true;
+  });
   const out = new Map<string, ParsedDrawing>();
   let cost = 0, done = 0, cached = 0;
   const tick = (name: string) => onProgress?.({ done, total: files.length, name, cost, cached });

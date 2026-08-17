@@ -116,12 +116,20 @@ export default function PurchasedPage({ orders, onToast, onOpenOrder, refreshKey
     return m;
   }, [orders]);
 
-  /** Зведення по номенклатурі: ключ — назва + код, як у розборі. */
+  /**
+   * Зведення по номенклатурі: ключ — назва + код, як у розборі.
+   * Дублі (те саме креслення прийшло кількома рядками маршруту)
+   * рахуємо один раз — інакше 8 гайок перетворюються на 32.
+   */
   const groups = useMemo(() => {
     const m = new Map<string, Group>();
+    const seen = new Set<string>();
     rows.forEach(r => {
       if (order && r.order !== order) return;
       if (batch && r.batch !== batch) return;
+      const dup = `${r.order}|${r.assembly}|${r.pos}|${r.code}|${r.name}`.toLowerCase();
+      if (seen.has(dup)) return;
+      seen.add(dup);
       const key = `${r.name.toLowerCase()}|${r.code.toLowerCase()}`;
       const g = m.get(key) || {
         key, code: r.code, name: r.name, total: 0, lines: [], orders: [], batches: [], status: 'need' as const,
