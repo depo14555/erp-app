@@ -232,7 +232,7 @@ export default function ItemsTable({
       <span className="flex items-center gap-0.5 w-full">
       <button
         onClick={e => openEditor(e, item, field)}
-        className={`w-full px-1.5 py-[3px] rounded text-[12.5px] truncate press hover:bg-black/[0.03]
+        className={`k-cell w-full px-1.5 py-[3px] text-[12.5px] press whitespace-nowrap
           ${numeric ? 'font-mono text-[11.5px] text-right' : 'text-left'}
           ${field === 'executor' && value ? 'font-semibold' : ''}
           ${blank ? 'k-empty !text-center' : ''}`}
@@ -492,7 +492,8 @@ export default function ItemsTable({
               <td className="px-2.5 py-[6px] font-mono text-[11.5px] whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
                 {item.id}
               </td>
-              <td className="px-2.5 py-[6px]">{nameCell(item)}</td>
+              {/* єдина колонка, де значення таки обрізаємо: імена файлів бувають на сто символів */}
+              <td className="px-2.5 py-[6px] k-clip" style={{ maxWidth: 560 }}>{nameCell(item)}</td>
               {log ? (
                 <>
                   <td className="px-1 py-1 tabular-nums">{cell(item, 'qty')}</td>

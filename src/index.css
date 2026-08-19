@@ -281,6 +281,32 @@
   /** Поле, у яке щось уже вписали руками — видно, що це не автозаповнення. */
   .k-input.k-hand { background: #FFFDF3; border-color: var(--amber-line); }
 
+  /**
+   * КЛІТИНКА, ЯКУ МОЖНА РЕДАГУВАТИ. У таблиці позицій усе виглядало
+   * однаково — і те, що можна вписати, і те, що просто напис. Тепер
+   * під такою клітинкою тонка лінія, як місце для заповнення на бланку;
+   * під курсором вона стає повноцінним білим полем.
+   */
+  .k-cell {
+    background: rgba(255, 255, 255, 0.6);
+    border-bottom: 1px dashed var(--line-2);
+    border-radius: 4px 4px 0 0;
+    transition: background .1s, border-color .1s, box-shadow .1s;
+  }
+  .k-cell:hover {
+    background: #fff;
+    border-bottom-color: var(--line-2);
+    box-shadow: inset 0 0 0 1px var(--line-2);
+    border-radius: 5px;
+  }
+  .k-cell:focus-visible {
+    background: #fff;
+    outline: none;
+    border-bottom-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+    border-radius: 5px;
+  }
+
   /** Порожня клітинка: одна риска по центру, а не порожнеча. */
   .k-empty { color: var(--line-2); font-family: 'IBM Plex Mono', ui-monospace, monospace; }
 
@@ -293,8 +319,16 @@
    * рядок став удвічі вищим, око спотикається на кожному екрані.
    */
   .paper-table { background: var(--paper); }
+  /*
+    Рядок лишається в один рядок заввишки (ритм таблиці), але значення
+    більше не ріжеться: колонка розтягується під вміст, а таблиця
+    прокручується вбік. Обрізаємо тільки те, що позначене .k-clip —
+    імена файлів бувають на сто символів.
+  */
   .paper-table tbody td {
     white-space: nowrap;
+  }
+  .paper-table tbody td.k-clip {
     max-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
