@@ -259,12 +259,12 @@ export default function App() {
   if (!authed) return <TokenGate onSuccess={() => setAuthed(true)} />;
 
   const title = tab === 'mail' ? 'Вхідні (пошта)'
-    : tab === 'purch' ? 'Покупні'
+    : tab === 'purch' ? 'Закупівлі'
     : tab === 'execinv' ? 'Рахунки виконавців'
-    : tab === 'billing' ? 'Рахунки і оплати'
+    : tab === 'billing' ? 'Рахунки клієнтам'
     : tab === 'contractors' ? 'Контрагенти'
     : tab === 'staff' ? 'Штат працівників'
-    : tab === 'calc' ? 'Прорахунок'
+    : tab === 'calc' ? 'Прорахунки'
     : (TABS.find(t => t.key === tab)?.label ?? 'ERP');
   const subtitle = tab === 'purch'
     ? 'що треба купити по всіх замовленнях'

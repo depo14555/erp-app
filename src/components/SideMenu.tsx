@@ -24,16 +24,20 @@ interface MenuGroup { title: string; items: MenuItem[] }
 
 const GROUPS: MenuGroup[] = [
   {
-    title: 'Виробництво',
+    title: 'Робота',
     items: [
       { Icon: ClipboardList, label: 'Замовлення', tab: 'orders' },
       { Icon: MessageSquare, label: 'Чат виконавців', tab: 'chat' },
+      { Icon: Truck, label: 'Відвантаження', tab: 'logistics', locked: true },
     ],
   },
   {
-    title: 'Логістика',
+    title: 'Гроші',
     items: [
-      { Icon: Truck, label: 'Відвантаження', tab: 'logistics', locked: true },
+      { Icon: Calculator, label: 'Прорахунки', tab: 'calc' },
+      { Icon: Receipt, label: 'Рахунки клієнтам', tab: 'billing' },
+      { Icon: FileInput, label: 'Рахунки виконавців', tab: 'execinv' },
+      { Icon: ShoppingCart, label: 'Закупівлі', tab: 'purch' },
     ],
   },
   {
@@ -41,15 +45,6 @@ const GROUPS: MenuGroup[] = [
     items: [
       { Icon: Building2, label: 'Контрагенти', tab: 'contractors' },
       { Icon: UserRound, label: 'Штат працівників', tab: 'staff' },
-    ],
-  },
-  {
-    title: 'Гроші',
-    items: [
-      { Icon: Calculator, label: 'Прорахунок', tab: 'calc' },
-      { Icon: ShoppingCart, label: 'Покупні', tab: 'purch' },
-      { Icon: Receipt, label: 'Рахунки і оплати', tab: 'billing' },
-      { Icon: FileInput, label: 'Рахунки виконавців', tab: 'execinv' },
     ],
   },
 ];

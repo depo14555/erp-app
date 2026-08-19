@@ -23,18 +23,28 @@ interface NavItem {
 }
 interface NavSection { title: string; items: NavItem[] }
 
+/*
+  Три групи замість чотирьох. Назви розділів — це підсумки («Прорахунки»,
+  «Закупівлі»), а дії всередині замовлення — дієслова. Раніше «Прорахунок»
+  означав і розділ, і вікно, і зону таблиці, і ніхто не міг сказати, що
+  саме відкриється.
+*/
 const SECTIONS: NavSection[] = [
   {
-    title: 'Виробництво',
+    title: 'Робота',
     items: [
       { key: 'orders', label: 'Замовлення', Icon: ClipboardList },
       { key: 'chat', label: 'Чат виконавців', Icon: MessageSquare },
+      { key: 'logistics', label: 'Відвантаження', Icon: Truck, locked: true },
     ],
   },
   {
-    title: 'Логістика',
+    title: 'Гроші',
     items: [
-      { key: 'logistics', label: 'Відвантаження', Icon: Truck, locked: true },
+      { key: 'calc', label: 'Прорахунки', Icon: Calculator },
+      { key: 'billing', label: 'Рахунки клієнтам', Icon: Receipt },
+      { key: 'execinv', label: 'Рахунки виконавців', Icon: FileInput },
+      { key: 'purch', label: 'Закупівлі', Icon: ShoppingCart },
     ],
   },
   {
@@ -68,22 +78,32 @@ interface Props {
 
 interface ToolItem { key: OrderTool; label: string; Icon: typeof Receipt; color: string }
 
-const ORDER_TOOLS: ToolItem[] = [
+/*
+  Дії йдуть у порядку РОБОТИ, а не абеткою: спершу файли стають рядками
+  картки, потім креслення читає ШІ, і аж потім рахунок і роздача.
+  Три підписані етапи — щоб не гадати, з чого починати.
+*/
+const STEP_1: ToolItem[] = [
   { key: 'tech', label: 'Тех.запуск', Icon: Rocket, color: '#EA580C' },
-  { key: 'distr', label: 'Розподіл КД', Icon: FolderTree, color: '#7C3AED' },
-  { key: 'nest', label: 'Розкрій DXF', Icon: Scissors, color: '#0891B2' },
-  { key: 'calc', label: 'Прорахунок', Icon: Calculator, color: '#0D9488' },
   { key: 'photo', label: 'Фотошоп креслень', Icon: Paintbrush, color: '#DB2777' },
-  { key: 'send', label: 'Відправити виконавцю', Icon: Send, color: '#4F46E5' },
   { key: 'print', label: 'Друк креслень + QR', Icon: Printer, color: '#0891B2' },
-  { key: 'billing', label: 'Рахунки і оплати', Icon: Receipt, color: 'var(--green)' },
 ];
 
 /** Те, що читає креслення само — окремим блоком, щоб було видно, де працює ШІ. */
 const AI_TOOLS: ToolItem[] = [
   { key: 'asm', label: 'Склад збірок', Icon: Blocks, color: '#7C3AED' },
-  { key: 'purch', label: 'Покупні', Icon: ShoppingCart, color: '#EA580C' },
   { key: 'tmc', label: 'ТМЦ і вага', Icon: Scale, color: '#1B4FD8' },
+  { key: 'purch', label: 'Покупні', Icon: ShoppingCart, color: '#EA580C' },
+];
+
+const STEP_3: ToolItem[] = [
+  { key: 'calc', label: 'Порахувати', Icon: Calculator, color: '#0D9488' },
+  // Розкрій лишається окремим пунктом, поки не переїхав усередину
+  // прорахунку — інакше він став би недосяжним
+  { key: 'nest', label: 'Розкрій DXF', Icon: Scissors, color: '#0891B2' },
+  { key: 'distr', label: 'Розподіл КД', Icon: FolderTree, color: '#7C3AED' },
+  { key: 'send', label: 'Відправити виконавцю', Icon: Send, color: '#4F46E5' },
+  { key: 'billing', label: 'Рахунки і оплати', Icon: Receipt, color: 'var(--green)' },
 ];
 
 /**
@@ -184,8 +204,8 @@ export default function Sidebar({
         {/* Інструменти відкритого завдання */}
         {order && (
           <div>
-            <SecTitle mini={collapsed}>Завдання {order.label}</SecTitle>
-            {ORDER_TOOLS.map(({ key, label, Icon, color }) => (
+            <SecTitle mini={collapsed}>{order.label} · 1. Підготувати</SecTitle>
+            {STEP_1.map(({ key, label, Icon, color }) => (
               <button key={key} onClick={() => onOrderTool(key)} title={label}
                 className={`${item} ${pad} border-transparent hover:bg-[var(--bg)]`}>
                 <Icon size={15} strokeWidth={2} className="flex-shrink-0" style={{ color }} />
@@ -203,7 +223,7 @@ export default function Sidebar({
             )}
 
             {/* Функції, що читають креслення самі — окремим розділом */}
-            <SecTitle mini={collapsed}>Читає креслення</SecTitle>
+            <SecTitle mini={collapsed}>2. Прочитати креслення</SecTitle>
             {AI_TOOLS.map(({ key, label, Icon, color }) => (
               <button key={key} onClick={() => onOrderTool(key)} title={`${label} — читає креслення`}
                 className={`${item} ${pad} border-transparent hover:bg-[var(--bg)] relative`}>
@@ -218,30 +238,18 @@ export default function Sidebar({
                   )}
               </button>
             ))}
+
+            <SecTitle mini={collapsed}>3. Порахувати й роздати</SecTitle>
+            {STEP_3.map(({ key, label, Icon, color }) => (
+              <button key={key} onClick={() => onOrderTool(key)} title={label}
+                className={`${item} ${pad} border-transparent hover:bg-[var(--bg)]`}>
+                <Icon size={15} strokeWidth={2} className="flex-shrink-0" style={{ color }} />
+                {!collapsed && <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>}
+              </button>
+            ))}
           </div>
         )}
 
-        <div>
-          <SecTitle mini={collapsed}>Гроші</SecTitle>
-          {([
-            ['calc', 'Прорахунок', Calculator],
-            ['purch', 'Покупні', ShoppingCart],
-            ['billing', 'Рахунки і оплати', Receipt],
-            ['execinv', 'Рахунки виконавців', FileInput],
-          ] as const).map(([key, label, Icon]) => {
-            const on = tab === key;
-            return (
-              <button key={key} onClick={() => onTab(key)} title={label}
-                className={`${item} ${pad}`}
-                style={on
-                  ? { borderColor: 'var(--accent)', background: 'var(--accent-soft)', color: 'var(--ink)' }
-                  : { borderColor: 'transparent', color: 'var(--ink)' }}>
-                <Icon size={15} strokeWidth={2} className="flex-shrink-0" style={{ color: on ? 'var(--accent)' : 'var(--ink-2)' }} />
-                {!collapsed && <span className="flex-1 text-[12.5px] font-semibold truncate">{label}</span>}
-              </button>
-            );
-          })}
-        </div>
 
       </nav>
 
