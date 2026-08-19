@@ -278,9 +278,15 @@ export default function StaffPage({ onToast, refreshSignal }: Props) {
                 <button key={s.name} onClick={() => setFSkill(on ? '' : s.name)}
                   title={`Оцінка ${levelOk}+ : ${n} осіб`}
                   className="px-2 py-1 rounded-lg text-[11px] font-bold transition-colors"
+                  // «Нема носіїв» — це попередження, а не помилка; коли штат
+                  // взагалі порожній, червонити всі операції безглуздо
                   style={on
                     ? { background: 'var(--accent)', color: '#fff' }
-                    : { background: n ? 'var(--bg)' : '#FEF2F2', color: n ? 'var(--ink-2)' : '#B91C1C' }}>
+                    : !data.rows.length
+                      ? { background: 'var(--bg)', color: 'var(--ink-3)' }
+                      : n
+                        ? { background: 'var(--bg)', color: 'var(--ink-2)' }
+                        : { background: 'var(--amber-bg)', color: 'var(--amber)' }}>
                   {s.name} · {n}
                 </button>
               );

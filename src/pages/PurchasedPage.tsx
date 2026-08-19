@@ -300,7 +300,7 @@ export default function PurchasedPage({ orders, onToast, onOpenOrder, refreshKey
             style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
             <ShoppingCart size={15} />
           </span>
-          <p className="font-extrabold text-[14px]">Покупні</p>
+          <p className="font-extrabold text-[14px]">Закупівлі</p>
           <span className="k-label">{stats.all} рядків · {groups.length} найменувань</span>
 
           <div className="relative flex-1 min-w-[150px] max-w-[320px] ml-auto">
