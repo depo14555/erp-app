@@ -217,7 +217,7 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
                 })}
                 title={o.group}
                 className="flex-shrink-0 px-2.5 py-1.5 rounded-full text-[11px] font-bold transition-colors"
-                style={on ? { background: 'var(--ink)', color: '#fff' } : { background: '#fff', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px #E5E7EB' }}>
+                style={on ? { background: 'var(--ink)', color: '#fff' } : { background: '#fff', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
                 {o.name}
               </button>
             );
@@ -345,7 +345,7 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
                 </div>
 
                 {newOp && (
-                  <div className="mb-2 p-2.5 rounded-xl ring-1 ring-gray-200 bg-[#FAFBFC] flex items-center gap-1.5 flex-wrap">
+                  <div className="mb-2 p-2.5 rounded-xl ring-1 ring-gray-200 bg-[var(--bg)] flex items-center gap-1.5 flex-wrap">
                     <input autoFocus value={newOp.name}
                       onChange={e => setNewOp({ ...newOp, name: e.target.value })}
                       onKeyDown={e => { if (e.key === 'Enter') addOp(); if (e.key === 'Escape') setNewOp(null); }}
@@ -374,8 +374,8 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
                           return (
                             <span key={op} className="inline-flex items-center rounded-xl"
                               style={on
-                                ? { background: '#ECFDF5', boxShadow: 'inset 0 0 0 1px #A7F3D0' }
-                                : { background: '#F3F4F6' }}>
+                                ? { background: 'var(--green-bg)', boxShadow: 'inset 0 0 0 1px #A7F3D0' }
+                                : { background: 'var(--bg)' }}>
                               <button
                                 onClick={() => setDraftOps(prev => {
                                   const n = new Set(prev);
@@ -383,11 +383,11 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
                                   return n;
                                 })}
                                 className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 text-[12px] font-bold transition-colors"
-                                style={{ color: on ? '#059669' : 'var(--ink-3)' }}>
+                                style={{ color: on ? 'var(--green)' : 'var(--ink-3)' }}>
                                 {on && <Check size={12} />} {op}
                               </button>
                               <button onClick={() => dropOp(op)} disabled={saving}
-                                className="pr-2 pl-0.5 py-1.5 press" style={{ color: '#CBD5E1' }}
+                                className="pr-2 pl-0.5 py-1.5 press" style={{ color: 'var(--line-2)' }}
                                 title={`Прибрати операцію «${op}» з матриці (колонку аркуша)`}
                                 aria-label="Прибрати операцію">
                                 <X size={11} />
@@ -416,7 +416,7 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
                       const on = openPrice === op;
                       const v = prices[op] || {};
                       return (
-                        <div key={op} className="rounded-xl" style={{ background: on ? '#FAFBFC' : undefined }}>
+                        <div key={op} className="rounded-xl" style={{ background: on ? 'var(--bg)' : undefined }}>
                           <div className="flex items-center gap-2 px-2 py-1.5">
                             <button onClick={() => setOpenPrice(on ? '' : op)}
                               className="flex-1 min-w-0 text-left text-[12px] font-semibold press truncate">

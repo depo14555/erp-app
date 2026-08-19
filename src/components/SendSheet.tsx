@@ -140,7 +140,7 @@ export default function SendSheet({ detail, preselect, onClose, onMinimize, onTo
                 return (
                   <button key={e.name} onClick={() => pickExec(e.name)}
                     className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] font-bold transition-colors"
-                    style={on ? { background: 'var(--ink)', color: '#fff' } : { background: '#F3F4F6', color: 'var(--ink-2)' }}>
+                    style={on ? { background: 'var(--ink)', color: '#fff' } : { background: 'var(--bg)', color: 'var(--ink-2)' }}>
                     {e.name} · {e.count}
                     {!e.hasMapping && <AlertTriangle size={11} className={on ? 'text-amber-300' : 'text-amber-500'} />}
                   </button>

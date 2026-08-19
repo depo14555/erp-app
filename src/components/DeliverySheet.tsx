@@ -73,7 +73,7 @@ export default function DeliverySheet({ items, onClose, onToast, onDone }: Props
                 className="flex items-center gap-2 px-3 py-2.5 rounded-2xl text-[12.5px] font-bold transition-colors press"
                 style={method === m.key
                   ? { background: 'var(--accent)', color: '#fff' }
-                  : { background: '#F3F4F6', color: 'var(--ink-2)' }}>
+                  : { background: 'var(--bg)', color: 'var(--ink-2)' }}>
                 <span className="text-[15px]">{m.icon}</span> {m.key}
               </button>
             ))}

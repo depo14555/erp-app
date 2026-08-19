@@ -57,8 +57,8 @@ interface Line {
 }
 
 const CONF: Record<string, { bg: string; color: string; label: string }> = {
-  high: { bg: '#ECFDF5', color: '#059669', label: 'точно' },
-  medium: { bg: '#FEF3C7', color: '#92400E', label: 'перевірити' },
+  high: { bg: 'var(--green-bg)', color: 'var(--green)', label: 'точно' },
+  medium: { bg: 'var(--amber-bg)', color: 'var(--amber)', label: 'перевірити' },
   low: { bg: '#FEF2F2', color: '#B91C1C', label: 'сумнівно' },
 };
 
@@ -255,7 +255,7 @@ export default function PurchasedSheet({ detail, onClose, onMinimize, onToast, o
                 return (
                   <button key={i.row} onClick={() => toggle(i.row)} disabled={busy}
                     className="w-full flex items-start gap-2 px-2.5 py-2 rounded-xl text-left press disabled:opacity-60"
-                    style={on ? { background: 'var(--accent-soft)' } : { background: '#FAFBFC' }}>
+                    style={on ? { background: 'var(--accent-soft)' } : { background: 'var(--bg)' }}>
                     {on ? <CheckSquare size={14} className="text-[var(--accent)] mt-0.5 flex-shrink-0" />
                         : <Square size={14} className="text-gray-300 mt-0.5 flex-shrink-0" />}
                     <span className="min-w-0 flex-1">
@@ -341,7 +341,7 @@ export default function PurchasedSheet({ detail, onClose, onMinimize, onToast, o
                 <div className="flex-1 min-h-0 overflow-y-auto p-2.5 space-y-2">
                   {grouped.map(g => (
                     <div key={g.code + g.name} className="rounded-2xl ring-1 ring-gray-200/70 bg-white overflow-hidden">
-                      <div className="px-3 py-2 flex items-center gap-2 bg-[#FAFBFC]">
+                      <div className="px-3 py-2 flex items-center gap-2 bg-[var(--bg)]">
                         <span className="min-w-0 flex-1">
                           {/* Постачальнику потрібен весь рядок разом: «Гайка M6x30 D10» */}
                           <span className="block text-[13px] font-bold truncate">

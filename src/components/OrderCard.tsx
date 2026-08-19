@@ -26,7 +26,7 @@ export default function OrderCard({ order, onOpen, active, pinned, onTogglePin }
       className="w-full text-left card overflow-hidden flex press cv-auto"
       style={active
         ? { borderColor: 'var(--accent)', background: 'var(--accent-soft)' }
-        : pinned ? { borderColor: '#FCD34D', background: '#FFFDF2' } : undefined}
+        : pinned ? { borderColor: 'var(--amber-line)', background: 'var(--amber-bg)' } : undefined}
     >
       {/* Смуга статусу */}
       <span className="w-1 flex-shrink-0" style={{ background: st.solid }} />
@@ -46,11 +46,11 @@ export default function OrderCard({ order, onOpen, active, pinned, onTogglePin }
               onClick={e => { e.stopPropagation(); onTogglePin(); }}
               onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); onTogglePin(); } }}
               className="p-1.5 -mt-1 rounded-lg press flex-shrink-0"
-              style={{ color: pinned ? '#D97706' : 'var(--ink-3)' }}
+              style={{ color: pinned ? 'var(--amber)' : 'var(--ink-3)' }}
               aria-label={pinned ? 'Відкріпити' : 'Закріпити для всіх'}
               title={pinned ? 'Відкріпити' : 'Закріпити для всіх'}
             >
-              <Pin size={15} fill={pinned ? '#D97706' : 'none'} className={pinned ? '' : 'rotate-45 opacity-50'} />
+              <Pin size={15} fill={pinned ? 'var(--amber)' : 'none'} className={pinned ? '' : 'rotate-45 opacity-50'} />
             </span>
           )}
           <span

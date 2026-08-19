@@ -60,7 +60,7 @@ export default function OrdersTable({ orders, pinned, activeRow, onOpen, onToggl
                   borderStyle: 'dashed',
                   ...(o.headerRow === activeRow
                     ? { background: 'var(--accent-soft)' }
-                    : pin ? { background: '#FBF1E6' } : {}),
+                    : pin ? { background: 'var(--amber-bg)' } : {}),
                 }}>
 
                 <td className="px-1.5 py-[6px]">

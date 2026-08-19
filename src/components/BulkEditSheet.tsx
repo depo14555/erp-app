@@ -104,7 +104,7 @@ export default function BulkEditSheet({ rows, items, lists, rowStatusList, onClo
                 return (
                   <button key={f.key} onClick={() => { setField(f.key); setValue(''); }} title={f.hint}
                     className="px-2.5 py-1.5 rounded-xl text-[12px] font-bold transition-colors"
-                    style={on ? { background: 'var(--ink)', color: '#fff' } : { background: '#F3F4F6', color: 'var(--ink-2)' }}>
+                    style={on ? { background: 'var(--ink)', color: '#fff' } : { background: 'var(--bg)', color: 'var(--ink-2)' }}>
                     {f.label}
                   </button>
                 );
@@ -134,7 +134,7 @@ export default function BulkEditSheet({ rows, items, lists, rowStatusList, onClo
                       className="px-2.5 py-1.5 rounded-xl text-[11.5px] font-semibold transition-colors flex items-center gap-1"
                       style={on
                         ? { background: 'var(--accent)', color: '#fff' }
-                        : st ? { background: st.bg, color: st.fg } : { background: '#F3F4F6', color: 'var(--ink-2)' }}>
+                        : st ? { background: st.bg, color: st.fg } : { background: 'var(--bg)', color: 'var(--ink-2)' }}>
                       {on && <Check size={11} />} {o}
                     </button>
                   );
@@ -146,7 +146,7 @@ export default function BulkEditSheet({ rows, items, lists, rowStatusList, onClo
             </p>
           </div>
 
-          <div className="rounded-xl bg-[#FAFBFC] ring-1 ring-gray-200/70 p-2.5">
+          <div className="rounded-xl bg-[var(--bg)] ring-1 ring-gray-200/70 p-2.5">
             <p className="text-[10.5px] font-bold uppercase tracking-wide mb-1" style={{ color: 'var(--ink-3)' }}>
               Зміняться позиції
             </p>

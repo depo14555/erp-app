@@ -147,7 +147,7 @@ export default function CalcOverviewPage({ orders: allOrders, onOpenOrder, onToa
                     {isOpen && (
                       <div className="px-3 pb-3 space-y-1.5">
                         {o.bundles.map(b => (
-                          <div key={b.id} className="rounded-xl bg-[#FAFBFC] ring-1 ring-gray-200/60 p-2.5">
+                          <div key={b.id} className="rounded-xl bg-[var(--bg)] ring-1 ring-gray-200/60 p-2.5">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-700">
                                 {b.kind || 'Без виду'}
@@ -157,8 +157,8 @@ export default function CalcOverviewPage({ orders: allOrders, onOpenOrder, onToa
                               </span>
                               <span className="text-[10.5px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0"
                                 style={b.payTo === 'client'
-                                  ? { background: '#ECFDF5', color: '#059669' }
-                                  : { background: '#FFF7ED', color: '#C2410C' }}>
+                                  ? { background: 'var(--green-bg)', color: 'var(--green)' }
+                                  : { background: '#FFF7ED', color: 'var(--amber)' }}>
                                 <Wallet size={9} className="inline -mt-0.5" /> {b.payTo === 'client' ? 'клієнт нам' : 'ми виконавцю'}
                               </span>
                               <span className="text-[13px] font-bold tabular-nums flex-shrink-0">{money(b.sum)} грн</span>

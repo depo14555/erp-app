@@ -141,7 +141,7 @@ export default function KanbanBoard({
           return (
             <span key={b.id}
               className="inline-flex items-center rounded-xl transition-colors"
-              style={on ? { background: 'var(--ink)', color: '#fff' } : { background: '#fff', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px #E5E7EB' }}>
+              style={on ? { background: 'var(--ink)', color: '#fff' } : { background: '#fff', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
               <button onClick={() => setBoardId(b.id)}
                 className="pl-3 pr-2 py-1.5 text-[12px] font-bold press rounded-l-xl">
                 {b.name}
@@ -222,7 +222,7 @@ export default function KanbanBoard({
 
                 <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2.5 group/col">
                   <span className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ background: isRest ? '#CBD5E1' : st.solid }} />
+                    style={{ background: isRest ? 'var(--line-2)' : st.solid }} />
                   {renaming === name && !isRest ? (
                     <input autoFocus value={renameTo} onChange={e => setRenameTo(e.target.value)}
                       onBlur={() => renameColumn(name, renameTo)}
@@ -279,9 +279,9 @@ export default function KanbanBoard({
                           <button
                             onClick={e => { e.stopPropagation(); onTogglePin(o.projectId, !isPinned); }}
                             className={`p-1 rounded-lg press flex-shrink-0 ${isPinned ? '' : 'opacity-0 group-hover:opacity-60'}`}
-                            style={{ color: isPinned ? '#D97706' : 'var(--ink-3)' }}
+                            style={{ color: isPinned ? 'var(--amber)' : 'var(--ink-3)' }}
                             aria-label={isPinned ? 'Відкріпити' : 'Закріпити'}>
-                            <Pin size={12} fill={isPinned ? '#D97706' : 'none'} className={isPinned ? '' : 'rotate-45'} />
+                            <Pin size={12} fill={isPinned ? 'var(--amber)' : 'none'} className={isPinned ? '' : 'rotate-45'} />
                           </button>
                         </div>
 
@@ -380,7 +380,7 @@ export default function KanbanBoard({
                   <button key={name || '__rest__'}
                     onClick={() => { const o = movePick; setMovePick(null); if (!cur) { setDrag(o); setTimeout(() => drop(name), 0); } }}
                     className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-left hover:bg-gray-50 press">
-                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: name ? st.solid : '#CBD5E1' }} />
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: name ? st.solid : 'var(--line-2)' }} />
                     <span className="flex-1 text-[14px] font-semibold" style={{ color: name ? st.fg : 'var(--ink-3)' }}>
                       {name || 'Не розподілені'}
                     </span>

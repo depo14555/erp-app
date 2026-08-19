@@ -707,13 +707,13 @@ export function statusStyle(s: string): { bg: string; fg: string; solid: string 
   const v = String(s || '');
   if (v.includes('Відвантаж')) return { bg: '#E0F2F1', fg: '#00695C', solid: '#00695C' };
   if (v.includes('Здано'))     return { bg: '#E0F7FA', fg: '#00838F', solid: '#00838F' };
-  if (v.includes('Готово'))    return { bg: '#E8F5E9', fg: '#2E7D32', solid: '#2E7D32' };
-  if (v.includes('Відправ'))   return { bg: '#EDE7F6', fg: '#4527A0', solid: '#4527A0' };
-  if (v.includes('робот') || v.includes('Виконуєт')) return { bg: '#FFF3E0', fg: '#E65100', solid: '#EF6C00' };
+  if (v.includes('Готово'))    return { bg: 'var(--green-bg)', fg: '#2E7D32', solid: '#2E7D32' };
+  if (v.includes('Відправ'))   return { bg: 'var(--violet-bg)', fg: '#4527A0', solid: '#4527A0' };
+  if (v.includes('робот') || v.includes('Виконуєт')) return { bg: 'var(--amber-bg)', fg: 'var(--amber)', solid: '#EF6C00' };
   if (v.includes('Пауза'))     return { bg: '#FFF8E1', fg: '#B28704', solid: '#F9A825' };
   if (v.includes('Опрацюв'))   return { bg: '#F3E5F5', fg: '#6A1B9A', solid: '#6A1B9A' };
   if (v.includes('Скасован'))  return { bg: '#FFEBEE', fg: '#C62828', solid: '#C62828' };
-  if (v.includes('Очікуван'))  return { bg: '#F5F5F5', fg: '#607D8B', solid: '#607D8B' };
+  if (v.includes('Очікуван'))  return { bg: 'var(--bg)', fg: 'var(--ink-2)', solid: 'var(--ink-2)' };
   if (v.includes('Нов'))       return { bg: '#E8EAF6', fg: '#283593', solid: '#283593' };
   return { bg: '#ECEFF1', fg: '#37474F', solid: '#37474F' };
 }

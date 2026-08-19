@@ -440,7 +440,7 @@ export default function PhotoSheet({ detail, onClose, onMinimize, onToast, onSav
           {([['todo', `Не оброблені · ${stats.todo}`], ['done', `Оброблені · ${stats.done}`], ['', 'Всі']] as const).map(([v, label]) => (
             <button key={v} onClick={() => setFilter(v as Filter)}
               className="px-2.5 py-1 rounded-xl text-[11px] font-bold transition-colors"
-              style={filter === v ? { background: 'var(--ink)', color: '#fff' } : { background: '#F3F4F6', color: 'var(--ink-2)' }}>
+              style={filter === v ? { background: 'var(--ink)', color: '#fff' } : { background: 'var(--bg)', color: 'var(--ink-2)' }}>
               {label}
             </button>
           ))}
@@ -454,7 +454,7 @@ export default function PhotoSheet({ detail, onClose, onMinimize, onToast, onSav
             </span>
             <button onClick={() => setFFmt('')}
               className="px-2 py-1 rounded-lg text-[11px] font-bold transition-colors"
-              style={!fFmt ? { background: 'var(--accent)', color: '#fff' } : { background: '#F3F4F6', color: 'var(--ink-2)' }}>
+              style={!fFmt ? { background: 'var(--accent)', color: '#fff' } : { background: 'var(--bg)', color: 'var(--ink-2)' }}>
               всі
             </button>
             {fmtChips.map(([key, v]) => (
@@ -462,7 +462,7 @@ export default function PhotoSheet({ detail, onClose, onMinimize, onToast, onSav
                 className="px-2 py-1 rounded-lg text-[11px] font-bold transition-colors inline-flex items-center gap-1"
                 style={fFmt === key
                   ? { background: 'var(--accent)', color: '#fff' }
-                  : { background: '#F3F4F6', color: 'var(--ink-2)' }}
+                  : { background: 'var(--bg)', color: 'var(--ink-2)' }}
                 title={templates[key] ? 'Для цього формату є шаблон розмітки' : undefined}>
                 {templates[key] && <Copy size={10} />}
                 {v.label} · {v.n}
@@ -573,7 +573,7 @@ export default function PhotoSheet({ detail, onClose, onMinimize, onToast, onSav
         {/* Дві панелі: перелік + креслення */}
         {(phase === 'files' || phase === 'render' || phase === 'edit' || phase === 'done') && (
           <div className="flex-1 min-h-0 flex">
-            <aside className={`${file ? 'hidden lg:flex' : 'flex'} flex-col w-full lg:w-[320px] xl:w-[380px] flex-shrink-0 lg:border-r hairline min-h-0 bg-[#FCFCFD]`}>
+            <aside className={`${file ? 'hidden lg:flex' : 'flex'} flex-col w-full lg:w-[320px] xl:w-[380px] flex-shrink-0 lg:border-r hairline min-h-0 bg-[var(--bg)]`}>
               {fileList}
             </aside>
 
@@ -601,7 +601,7 @@ export default function PhotoSheet({ detail, onClose, onMinimize, onToast, onSav
                   <div className="flex-shrink-0 px-3 py-2 flex items-center gap-1.5 border-b hairline flex-wrap">
                     <button onClick={backToFiles}
                       className="lg:hidden px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold press"
-                      style={{ background: '#F3F4F6', color: 'var(--ink-2)' }}>
+                      style={{ background: 'var(--bg)', color: 'var(--ink-2)' }}>
                       ← Файли
                     </button>
                     <span className="flex items-center gap-0.5">
@@ -626,17 +626,17 @@ export default function PhotoSheet({ detail, onClose, onMinimize, onToast, onSav
 
                     <button onClick={() => setColor('black')}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold transition-colors"
-                      style={color === 'black' ? { background: '#111', color: '#fff' } : { background: '#F3F4F6', color: 'var(--ink-2)' }}>
+                      style={color === 'black' ? { background: '#111', color: '#fff' } : { background: 'var(--bg)', color: 'var(--ink-2)' }}>
                       <Square size={12} fill="currentColor" /> Чорний
                     </button>
                     <button onClick={() => setColor('white')}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold transition-colors ring-1 ring-gray-200"
-                      style={color === 'white' ? { background: '#fff', color: 'var(--accent)' } : { background: '#F3F4F6', color: 'var(--ink-2)' }}>
+                      style={color === 'white' ? { background: '#fff', color: 'var(--accent)' } : { background: 'var(--bg)', color: 'var(--ink-2)' }}>
                       <Square size={12} /> Білий
                     </button>
                     <button onClick={undo} disabled={!(rects[pageIdx] || []).length}
                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold press disabled:opacity-40"
-                      style={{ background: '#F3F4F6', color: 'var(--ink-2)' }}>
+                      style={{ background: 'var(--bg)', color: 'var(--ink-2)' }}>
                       <Undo2 size={12} /> Відмінити
                     </button>
 
@@ -646,7 +646,7 @@ export default function PhotoSheet({ detail, onClose, onMinimize, onToast, onSav
                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold press disabled:opacity-40"
                       style={curTpl
                         ? { background: '#FCE7F3', color: '#BE185D' }
-                        : { background: '#F3F4F6', color: 'var(--ink-2)' }}
+                        : { background: 'var(--bg)', color: 'var(--ink-2)' }}
                       title={`Запам'ятати розмітку для формату ${curFmt?.label || ''} і накладати на всі креслення цього формату`}>
                       <Copy size={12} />
                       {curTpl ? `Шаблон ${curFmt?.label} · ${curTpl.length}` : 'Повторити на всі'}

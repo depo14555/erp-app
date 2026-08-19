@@ -366,7 +366,7 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast }: P
                 {([['J', 'К-сть'], ['M', 'Призначено'], ['name', 'з назви файлу']] as const).map(([v, label]) => (
                   <button key={v} onClick={() => setQsrc(v)}
                     className="px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold transition-colors"
-                    style={qsrc === v ? { background: 'var(--ink)', color: '#fff' } : { background: '#F3F4F6', color: 'var(--ink-2)' }}>
+                    style={qsrc === v ? { background: 'var(--ink)', color: '#fff' } : { background: 'var(--bg)', color: 'var(--ink-2)' }}>
                     {label}
                   </button>
                 ))}
@@ -380,13 +380,13 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast }: P
                   ([k, val, set, label]) => (
                     <button key={k as string} onClick={() => (set as any)(!val)}
                       className="px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold transition-colors"
-                      style={val ? { background: '#ECFEFF', color: '#0891B2' } : { background: '#F3F4F6', color: 'var(--ink-3)' }}>
+                      style={val ? { background: '#ECFEFF', color: '#0891B2' } : { background: 'var(--bg)', color: 'var(--ink-3)' }}>
                       {val ? '✓ ' : ''}{label}
                     </button>
                   ))}
                 <button onClick={() => setShowPrices(v => !v)}
                   className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold press"
-                  style={{ background: '#F3F4F6', color: 'var(--ink-2)' }}>
+                  style={{ background: 'var(--bg)', color: 'var(--ink-2)' }}>
                   <Settings2 size={12} /> Тарифи різу
                 </button>
               </div>
@@ -397,7 +397,7 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast }: P
                   <div key={g.key} className="flex items-center gap-2 flex-wrap p-2 rounded-2xl ring-1 ring-gray-200/70">
                     <button onClick={() => setGroups(prev => prev.map((x, i) => i === gi ? { ...x, on: !x.on } : x))}
                       className="px-2.5 py-1 rounded-xl text-[12px] font-bold press"
-                      style={g.on ? { background: '#ECFEFF', color: '#0891B2' } : { background: '#F3F4F6', color: 'var(--ink-3)' }}>
+                      style={g.on ? { background: '#ECFEFF', color: '#0891B2' } : { background: 'var(--bg)', color: 'var(--ink-3)' }}>
                       {g.on ? '✓ ' : ''}{g.key}
                     </button>
                     <span className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>
@@ -484,7 +484,7 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast }: P
               <>
                 <button onClick={saveLayouts} disabled={saving}
                   className="flex items-center gap-1.5 px-3 py-2.5 rounded-2xl text-[12px] font-bold press disabled:opacity-40"
-                  style={{ background: '#F3F4F6', color: 'var(--ink-2)' }}>
+                  style={{ background: 'var(--bg)', color: 'var(--ink-2)' }}>
                   {act === 'layouts' ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                   {act === 'layouts' ? 'Зберігаю…' : 'Зберегти розкладки'}
                 </button>
@@ -498,7 +498,7 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast }: P
             )}
             <button onClick={pronest} disabled={saving || !chosen.length}
               className="flex items-center gap-1.5 px-3 py-2.5 rounded-2xl text-[12px] font-bold press disabled:opacity-40"
-              style={{ background: '#F3F4F6', color: 'var(--ink-2)' }}>
+              style={{ background: 'var(--bg)', color: 'var(--ink-2)' }}>
               {act === 'pronest' ? <Loader2 size={13} className="animate-spin" /> : <Package size={13} />}
               {act === 'pronest' ? 'Збираю пакет…' : 'Пакет ProNest'}
             </button>

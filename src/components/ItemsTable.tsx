@@ -48,7 +48,7 @@ export function noteWithoutDelivery(note: string): string {
 const PAY_OPTIONS = ['Сформувати', 'Рахунок виставлено', 'Оплачено'];
 
 /** Кольори маршрутних смужок: та сама деталь з різними операціями. */
-const ROUTE_COLORS = ['#6366F1', '#0891B2', '#D97706', '#DB2777', '#16A34A', '#7C3AED'];
+const ROUTE_COLORS = ['#6366F1', '#0891B2', 'var(--amber)', '#DB2777', '#16A34A', '#7C3AED'];
 
 interface Props {
   items: OrderItem[];
@@ -232,7 +232,7 @@ export default function ItemsTable({
       <span className="flex items-center gap-0.5 w-full">
       <button
         onClick={e => openEditor(e, item, field)}
-        className={`k-cell w-full px-1.5 py-[3px] text-[12.5px] press whitespace-nowrap
+        className={`k-cell w-full px-1.5 py-[3px] text-[12.5px] press ${field === 'material' ? 'whitespace-normal text-left' : 'whitespace-nowrap'}
           ${numeric ? 'font-mono text-[11.5px] text-right' : 'text-left'}
           ${field === 'executor' && value ? 'font-semibold' : ''}
           ${blank ? 'k-empty !text-center' : ''}`}
@@ -559,7 +559,7 @@ export default function ItemsTable({
                 </>
               ) : (
                 <>
-                  <td className="px-1 py-1">{cell(item, 'material')}</td>
+                  <td className="px-1 py-1 k-wrap">{cell(item, 'material')}</td>
                   <td className="px-1 py-1">{cell(item, 'thickness')}</td>
                   <td className="px-1 py-1 tabular-nums">{cell(item, 'qty')}</td>
                   <td className="px-1 py-1">{cell(item, 'op')}</td>
@@ -853,11 +853,11 @@ function ColumnFilterPopover({ label, rect, values, selected, onChange, onClose 
 
         <div className="flex-shrink-0 flex gap-1 p-1.5 border-t hairline">
           <button onClick={() => onChange(new Set(list.map(x => x.v)))}
-            className="flex-1 py-1.5 rounded-xl text-[11.5px] font-bold press" style={{ background: '#F3F4F6', color: 'var(--ink-2)' }}>
+            className="flex-1 py-1.5 rounded-xl text-[11.5px] font-bold press" style={{ background: 'var(--bg)', color: 'var(--ink-2)' }}>
             Всі видимі
           </button>
           <button onClick={() => onChange(new Set())}
-            className="flex-1 py-1.5 rounded-xl text-[11.5px] font-bold press" style={{ background: '#F3F4F6', color: 'var(--ink-2)' }}>
+            className="flex-1 py-1.5 rounded-xl text-[11.5px] font-bold press" style={{ background: 'var(--bg)', color: 'var(--ink-2)' }}>
             Очистити
           </button>
           <button onClick={onClose}

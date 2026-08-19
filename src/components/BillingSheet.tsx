@@ -115,7 +115,7 @@ export default function BillingSheet({ detail, onClose, onToast, onChanged, crea
               return (
                 <div key={num} className="rounded-2xl ring-1 ring-gray-200/70 overflow-hidden">
                   <div className="px-3 py-2.5 flex items-center gap-2 flex-wrap"
-                    style={{ background: paid ? '#ECFDF5' : partly ? '#FFFBEB' : '#F8FAFC' }}>
+                    style={{ background: paid ? 'var(--green-bg)' : partly ? '#FFFBEB' : '#F8FAFC' }}>
                     <FileText size={15} className={paid ? 'text-emerald-600' : 'text-gray-500'} />
                     <span className="font-bold text-[13.5px]">Рахунок {num}</span>
                     {url && (
@@ -127,8 +127,8 @@ export default function BillingSheet({ detail, onClose, onToast, onChanged, crea
                     <button onClick={() => togglePaid(num, items)} disabled={busy === num}
                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold press disabled:opacity-50"
                       style={paid
-                        ? { background: '#059669', color: '#fff' }
-                        : { background: '#fff', color: '#059669', boxShadow: 'inset 0 0 0 1px #A7F3D0' }}>
+                        ? { background: 'var(--green)', color: '#fff' }
+                        : { background: '#fff', color: 'var(--green)', boxShadow: 'inset 0 0 0 1px #A7F3D0' }}>
                       {busy === num ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle2 size={12} />}
                       {paid ? 'Оплачено' : 'Позначити оплаченим'}
                     </button>

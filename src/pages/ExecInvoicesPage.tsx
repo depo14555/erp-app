@@ -179,7 +179,7 @@ export default function ExecInvoicesPage({ onToast, onOpenOrder }: Props) {
               <div key={inv.row} className="rounded-2xl ring-1 ring-gray-200/70 bg-white p-3">
                 <div className="flex items-start gap-2.5">
                   <span className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ background: isFree ? '#FEF3C7' : '#ECFDF5', color: isFree ? '#92400E' : '#047857' }}>
+                    style={{ background: isFree ? 'var(--amber-bg)' : 'var(--green-bg)', color: isFree ? 'var(--amber)' : '#047857' }}>
                     <Receipt size={15} />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -457,7 +457,7 @@ function LinkInvoiceSheet({ invoice, onToast, onClose, onLinked }: {
                 <button key={o.headerRow} onClick={() => openOrder(o)}
                   className="w-full px-2.5 py-2 rounded-xl text-left press"
                   style={order?.headerRow === o.headerRow
-                    ? { background: 'var(--accent-soft)' } : { background: '#FAFBFC' }}>
+                    ? { background: 'var(--accent-soft)' } : { background: 'var(--bg)' }}>
                   <span className="block text-[12px] font-semibold truncate">{o.orderNum || o.projectId}</span>
                   <span className="block text-[10.5px] truncate" style={{ color: 'var(--ink-3)' }}>
                     {o.client || 'клієнт не вказаний'} · {o.total} поз.

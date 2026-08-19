@@ -67,10 +67,10 @@ interface Props {
 }
 
 const GROUP_META = {
-  pdf:   { label: 'Креслення (PDF)',    icon: FileText,  color: '#0D47A1', bg: '#E3F2FD' },
-  dxf:   { label: 'Файли різу (DXF)',   icon: Ruler,     color: '#E65100', bg: '#FFF3E0' },
-  '3d':  { label: '3D-моделі',          icon: Box,       color: '#1B5E20', bg: '#E8F5E9' },
-  other: { label: 'Інші позиції',       icon: Paperclip, color: '#455A64', bg: '#F5F5F5' },
+  pdf:   { label: 'Креслення (PDF)',    icon: FileText,  color: 'var(--blue)', bg: 'var(--blue-bg)' },
+  dxf:   { label: 'Файли різу (DXF)',   icon: Ruler,     color: 'var(--amber)', bg: 'var(--amber-bg)' },
+  '3d':  { label: '3D-моделі',          icon: Box,       color: 'var(--green)', bg: 'var(--green-bg)' },
+  other: { label: 'Інші позиції',       icon: Paperclip, color: 'var(--ink-2)', bg: 'var(--bg)' },
 } as const;
 
 const PAGE = 40; // позицій на групу за раз — великі замовлення (400+) не вішають телефон
@@ -92,7 +92,7 @@ const TOOLS: Array<{ key: string; label: string; hint: string; Icon: typeof Rock
   { key: 'photo',   label: 'Фотошоп',      hint: 'закрити зайве на кресленні', Icon: Paintbrush, color: '#DB2777' },
   { key: 'send',    label: 'Виконавцю',    hint: 'відправити позиції в його таблицю', Icon: Send, color: '#4F46E5' },
   { key: 'print',   label: 'Друк + QR',    hint: 'пакет креслень для цеху',    Icon: Printer,    color: '#0369A1' },
-  { key: 'billing', label: 'Рахунки',      hint: 'оплати і документи',         Icon: Receipt,    color: '#059669' },
+  { key: 'billing', label: 'Рахунки',      hint: 'оплати і документи',         Icon: Receipt,    color: 'var(--green)' },
   { key: 'asm',     label: 'Склад збірок', hint: 'що в яку збірку входить',    Icon: Blocks,     color: '#7C3AED', ai: true },
   { key: 'tmc',     label: 'ТМЦ і вага',   hint: 'матеріал, товщина, маса зі штампа', Icon: Scale, color: '#1B4FD8', ai: true },
   { key: 'purch',   label: 'Покупні',      hint: 'кріплення зі специфікацій збірок', Icon: ShoppingCart, color: '#EA580C', ai: true },
@@ -344,8 +344,8 @@ export default function OrderPage({
           key: `asm:${g.key}`,
           label: g.key || 'Без збірок',
           Icon: Blocks,
-          color: g.key ? '#5B21B6' : '#455A64',
-          bg: g.key ? '#F3EEFF' : '#F5F5F5',
+          color: g.key ? '#5B21B6' : 'var(--ink-2)',
+          bg: g.key ? '#F3EEFF' : 'var(--bg)',
           list: g.items,
         }))
       : (Object.keys(GROUP_META) as Array<keyof typeof GROUP_META>).map(k => ({
@@ -1180,7 +1180,7 @@ function FilterChip({ value, onChange, label, options }: {
         className="k-input appearance-none pl-2.5 pr-6 py-1.5 rounded-xl text-[11px] font-bold outline-none max-w-[130px] truncate transition-colors"
         style={value
           ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
-          : { background: '#F3F4F6', color: 'var(--ink-2)' }}>
+          : { background: 'var(--bg)', color: 'var(--ink-2)' }}>
         <option value="">{label}</option>
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>

@@ -37,8 +37,8 @@ const STATUS_OPTIONS = ['Працює', 'Відпустка', 'Лікарнян�
 const DOC_COLS = [11, 12, 13, 14, 15, 16];
 /** Кольори оцінок 0..4. */
 const LEVEL_STYLE: Record<number, { background: string; color: string }> = {
-  0: { background: '#F3F4F6', color: '#6B7280' },
-  1: { background: '#FEF3C7', color: '#92400E' },
+  0: { background: 'var(--bg)', color: '#6B7280' },
+  1: { background: 'var(--amber-bg)', color: 'var(--amber)' },
   2: { background: '#DBEAFE', color: '#1E40AF' },
   3: { background: '#D1FAE5', color: '#065F46' },
   4: { background: '#0D9488', color: '#FFFFFF' },
@@ -238,7 +238,7 @@ export default function StaffPage({ onToast, refreshSignal }: Props) {
       <span className="rounded-xl flex items-center justify-center flex-shrink-0"
         style={{ width: size, height: size, ...(on
           ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
-          : { background: '#F3F4F6', color: '#94A3B8' }) }}>
+          : { background: 'var(--bg)', color: '#94A3B8' }) }}>
         <UserRound size={Math.round(size * 0.45)} />
       </span>
     );
@@ -280,7 +280,7 @@ export default function StaffPage({ onToast, refreshSignal }: Props) {
                   className="px-2 py-1 rounded-lg text-[11px] font-bold transition-colors"
                   style={on
                     ? { background: 'var(--accent)', color: '#fff' }
-                    : { background: n ? '#F3F4F6' : '#FEF2F2', color: n ? 'var(--ink-2)' : '#B91C1C' }}>
+                    : { background: n ? 'var(--bg)' : '#FEF2F2', color: n ? 'var(--ink-2)' : '#B91C1C' }}>
                   {s.name} · {n}
                 </button>
               );
@@ -324,7 +324,7 @@ export default function StaffPage({ onToast, refreshSignal }: Props) {
                   </span>
                   {val(r, 9) && (
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0"
-                      style={working(r) ? { background: '#ECFDF5', color: '#059669' } : { background: '#FEF2F2', color: '#B91C1C' }}>
+                      style={working(r) ? { background: 'var(--green-bg)', color: 'var(--green)' } : { background: '#FEF2F2', color: '#B91C1C' }}>
                       {val(r, 9)}
                     </span>
                   )}
@@ -407,7 +407,7 @@ export default function StaffPage({ onToast, refreshSignal }: Props) {
                               className="px-2 py-0.5 rounded-lg text-[10.5px] font-bold press"
                               style={draft['9'] === o
                                 ? { background: 'var(--accent)', color: '#fff' }
-                                : { background: '#F3F4F6', color: 'var(--ink-2)' }}>
+                                : { background: 'var(--bg)', color: 'var(--ink-2)' }}>
                               {o}
                             </button>
                           ))}
@@ -492,7 +492,7 @@ export default function StaffPage({ onToast, refreshSignal }: Props) {
                           ))}
                         </span>
                         <button onClick={() => dropSkill(s.name)} disabled={saving}
-                          className="p-1 press flex-shrink-0" style={{ color: '#D1D5DB' }}
+                          className="p-1 press flex-shrink-0" style={{ color: 'var(--line-2)' }}
                           title={`Прибрати операцію «${s.name}» з матриці`} aria-label="Прибрати операцію">
                           <X size={12} />
                         </button>

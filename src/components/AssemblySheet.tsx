@@ -302,7 +302,7 @@ export default function AssemblySheet({ detail, onClose, onMinimize, onToast, on
                 return (
                   <button key={i.row} onClick={() => toggle(i.row)} disabled={busy}
                     className="w-full flex items-start gap-2 px-2.5 py-2 rounded-xl text-left press disabled:opacity-60"
-                    style={on ? { background: 'var(--accent-soft)' } : { background: '#FAFBFC' }}>
+                    style={on ? { background: 'var(--accent-soft)' } : { background: 'var(--bg)' }}>
                     {on ? <CheckSquare size={14} className="text-[var(--accent)] mt-0.5 flex-shrink-0" />
                         : <Square size={14} className="text-gray-300 mt-0.5 flex-shrink-0" />}
                     <span className="min-w-0 flex-1">
@@ -456,7 +456,7 @@ export default function AssemblySheet({ detail, onClose, onMinimize, onToast, on
                     return (
                       <div key={g.p.fileId} className="rounded-2xl ring-1 ring-gray-200/70 overflow-hidden">
                         <button onClick={() => flip(g.p.fileId)}
-                          className="w-full px-3 py-2 flex items-center gap-2 bg-[#FAFBFC] text-left press">
+                          className="w-full px-3 py-2 flex items-center gap-2 bg-[var(--bg)] text-left press">
                           {on ? <ChevronDown size={14} className="flex-shrink-0" style={{ color: 'var(--ink-3)' }} />
                               : <ChevronRight size={14} className="flex-shrink-0" style={{ color: 'var(--ink-3)' }} />}
                           <span className="min-w-0 flex-1">
@@ -523,7 +523,7 @@ export default function AssemblySheet({ detail, onClose, onMinimize, onToast, on
 
                   {orphans.length > 0 && (
                     <div className="rounded-2xl ring-1 ring-gray-200/70 overflow-hidden">
-                      <div className="px-3 py-2 bg-[#FAFBFC] flex items-center gap-2">
+                      <div className="px-3 py-2 bg-[var(--bg)] flex items-center gap-2">
                         <span className="text-[13px] font-bold flex-1">Без збірок</span>
                         <span className="text-[11.5px] font-bold tabular-nums" style={{ color: 'var(--ink-3)' }}>
                           {orphans.length}

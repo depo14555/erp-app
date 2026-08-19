@@ -15,8 +15,8 @@ interface Props {
 }
 
 const KIND = {
-  price:   { Icon: Tag,           label: 'Ціна',     color: '#2E7D32', bg: '#E8F5E9' },
-  status:  { Icon: Activity,      label: 'Статус',   color: '#1565C0', bg: '#E3F2FD' },
+  price:   { Icon: Tag,           label: 'Ціна',     color: '#2E7D32', bg: 'var(--green-bg)' },
+  status:  { Icon: Activity,      label: 'Статус',   color: '#1565C0', bg: 'var(--blue-bg)' },
   comment: { Icon: MessageSquare, label: 'Коментар', color: '#6A1B9A', bg: '#F3E5F5' },
 } as const;
 
@@ -59,7 +59,7 @@ export default function NotificationsSheet({ onClose, onToast }: Props) {
 
           {items.map((n, i) => {
             const meta = KIND[n.type as keyof typeof KIND] ?? {
-              Icon: Activity, label: n.type || 'Подія', color: '#455A64', bg: '#F5F5F5',
+              Icon: Activity, label: n.type || 'Подія', color: 'var(--ink-2)', bg: 'var(--bg)',
             };
             const Icon = meta.Icon;
             return (

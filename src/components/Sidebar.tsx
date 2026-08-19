@@ -76,7 +76,7 @@ const ORDER_TOOLS: ToolItem[] = [
   { key: 'photo', label: 'Фотошоп креслень', Icon: Paintbrush, color: '#DB2777' },
   { key: 'send', label: 'Відправити виконавцю', Icon: Send, color: '#4F46E5' },
   { key: 'print', label: 'Друк креслень + QR', Icon: Printer, color: '#0891B2' },
-  { key: 'billing', label: 'Рахунки і оплати', Icon: Receipt, color: '#059669' },
+  { key: 'billing', label: 'Рахунки і оплати', Icon: Receipt, color: 'var(--green)' },
 ];
 
 /** Те, що читає креслення само — окремим блоком, щоб було видно, де працює ШІ. */

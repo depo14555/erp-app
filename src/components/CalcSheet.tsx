@@ -387,7 +387,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
 
               <div className="flex-1 min-h-0 overflow-auto thin-scrollbar">
                 <table className="w-full border-collapse text-[12px]">
-                  <thead className="sticky top-0 bg-[#FAFBFC] z-10">
+                  <thead className="sticky top-0 bg-[var(--bg)] z-10">
                     <tr>
                       {['', 'Найменування', 'Призн.', 'Гібів/шт', 'Порізка хв/шт', 'Час всього', 'Ціна/шт', 'Сума'].map((h, i) => (
                         <th key={i} className="text-left font-semibold text-[10.5px] uppercase tracking-wide text-[var(--ink-3)] px-2 py-2 border-b hairline whitespace-nowrap">
@@ -400,7 +400,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                     {items.map(i => {
                       const inBundle = taken.has(i.row);
                       return (
-                        <tr key={i.row} className="border-b hairline hover:bg-[#FCFCFD]"
+                        <tr key={i.row} className="border-b hairline hover:bg-[var(--bg)]"
                           style={sel.has(i.row) ? { background: 'var(--accent-soft)' } : undefined}>
                           <td className="px-2 py-1.5 w-[32px]">
                             <button onClick={() => toggleRow(i.row)} className="flex press" aria-label="Вибрати">
@@ -483,7 +483,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
               {/* Гнуття: одна ціна за гіб на все замовлення */}
               {totals.bends > 0 && (
                 <div className="flex-shrink-0 border-t hairline px-3 py-2 flex items-center gap-2 flex-wrap bg-amber-50/60">
-                  <span className="flex items-center gap-1.5 text-[11.5px] font-bold" style={{ color: '#92400E' }}>
+                  <span className="flex items-center gap-1.5 text-[11.5px] font-bold" style={{ color: 'var(--amber)' }}>
                     <CornerUpRight size={13} /> Гнуття: {totals.bends} гібів
                   </span>
                   <label className="flex items-center gap-1.5 text-[11.5px]" style={{ color: 'var(--ink-3)' }}>
@@ -495,7 +495,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                       className="k-input w-[74px] px-2 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right"
                     />
                   </label>
-                  <span className="text-[11.5px] font-bold tabular-nums" style={{ color: '#92400E' }}>
+                  <span className="text-[11.5px] font-bold tabular-nums" style={{ color: 'var(--amber)' }}>
                     = {money(totals.bendCost)} грн
                   </span>
                 </div>
@@ -534,12 +534,12 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
             </div>
 
             {/* ПРАВОРУЧ: групи-картки */}
-            <div className="flex flex-col min-h-0 bg-[#FAFBFC]">
+            <div className="flex flex-col min-h-0 bg-[var(--bg)]">
               <div className="flex-shrink-0 px-3 py-2 flex items-center gap-2 border-b hairline">
                 <p className="text-[12px] font-bold flex-1">Групи для рахунку ({bundles.length})</p>
                 <button onClick={addBundle}
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold press"
-                  style={{ background: '#F3F4F6', color: 'var(--ink-2)' }}>
+                  style={{ background: 'var(--bg)', color: 'var(--ink-2)' }}>
                   <Plus size={12} /> Нова
                 </button>
               </div>
@@ -586,8 +586,8 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                           <button key={v} onClick={() => patch(b.id, { payTo: v })}
                             className="px-2 py-1 rounded-lg text-[10.5px] font-bold transition-colors"
                             style={b.payTo === v
-                              ? { background: v === 'client' ? '#ECFDF5' : '#FFF7ED', color: v === 'client' ? '#059669' : '#C2410C' }
-                              : { background: '#F3F4F6', color: 'var(--ink-3)' }}>
+                              ? { background: v === 'client' ? 'var(--green-bg)' : '#FFF7ED', color: v === 'client' ? 'var(--green)' : 'var(--amber)' }
+                              : { background: 'var(--bg)', color: 'var(--ink-3)' }}>
                             {label}
                           </button>
                         ))}

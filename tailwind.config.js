@@ -17,13 +17,13 @@ export default {
        */
       borderRadius: {
         none: '0',
-        sm: '3px',
-        DEFAULT: '4px',
-        md: '5px',
-        lg: '6px',
-        xl: '8px',
-        '2xl': '10px',
-        '3xl': '12px',
+        sm: '4px',
+        DEFAULT: '6px',
+        md: '7px',
+        lg: '8px',
+        xl: '10px',
+        '2xl': '12px',
+        '3xl': '14px',
         full: '9999px',
       },
 
@@ -47,27 +47,27 @@ export default {
        */
       colors: {
         /*
-          «Білий» у системі — це аркуш блокнота, а не екран: теплий тон
-          на всю поверхню виявився спокійнішим за розділення «хром/папір».
-          Підміна тут робить теплим одразу все, що написано bg-white.
+          Світлий CRM: білий — справді білий аркуш, сірий — холодний і
+          рівний по кроках. Підміна тут перефарбовує одразу все, що
+          написано bg-white / bg-gray-50 у сотні місць.
         */
-        white: '#FDFAF2',
+        white: '#FFFFFF',
         gray: {
-          50: '#F8F5ED',
-          100: '#F2EEE4',
-          200: '#E7E1D4',
-          300: '#DED6C6',
-          400: '#B7AD99',
-          500: '#8C8577',
-          600: '#6A6558',
-          700: '#4A463C',
-          800: '#2E2B25',
-          900: '#1B1F24',
+          50: '#F7F8FA',
+          100: '#F1F3F6',
+          200: '#E7E9EE',
+          300: '#D6DAE2',
+          400: '#B4BBC6',
+          500: '#98A1AE',
+          600: '#5B6472',
+          700: '#3D4552',
+          800: '#242A33',
+          900: '#101418',
         },
       },
 
       fontFamily: {
-        sans: ['Manrope', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
         mono: ['IBM Plex Mono', 'ui-monospace', 'SFMono-Regular', 'Consolas',
                'Liberation Mono', 'monospace'],
       },

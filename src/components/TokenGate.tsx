@@ -59,7 +59,7 @@ export default function TokenGate({ onSuccess }: Props) {
               <button key={k} type="button" onClick={() => pickEnv(k)}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl text-[12px] font-bold transition-colors"
                 style={on
-                  ? { background: k === 'test' ? '#FEF3C7' : '#EBF2FE', color: k === 'test' ? '#92400E' : '#1F6FEB' }
+                  ? { background: k === 'test' ? 'var(--amber-bg)' : '#EBF2FE', color: k === 'test' ? 'var(--amber)' : '#1F6FEB' }
                   : { background: '#F5F6F8', color: '#9CA3AF' }}>
                 <Icon size={13} /> {ENVS[k].label}
               </button>
