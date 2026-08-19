@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   X, Calculator, Loader2, Plus, Trash2, Save, Clock, Layers,
-  ArrowRight, Wallet, CheckSquare, Square, Scissors, CornerUpRight,
+  ArrowRight, Wallet, CheckSquare, Square, Scissors, CornerUpRight, Wrench,
 } from 'lucide-react';
 import { MinimizeButton } from './PageSheet';
 import { api } from '../api';
@@ -23,6 +23,12 @@ interface Props {
   onToast: (msg: string, err?: boolean) => void;
   /** Ціни записані в картку — оновити замовлення. */
   onApplied: () => void;
+  /**
+   * Відкрити розкрій. Він живе всередині картки «Лазерна порізка»:
+   * листи, вага металу й вартість різу — частина прорахунку, а не
+   * окреме вікно, з якого суму переносили руками.
+   */
+  onOpenNest?: () => void;
 }
 
 /** Класифікація групи — як це називається у нас і в рахунку. */
@@ -47,7 +53,7 @@ function isDxf(i: OrderItem): boolean {
   return /\.dxf$/i.test(String(i.name || ''));
 }
 
-export default function CalcSheet({ detail, onClose, onMinimize, onToast, onApplied }: Props) {
+export default function CalcSheet({ detail, onClose, onMinimize, onToast, onApplied, onOpenNest }: Props) {
   const items = useMemo(() => detail.items.filter(i => !i.group), [detail.items]);
   const [bundles, setBundles] = useState<CalcBundle[]>([]);
   const [updatedAt, setUpdatedAt] = useState('');
@@ -60,6 +66,9 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
   /** Гіби і час порізки по рядках. */
   const [meta, setMeta] = useState<Record<string, CalcRowMeta>>({});
   const [cutBusy, setCutBusy] = useState('');
+  /** Картки за видами робіт — головний вигляд; таблиця позицій лишається під ним. */
+  const [view, setView] = useState<'cards' | 'table'>('cards');
+  const [openCard, setOpenCard] = useState<string>('cut');
 
   useEffect(() => {
     api.calcGet(detail.header.headerRow)
@@ -115,6 +124,101 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
     return { time, sum, extras, bends, bendCost, cut, all: sum + extras + bendCost };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, prices, bundles, meta]);
+
+  /**
+   * КАРТКИ ЗА ВИДАМИ РОБІТ. Рахують не «позицію за позицією», а
+   * «порізка стільки, гнуття стільки» — так, як це тримають у голові
+   * і як воно потім лягає в рахунок. Позиція з маршрутом «лазер →
+   * гнуття» чесно живе у двох картках: це дві різні роботи.
+   */
+  const opCards = useMemo(() => {
+    const map = new Map<string, { key: string; label: string; kind: string; rows: OrderItem[] }>();
+    items.forEach(i => {
+      const op = String(i.op || '').trim();
+      // Групуємо за ВИДОМ РОБОТИ, а не за типом файла: позиція з операцією
+      // «Лазер» належить до порізки, навіть якщо DXF до неї ще не приклали
+      const key = /лазер|порізк|різ/i.test(op) ? 'cut'
+        : isBend(i) ? 'bend'
+        : op ? 'op:' + op.toLowerCase()
+        : 'none';
+      const label = key === 'cut' ? 'Лазерна порізка'
+        : key === 'bend' ? 'Гнуття'
+        : op || 'Без операції';
+      const kind = key === 'cut' ? 'Порізка металу'
+        : key === 'bend' ? 'Гнуття'
+        : /токар/i.test(op) ? 'Токарні роботи'
+        : /фрез/i.test(op) ? 'Фрезерні роботи'
+        : /сл\.?св|зварю/i.test(op) ? 'Зварювальні роботи'
+        : /фарб|покрит/i.test(op) ? 'Покриття'
+        : 'Інше';
+      const cur = map.get(key) || { key, label, kind, rows: [] };
+      cur.rows.push(i);
+      map.set(key, cur);
+    });
+    const order = ['cut', 'bend'];
+    return [...map.values()].sort((a, b) => {
+      const ia = order.indexOf(a.key), ib = order.indexOf(b.key);
+      if (ia !== ib) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      return a.label.localeCompare(b.label, 'uk');
+    });
+  }, [items, meta]);
+
+  /**
+   * Що вже дав розкрій. Вікно розкрою кладе в групи рядок витрат
+   * «лазерна порізка … м, врізок …, листів …» — з нього й читаємо,
+   * щоб картка показувала стан, а не порожнечу.
+   */
+  const nestInfo = useMemo(() => {
+    const lines = bundles.flatMap(b => b.extras).filter(e => /порізк|лист/i.test(e.label));
+    if (!lines.length) return '';
+    const sum = lines.reduce((s, e) => s + (e.sum || 0), 0);
+    return `${lines.length} розкладка${lines.length > 1 ? 'и' : ''} · ${money(sum)} грн`;
+  }, [bundles]);
+
+  const cardSum = (rows: OrderItem[]) => rows.reduce((s, i) => s + sumOf(i) + bendSum(i), 0);
+  const cardTime = (rows: OrderItem[]) => rows.reduce((s, i) => s + timeAllOf(i) + cutHours(i), 0);
+
+  /** Одна ціна на всі позиції картки — найчастіша дія при прорахунку. */
+  function priceCard(rows: OrderItem[], raw: string) {
+    const v = num(raw);
+    setPrices(p => {
+      const n = { ...p };
+      rows.forEach(i => { n[i.row] = raw; });
+      return n;
+    });
+    setMeta(m => {
+      const n = { ...m };
+      rows.forEach(i => {
+        const cur = { ...(n[String(i.row)] || {}) };
+        if (v > 0) cur.price = v; else delete cur.price;
+        if (Object.keys(cur).length) n[String(i.row)] = cur; else delete n[String(i.row)];
+      });
+      return n;
+    });
+  }
+
+  /** Рахунок збирається з карток: одна картка — один рядок рахунку. */
+  function bundlesFromCards() {
+    const made: CalcBundle[] = opCards
+      .filter(c => c.rows.length)
+      .map(c => {
+        const old = bundles.find(b => b.kind === c.kind);
+        return {
+          id: old?.id || uid(),
+          kind: c.kind,
+          invoiceName: old?.invoiceName || `${c.label} — ${detail.header.orderNum || detail.header.projectId}`,
+          payTo: old?.payTo || 'client',
+          rows: c.rows.map(i => i.row),
+          extras: old?.extras || [],
+          note: old?.note || '',
+        } as CalcBundle;
+      });
+    // рядки витрат із розкрою не втрачаємо — вони живуть у своїх групах
+    const keep = bundles.filter(b => !made.some(m => m.kind === b.kind) && b.extras.length);
+    setBundles([...made, ...keep]);
+    setActive(made[0]?.id || '');
+    onToast(`📋 Рахунок зібрано з ${made.length} карток`);
+  }
 
   function setMetaVal(row: number, key: keyof CalcRowMeta, raw: string) {
     const v = num(raw);
@@ -346,6 +450,16 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
             </span>
             <span className="text-[14px] font-bold tabular-nums">{money(totals.all)} грн</span>
           </div>
+          <div className="flex items-center rounded-lg overflow-hidden mr-1"
+            style={{ boxShadow: 'inset 0 0 0 1px var(--line-2)' }}>
+            {([['cards', 'Роботи'], ['table', 'Позиції']] as const).map(([v, label]) => (
+              <button key={v} onClick={() => setView(v)}
+                className="px-2.5 py-[5px] text-[11.5px] font-bold transition-colors"
+                style={view === v ? { background: 'var(--ink)', color: '#fff' } : { color: 'var(--ink-2)' }}>
+                {label}
+              </button>
+            ))}
+          </div>
           {onMinimize && <MinimizeButton onClick={onMinimize} />}
           <button onClick={onClose} className="p-2 rounded-xl press" style={{ color: 'var(--ink-3)' }} aria-label="Закрити">
             <X size={18} />
@@ -354,6 +468,170 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
 
         {loading ? (
           <div className="p-10 flex justify-center"><Loader2 size={24} className="animate-spin text-teal-600" /></div>
+        ) : view === 'cards' ? (
+          <>
+            <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5" style={{ background: 'var(--bg)' }}>
+              {opCards.map(card => {
+                const on = openCard === card.key;
+                const isCut = card.key === 'cut';
+                const isBendCard = card.key === 'bend';
+                const sum = cardSum(card.rows);
+                const withPrice = card.rows.filter(i => priceOf(i) > 0).length;
+                return (
+                  <div key={card.key} className="card overflow-hidden" style={{ background: 'var(--surface)' }}>
+                    <button onClick={() => setOpenCard(on ? '' : card.key)}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 text-left press">
+                      <span className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
+                        style={isCut ? { background: 'var(--blue-bg)', color: 'var(--blue)' }
+                          : isBendCard ? { background: 'var(--amber-bg)', color: 'var(--amber)' }
+                          : { background: 'var(--bg)', color: 'var(--ink-2)' }}>
+                        {isCut ? <Scissors size={14} /> : isBendCard ? <CornerUpRight size={14} /> : <Wrench size={14} />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[13.5px] font-bold truncate">{card.label}</span>
+                        <span className="k-label">
+                          {card.rows.length} поз. · ціна є в {withPrice}
+                          {cardTime(card.rows) > 0 ? ` · ${cardTime(card.rows).toFixed(1)} год` : ''}
+                        </span>
+                      </span>
+                      {withPrice < card.rows.length && (
+                        <span className="k-chip" style={{ background: 'var(--amber-bg)', color: 'var(--amber)', borderColor: 'var(--amber-line)' }}>
+                          нема ціни: {card.rows.length - withPrice}
+                        </span>
+                      )}
+                      <span className="k-value text-[14px] whitespace-nowrap">{sum ? money(sum) : '—'}</span>
+                    </button>
+
+                    {on && (
+                      <div className="px-3 pb-3 border-t hairline pt-2.5 space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap text-[11.5px]" style={{ color: 'var(--ink-2)' }}>
+                          {isCut ? (
+                            <>
+                              <span className="k-label">Тариф різу з креслень</span>
+                              <button onClick={cutFromDxf} disabled={!!cutBusy || saving}
+                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold press disabled:opacity-50"
+                                style={{ background: 'var(--blue-bg)', color: 'var(--blue)', boxShadow: 'inset 0 0 0 1px var(--blue-line)' }}>
+                                {cutBusy ? <Loader2 size={11} className="animate-spin" /> : <Scissors size={11} />}
+                                {cutBusy || 'Перерахувати з DXF'}
+                              </button>
+                              {cutPriced.length > 0 && (
+                                <button onClick={priceFromCut}
+                                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold press"
+                                  style={{ background: 'var(--accent-soft)', color: 'var(--accent)', boxShadow: 'inset 0 0 0 1px var(--accent)' }}>
+                                  <CornerUpRight size={11} /> Тариф → ціна ({cutPriced.length})
+                                </button>
+                              )}
+                            </>
+                          ) : isBendCard ? (
+                            <>
+                              <span className="k-label">Ціна за один гіб</span>
+                              <input value={bendPriceAll} onChange={e => applyBendPrice(e.target.value)}
+                                inputMode="decimal" placeholder="0"
+                                className="k-input w-[74px] px-2 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right" />
+                              <span className="k-label">гібів усього: {totals.bends || '—'}</span>
+                            </>
+                          ) : (
+                            <span className="k-label">Ціна ставиться руками — цю роботу з креслення не порахувати</span>
+                          )}
+                          <span className="ml-auto flex items-center gap-1.5">
+                            <span className="k-label">одна ціна на всі</span>
+                            <input inputMode="decimal" placeholder="0"
+                              onChange={e => priceCard(card.rows, e.target.value)}
+                              className="k-input w-[74px] px-2 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right" />
+                          </span>
+                        </div>
+
+                        <table className="w-full border-collapse text-[12px]">
+                          <tbody>
+                            {card.rows.map(i => (
+                              <tr key={i.row} className="border-t hairline">
+                                <td className="py-[5px] pr-2 truncate" style={{ maxWidth: 0, width: '100%' }} title={i.name}>
+                                  {i.name}
+                                  {metaOf(i.row).cutPrice ? (
+                                    <span className="k-label">тариф різу {money(metaOf(i.row).cutPrice as number)} грн/шт</span>
+                                  ) : null}
+                                </td>
+                                <td className="py-[5px] px-1 text-right font-mono text-[11.5px] whitespace-nowrap"
+                                  style={{ color: 'var(--ink-3)' }}>{qtyOf(i) || '—'} шт</td>
+                                <td className="py-[5px] px-1 w-[84px]">
+                                  <input value={prices[i.row] ?? metaOf(i.row).price ?? i.clientPrice ?? ''}
+                                    onChange={e => {
+                                      setPrices(p => ({ ...p, [i.row]: e.target.value }));
+                                      setMetaVal(i.row, 'price', e.target.value);
+                                    }}
+                                    inputMode="decimal" placeholder="0"
+                                    className="k-input w-full px-1.5 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right" />
+                                </td>
+                                <td className="py-[5px] pl-1 text-right font-mono font-semibold whitespace-nowrap w-[86px]">
+                                  {sumOf(i) ? money(sumOf(i)) : <span className="k-empty">—</span>}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+
+                        {isCut && (
+                          <div className="rounded-lg p-2.5"
+                            style={{ background: 'var(--blue-bg)', boxShadow: 'inset 0 0 0 1px var(--blue-line)' }}>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[12px] font-bold" style={{ color: 'var(--blue)' }}>Розкрій на листи</span>
+                              <span className="k-label" style={nestInfo ? { color: 'var(--blue)' } : undefined}>
+                                {nestInfo || 'ще не розкладали'}
+                              </span>
+                              {onOpenNest && (
+                                <button onClick={onOpenNest}
+                                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold press ml-auto"
+                                  style={{ background: 'var(--blue)', color: '#fff' }}>
+                                  <Scissors size={11} /> {nestInfo ? 'Перерозкласти' : 'Розкласти на листи'}
+                                </button>
+                              )}
+                            </div>
+                            <span className="k-label mt-1">
+                              звідти беруться листи, вага металу й вартість різу — окремим рядком у рахунок
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              <div className="card overflow-hidden" style={{ background: 'var(--surface)' }}>
+                <div className="flex items-center gap-2 px-3 py-2.5">
+                  <span className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'var(--bg)', color: 'var(--ink-2)' }}><Plus size={14} /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13.5px] font-bold">Інші витрати</span>
+                    <span className="k-label">метал, доставка, покриття — усе, чого немає в кресленнях</span>
+                  </span>
+                  <span className="k-value text-[14px]">{totals.extras ? money(totals.extras) : '—'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-shrink-0 border-t hairline px-3 py-2 flex items-center gap-2 flex-wrap"
+              style={{ background: 'var(--surface)' }}>
+              <span className="k-label">Разом по замовленню</span>
+              <span className="k-value text-[15px]">{money(totals.all)} грн</span>
+              <button onClick={bundlesFromCards}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold press ml-auto"
+                style={{ background: 'var(--surface)', color: 'var(--ink)', boxShadow: 'inset 0 0 0 1px var(--line-2)' }}>
+                <Layers size={12} /> Зібрати рахунок ({opCards.length})
+              </button>
+              <button onClick={applyPrices} disabled={saving || !pending.length}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold press disabled:opacity-40"
+                style={{ background: 'var(--accent-soft)', color: 'var(--accent)', boxShadow: 'inset 0 0 0 1px var(--accent)' }}>
+                {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                Записати в картку{pending.length ? ` (${pending.length})` : ''}
+              </button>
+              <button onClick={save} disabled={saving}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold press"
+                style={{ background: 'var(--green)', color: '#fff' }}>
+                {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Зберегти
+              </button>
+            </div>
+          </>
         ) : (
           <div className="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-[minmax(420px,1fr)_minmax(380px,460px)]">
 

@@ -972,6 +972,7 @@ export default function OrderPage({
         <div className={hide('calc')}>
           <CalcSheet
             detail={detail}
+            onOpenNest={() => setShowNest(true)}
             onClose={() => setShowCalc(false)}
             onMinimize={() => minimize('calc')}
             onToast={onToast}
