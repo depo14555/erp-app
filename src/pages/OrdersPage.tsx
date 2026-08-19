@@ -73,7 +73,7 @@ export default function OrdersPage({
               value={q}
               onChange={e => setQ(e.target.value)}
               placeholder="Пошук за номером, клієнтом, шифром…"
-              className="w-full pl-8 pr-3 py-[6px] rounded-lg bg-white outline-none text-[12.5px]"
+              className="k-input w-full pl-8 pr-3 py-[6px] rounded-lg outline-none text-[12.5px]"
               style={{ boxShadow: 'inset 0 0 0 1px var(--line)' }}
             />
           </div>

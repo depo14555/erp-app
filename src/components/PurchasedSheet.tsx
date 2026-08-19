@@ -391,7 +391,7 @@ export default function PurchasedSheet({ detail, onClose, onMinimize, onToast, o
                                 <input autoFocus value={draft} onChange={e => setDraft(e.target.value)}
                                   onKeyDown={e => { if (e.key === 'Enter') correct(l); if (e.key === 'Escape') setEditing(''); }}
                                   placeholder="як має бути"
-                                  className="flex-1 px-2 py-1 rounded-lg bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 outline-none text-[12px]" />
+                                  className="k-input flex-1 px-2 py-1 rounded-lg outline-none text-[12px]" />
                                 <button onClick={() => correct(l)}
                                   className="px-2.5 py-1 rounded-lg text-[11.5px] font-bold text-white press"
                                   style={{ background: 'var(--accent)' }}>Зберегти</button>

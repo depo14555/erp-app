@@ -122,7 +122,7 @@ export default function BulkEditSheet({ rows, items, lists, rowStatusList, onClo
               onKeyDown={e => { if (e.key === 'Enter') apply(); }}
               placeholder={FIELDS.find(f => f.key === field)?.hint}
               autoFocus
-              className="w-full px-3 py-2.5 rounded-xl bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[13.5px]"
+              className="k-input w-full px-3 py-2.5 rounded-xl outline-none text-[13.5px]"
             />
             {opts.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">

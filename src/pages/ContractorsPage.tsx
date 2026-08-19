@@ -192,7 +192,7 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input value={q} onChange={e => setQ(e.target.value)}
               placeholder="Пошук за назвою, телефоном, містом…"
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-white ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[13px]" />
+              className="k-input w-full pl-9 pr-3 py-2 rounded-xl outline-none text-[13px]" />
           </div>
           <p className="hidden md:block text-[11.5px]" style={{ color: 'var(--ink-3)' }}>
             Показано <b style={{ color: 'var(--ink-2)' }}>{rows.length}</b> з {data?.rows.length ?? 0}
@@ -319,12 +319,12 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
                     {isLong(f.col) ? (
                       <textarea rows={2} value={draft[f.col] || ''}
                         onChange={e => setDraft(d => ({ ...d, [f.col]: e.target.value }))}
-                        className="w-full px-3 py-2 rounded-xl bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[13px] resize-y" />
+                        className="k-input w-full px-3 py-2 rounded-xl outline-none text-[13px] resize-y" />
                     ) : (
                       <input value={draft[f.col] || ''}
                         onChange={e => setDraft(d => ({ ...d, [f.col]: e.target.value }))}
                         placeholder={f.col === 1 ? 'Назва компанії' : ''}
-                        className="w-full px-3 py-2 rounded-xl bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[13px]" />
+                        className="k-input w-full px-3 py-2 rounded-xl outline-none text-[13px]" />
                     )}
                   </label>
                 ))}
@@ -350,9 +350,9 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
                       onChange={e => setNewOp({ ...newOp, name: e.target.value })}
                       onKeyDown={e => { if (e.key === 'Enter') addOp(); if (e.key === 'Escape') setNewOp(null); }}
                       placeholder="Назва операції"
-                      className="flex-1 min-w-[150px] px-2.5 py-1.5 rounded-lg bg-white ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 outline-none text-[12.5px]" />
+                      className="k-input flex-1 min-w-[150px] px-2.5 py-1.5 rounded-lg outline-none text-[12.5px]" />
                     <select value={newOp.group} onChange={e => setNewOp({ ...newOp, group: e.target.value })}
-                      className="px-2 py-1.5 rounded-lg bg-white ring-1 ring-gray-200 text-[12px] outline-none">
+                      className="k-input px-2 py-1.5 rounded-lg text-[12px] outline-none">
                       {opGroups.map(([g]) => <option key={g} value={g}>{g}</option>)}
                       <option value="">без групи</option>
                     </select>
@@ -449,7 +449,7 @@ export default function ContractorsPage({ onToast, refreshSignal }: Props) {
                                       }))}
                                       inputMode={[3, 5, 7, 8, 9, 10].includes(f.col) ? 'decimal' : undefined}
                                       placeholder={f.col === 4 ? 'грн/шт · грн/м · грн/год' : ''}
-                                      className="w-full px-2 py-1.5 rounded-lg bg-white ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 outline-none text-[12px]" />
+                                      className="k-input w-full px-2 py-1.5 rounded-lg outline-none text-[12px]" />
                                   </label>
                                 ))}
                               </div>

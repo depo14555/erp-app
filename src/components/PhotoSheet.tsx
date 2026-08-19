@@ -434,7 +434,7 @@ export default function PhotoSheet({ detail, onClose, onMinimize, onToast, onSav
         <div className="relative">
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Пошук файлу…"
-            className="w-full pl-7 pr-2 py-1.5 rounded-xl bg-gray-50 ring-1 ring-gray-200/80 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[12px]" />
+            className="k-input w-full pl-7 pr-2 py-1.5 rounded-xl outline-none text-[12px]" />
         </div>
         <div className="flex items-center gap-1 flex-wrap">
           {([['todo', `Не оброблені · ${stats.todo}`], ['done', `Оброблені · ${stats.done}`], ['', 'Всі']] as const).map(([v, label]) => (

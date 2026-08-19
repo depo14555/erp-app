@@ -45,7 +45,7 @@ export default function SearchPage({ onOpenOrder, onToast }: Props) {
             value={q}
             onChange={e => setQ(e.target.value)}
             placeholder="Децимальник, назва, виконавець…"
-            className="w-full pl-9 pr-3 py-2.5 rounded-2xl bg-white ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[13px]"
+            className="k-input w-full pl-9 pr-3 py-2.5 rounded-2xl outline-none text-[13px]"
           />
         </div>
         <button

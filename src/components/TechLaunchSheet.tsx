@@ -201,8 +201,8 @@ export default function TechLaunchSheet({ detail, onClose, onMinimize, onToast, 
             <div className="flex flex-col min-h-0">
               <div className="flex-shrink-0 px-4 pt-2.5 flex items-center gap-1.5">
                 <input value={q} onChange={e => setQ(e.target.value)} placeholder="Пошук файлу…"
-                  className="flex-1 min-w-0 px-3 py-1.5 rounded-[8px] outline-none text-[12px]"
-                  style={{ background: 'var(--surface)', boxShadow: 'inset 0 0 0 1px var(--line)' }} />
+                  className="k-input flex-1 min-w-0 px-3 py-1.5 rounded-[8px] outline-none text-[12px]"
+                  />
                 {[['', 'Всі'], ['pdf', 'PDF'], ['dxf', 'DXF'], ['3d', '3D']].map(([v, label]) => (
                   <button key={v} onClick={() => setFExt(v)}
                     className="px-2.5 py-1.5 rounded-[8px] text-[11px] font-bold transition-colors flex-shrink-0"
@@ -285,8 +285,8 @@ export default function TechLaunchSheet({ detail, onClose, onMinimize, onToast, 
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <input value={s.qty} onChange={e => patch(f.id, { qty: e.target.value.replace(/\D/g, '') })}
                               placeholder="К-сть" inputMode="numeric"
-                              className="w-[76px] px-2.5 py-1.5 rounded-[8px] outline-none text-[12px] tabular-nums"
-                              style={{ background: 'var(--surface)', boxShadow: 'inset 0 0 0 1px var(--line-2)' }} />
+                              className="k-input w-[76px] px-2.5 py-1.5 rounded-[8px] outline-none text-[12px] tabular-nums"
+                              />
                             <button onClick={() => patch(f.id, { mirror: !s.mirror })}
                               className="flex items-center gap-1 px-2.5 py-1.5 rounded-[8px] text-[11px] font-bold transition-colors"
                               style={s.mirror
@@ -296,8 +296,8 @@ export default function TechLaunchSheet({ detail, onClose, onMinimize, onToast, 
                             </button>
                             <input value={s.note} onChange={e => patch(f.id, { note: e.target.value })}
                               placeholder="Примітка…"
-                              className="flex-1 min-w-[120px] px-2.5 py-1.5 rounded-[8px] outline-none text-[12px]"
-                              style={{ background: 'var(--surface)', boxShadow: 'inset 0 0 0 1px var(--line-2)' }} />
+                              className="k-input flex-1 min-w-[120px] px-2.5 py-1.5 rounded-[8px] outline-none text-[12px]"
+                              />
                           </div>
                         </div>
                       )}

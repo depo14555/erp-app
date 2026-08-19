@@ -306,8 +306,8 @@ export default function PurchasedPage({ orders, onToast, onOpenOrder, refreshKey
           <div className="relative flex-1 min-w-[150px] max-w-[320px] ml-auto">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--ink-3)' }} />
             <input value={q} onChange={e => setQ(e.target.value)} placeholder="Назва або ГОСТ…"
-              className="w-full pl-7 pr-2 py-[6px] rounded-lg outline-none text-[12.5px]"
-              style={{ background: 'var(--surface)', boxShadow: 'inset 0 0 0 1px var(--line)' }} />
+              className="k-input w-full pl-7 pr-2 py-[6px] rounded-lg outline-none text-[12.5px]"
+              />
           </div>
           <button onClick={load} className="p-1.5 press" aria-label="Оновити" style={{ color: 'var(--ink-2)' }}>
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
@@ -330,7 +330,7 @@ export default function PurchasedPage({ orders, onToast, onOpenOrder, refreshKey
 
           {orderList.length > 1 && (
             <select value={order} onChange={e => setOrder(e.target.value)}
-              className="px-2 py-1 rounded-[8px] text-[11.5px] font-bold outline-none"
+              className="k-input px-2 py-1 rounded-[8px] text-[11.5px] font-bold outline-none"
               style={{ background: 'var(--surface)', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
               <option value="">Усі замовлення</option>
               {orderList.map(o => <option key={o} value={o}>{orderLabel.get(o) || o}</option>)}
@@ -477,7 +477,7 @@ export default function PurchasedPage({ orders, onToast, onOpenOrder, refreshKey
                         <td className="px-2.5 py-[5px] whitespace-nowrap">
                           <select value={l.status} disabled={busy}
                             onChange={e => mark(e.target.value, [l.row])}
-                            className="px-1.5 py-[3px] rounded-[6px] text-[11px] font-bold outline-none"
+                            className="k-input px-1.5 py-[3px] rounded-[6px] text-[11px] font-bold outline-none"
                             style={l.status
                               ? { background: STATUS_META[l.status]?.bg, color: STATUS_META[l.status]?.fg, boxShadow: `inset 0 0 0 1px ${STATUS_META[l.status]?.line}` }
                               : { background: 'var(--surface)', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
@@ -515,8 +515,8 @@ export default function PurchasedPage({ orders, onToast, onOpenOrder, refreshKey
             <input autoFocus value={listName} onChange={e => setListName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') makeList(); }}
               placeholder="Напр. «Кріплення 18.08» або «Метизи до 27/07»"
-              className="w-full mt-3 px-3 py-2 rounded-[8px] outline-none text-[13px]"
-              style={{ background: 'var(--surface)', boxShadow: 'inset 0 0 0 1px var(--line-2)' }} />
+              className="k-input w-full mt-3 px-3 py-2 rounded-[8px] outline-none text-[13px]"
+              />
             <div className="flex items-center gap-1.5 mt-3">
               <button onClick={() => setNaming(false)} className="px-3 py-2 rounded-[8px] text-[12.5px] font-bold press"
                 style={{ color: 'var(--ink-3)' }}>Скасувати</button>

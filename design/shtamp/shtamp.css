@@ -122,6 +122,31 @@ table { font-variant-numeric: tabular-nums; }
   white-space: nowrap;
 }
 
+/**
+ * ПОЛЕ ВВОДУ. Правило 8: на кремовому аркуші сіре поле з волосяною
+ * рамкою зливається з тлом — не видно, куди писати. Поле має бути
+ * білою клітинкою з чіткою рамкою, як на паперовому бланку.
+ */
+.k-input {
+  background: #FFFFFF;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  color: var(--ink);
+  box-shadow: inset 0 1px 2px rgba(27, 31, 36, 0.05);
+  transition: border-color .12s, box-shadow .12s;
+}
+.k-input::placeholder { color: var(--ink-3); }
+.k-input:hover:not(:disabled) { border-color: var(--ink-3); }
+.k-input:focus,
+.k-input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.k-input:disabled { background: var(--bg); color: var(--ink-3); }
+/** Вписане руками — щоб було видно, що це не автозаповнення. */
+.k-input.k-hand { background: #FFFDF3; border-color: var(--amber-line); }
+
 /** Порожня клітинка: риска по центру, а не порожнеча. */
 .k-empty {
   color: var(--line-2);

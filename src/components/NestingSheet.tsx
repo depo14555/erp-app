@@ -372,10 +372,10 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast }: P
                 ))}
                 <span className="ml-2 text-[11.5px]" style={{ color: 'var(--ink-3)' }}>Зазор</span>
                 <input value={gap} onChange={e => setGap(parseFloat(e.target.value) || 0)} inputMode="decimal"
-                  className="w-[56px] px-2 py-1.5 rounded-xl bg-gray-50 ring-1 ring-gray-200 outline-none text-[12px] tabular-nums text-right" />
+                  className="k-input w-[56px] px-2 py-1.5 rounded-xl outline-none text-[12px] tabular-nums text-right" />
                 <span className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>Поле</span>
                 <input value={margin} onChange={e => setMargin(parseFloat(e.target.value) || 0)} inputMode="decimal"
-                  className="w-[56px] px-2 py-1.5 rounded-xl bg-gray-50 ring-1 ring-gray-200 outline-none text-[12px] tabular-nums text-right" />
+                  className="k-input w-[56px] px-2 py-1.5 rounded-xl outline-none text-[12px] tabular-nums text-right" />
                 {([['rot', rot, setRot, 'Поворот 90°'], ['opt', optAngle, setOptAngle, 'Авто-кут'], ['ts', trueShape, setTrueShape, 'Щільний розкрій']] as const).map(
                   ([k, val, set, label]) => (
                     <button key={k as string} onClick={() => (set as any)(!val)}
@@ -404,7 +404,7 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast }: P
                       {g.items.length} найменувань · {g.items.reduce((s, i) => s + qtyOf(i), 0)} шт
                     </span>
                     <select value={g.fmt} onChange={e => setGroups(prev => prev.map((x, i) => i === gi ? { ...x, fmt: +e.target.value } : x))}
-                      className="ml-auto px-2 py-1 rounded-xl bg-gray-50 ring-1 ring-gray-200 text-[11.5px] outline-none">
+                      className="k-input ml-auto px-2 py-1 rounded-xl text-[11.5px] outline-none">
                       {FORMATS.map(([w, h], i) => <option key={i} value={i}>{w}×{h}</option>)}
                     </select>
 
@@ -422,7 +422,7 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast }: P
                               )}
                               onChange={e => setPrice(g.key, f, e.target.value)}
                               inputMode="decimal"
-                              className="w-[62px] px-1.5 py-1 rounded-lg bg-gray-50 ring-1 ring-gray-200 outline-none text-[11px] tabular-nums text-right" />
+                              className="k-input w-[62px] px-1.5 py-1 rounded-lg outline-none text-[11px] tabular-nums text-right" />
                           </label>
                         ))}
                         <button onClick={savePrices} className="text-[11px] font-bold press px-2 py-1 rounded-lg" style={{ color: 'var(--accent)' }}>

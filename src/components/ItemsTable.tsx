@@ -195,7 +195,7 @@ export default function ItemsTable({
             if (e.key === 'Enter') commit(item.row, field, draft, value);
             if (e.key === 'Escape') setEdit(null);
           }}
-          className="w-full px-2 py-1 rounded-lg border border-[var(--accent)] outline-none text-[12.5px] shadow-sm"
+          className="k-input w-full px-2 py-1 rounded-lg border-[var(--accent)] outline-none text-[12.5px] shadow-sm"
         />
       );
     }
@@ -269,7 +269,7 @@ export default function ItemsTable({
             if (e.key === 'Enter') commit(item.row, 'name', draft, item.name);
             if (e.key === 'Escape') setEdit(null);
           }}
-          className="w-full px-2 py-1 rounded-lg border border-[var(--accent)] outline-none text-[12.5px] shadow-sm"
+          className="k-input w-full px-2 py-1 rounded-lg border-[var(--accent)] outline-none text-[12.5px] shadow-sm"
         />
       );
     }
@@ -734,7 +734,7 @@ function ListPopover({ state, onPick, onClose }: {
                 }
               }}
               placeholder="Пошук або свій текст…"
-              className="w-full pl-7 pr-2 py-1.5 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-400 text-[12px]"
+              className="k-input w-full pl-7 pr-2 py-1.5 rounded-lg outline-none text-[12px]"
             />
           </div>
         </div>
@@ -827,7 +827,7 @@ function ColumnFilterPopover({ label, rect, values, selected, onChange, onClose 
             <input value={q} onChange={e => setQ(e.target.value)} autoFocus
               onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
               placeholder="Пошук значення…"
-              className="w-full pl-7 pr-2 py-1.5 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-400 text-[12px]" />
+              className="k-input w-full pl-7 pr-2 py-1.5 rounded-lg outline-none text-[12px]" />
           </div>
         </div>
 

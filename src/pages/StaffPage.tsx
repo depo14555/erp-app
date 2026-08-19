@@ -252,7 +252,7 @@ export default function StaffPage({ onToast, refreshSignal }: Props) {
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input value={q} onChange={e => setQ(e.target.value)}
               placeholder="Пошук за ПІБ, посадою, операцією…"
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-white ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[13px]" />
+              className="k-input w-full pl-9 pr-3 py-2 rounded-xl outline-none text-[13px]" />
           </div>
           <p className="hidden md:block text-[11.5px]" style={{ color: 'var(--ink-3)' }}>
             Працює: <b style={{ color: 'var(--ink-2)' }}>{(data?.rows || []).filter(working).length}</b> з {data?.rows.length ?? 0}
@@ -392,13 +392,13 @@ export default function StaffPage({ onToast, refreshSignal }: Props) {
                         <textarea rows={2} value={draft[f.col] || ''}
                           onChange={e => setDraft(d => ({ ...d, [f.col]: e.target.value }))}
                           placeholder={HINTS[f.col]}
-                          className="w-full px-3 py-2 rounded-xl bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[13px] resize-y" />
+                          className="k-input w-full px-3 py-2 rounded-xl outline-none text-[13px] resize-y" />
                       ) : (
                         <input value={draft[f.col] || ''}
                           onChange={e => setDraft(d => ({ ...d, [f.col]: e.target.value }))}
                           placeholder={HINTS[f.col]}
                           type={f.col === 4 ? 'email' : 'text'}
-                          className="w-full px-3 py-2 rounded-xl bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[13px]" />
+                          className="k-input w-full px-3 py-2 rounded-xl outline-none text-[13px]" />
                       )}
                       {f.col === 9 && (
                         <span className="flex gap-1 mt-1 flex-wrap">
@@ -432,7 +432,7 @@ export default function StaffPage({ onToast, refreshSignal }: Props) {
                       <input value={draft[f.col] || ''}
                         onChange={e => setDraft(d => ({ ...d, [f.col]: e.target.value }))}
                         placeholder={HINTS[f.col]}
-                        className="w-full px-3 py-2 rounded-xl bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[13px]" />
+                        className="k-input w-full px-3 py-2 rounded-xl outline-none text-[13px]" />
                     </label>
                   ))}
                 </div>
@@ -460,7 +460,7 @@ export default function StaffPage({ onToast, refreshSignal }: Props) {
                       onChange={e => setNewSkill(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter') addSkill(); if (e.key === 'Escape') setNewSkill(null); }}
                       placeholder="Назва операції"
-                      className="flex-1 min-w-[150px] px-2.5 py-1.5 rounded-lg bg-white ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 outline-none text-[12.5px]" />
+                      className="k-input flex-1 min-w-[150px] px-2.5 py-1.5 rounded-lg outline-none text-[12.5px]" />
                     <button onClick={addSkill} disabled={saving || !newSkill.trim()}
                       className="px-3 py-1.5 rounded-lg text-[12px] font-bold text-white press disabled:opacity-40"
                       style={{ background: 'var(--accent)' }}>Додати</button>

@@ -255,7 +255,7 @@ function FilterSelect({ value, onChange, label, options }: {
   return (
     <div className="relative">
       <select value={value} onChange={e => onChange(e.target.value)}
-        className="w-full appearance-none pl-2.5 pr-6 py-2 rounded-xl text-[11.5px] font-semibold border outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+        className="k-input w-full appearance-none pl-2.5 pr-6 py-2 rounded-xl text-[11.5px] font-semibold outline-none"
         style={{ borderColor: value ? 'var(--accent)' : 'var(--line)', color: value ? 'var(--accent)' : 'var(--ink-2)' }}>
         <option value="">{label}: всі</option>
         {options.map(o => <option key={o} value={o}>{o}</option>)}

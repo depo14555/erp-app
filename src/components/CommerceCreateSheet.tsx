@@ -142,12 +142,12 @@ export default function CommerceCreateSheet({ detail, docType, preselectRows, on
                 <div className="space-y-1.5">
                   <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--ink-3)' }}>Клієнт</p>
                   <input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Назва клієнта"
-                    className="w-full px-3 py-2 rounded-xl bg-gray-50 ring-1 ring-gray-200/80 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[12.5px] font-semibold" />
+                    className="k-input w-full px-3 py-2 rounded-xl outline-none text-[12.5px] font-semibold" />
                   <div className="flex gap-1.5">
                     <input value={clientEdrpou} onChange={e => setClientEdrpou(e.target.value)} placeholder="ЄДРПОУ"
-                      className="w-[130px] px-3 py-2 rounded-xl bg-gray-50 ring-1 ring-gray-200/80 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[12px]" />
+                      className="k-input w-[130px] px-3 py-2 rounded-xl outline-none text-[12px]" />
                     <input value={clientAddress} onChange={e => setClientAddress(e.target.value)} placeholder="Адреса"
-                      className="flex-1 px-3 py-2 rounded-xl bg-gray-50 ring-1 ring-gray-200/80 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[12px]" />
+                      className="k-input flex-1 px-3 py-2 rounded-xl outline-none text-[12px]" />
                   </div>
                 </div>
 
@@ -174,11 +174,11 @@ export default function CommerceCreateSheet({ detail, docType, preselectRows, on
                           </button>
                           <span className={`flex-1 text-[12px] truncate ${l.on ? 'font-semibold' : 'text-gray-400'}`}>{l.name}</span>
                           <input value={l.qty} onChange={e => patch(l.row, { qty: e.target.value.replace(/[^\d.,]/g, '') })}
-                            className="w-[54px] px-1.5 py-1 rounded-lg bg-white ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 outline-none text-[11.5px] text-right tabular-nums" />
+                            className="k-input w-[54px] px-1.5 py-1 rounded-lg outline-none text-[11.5px] text-right tabular-nums" />
                           <span className="text-[10px]" style={{ color: 'var(--ink-3)' }}>×</span>
                           <input value={l.price} onChange={e => patch(l.row, { price: e.target.value.replace(/[^\d.,]/g, '') })}
                             placeholder="ціна"
-                            className="w-[72px] px-1.5 py-1 rounded-lg bg-white ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 outline-none text-[11.5px] text-right tabular-nums" />
+                            className="k-input w-[72px] px-1.5 py-1 rounded-lg outline-none text-[11.5px] text-right tabular-nums" />
                         </div>
                       </div>
                     ))}

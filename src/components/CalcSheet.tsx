@@ -250,41 +250,50 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
     onToast(`✂️ Ціну з тарифу різу поставлено ${cutPriced.length} позиціям`);
   }
 
+  /** Час на одну деталь у годинах — з хвилин різу, порахованих із DXF. */
+  const hoursOf = (i: OrderItem) => {
+    const m = metaOf(i.row).cutMin || 0;
+    return m ? Math.round((m / 60) * 1000) / 1000 : 0;
+  };
+
   /**
-   * Ціни з прорахунку, яких ще немає в картці. Беремо і щойно введені,
-   * і збережені раніше — після перевідкриття вікна кнопка має працювати.
+   * Що з прорахунку ще не стоїть у картці: ціна за штуку і час різу.
+   * Беремо і щойно введене, і збережене раніше — після перевідкриття
+   * вікна кнопка має працювати так само.
    */
-  const pendingPrices = useMemo(() => {
-    const out: number[] = [];
+  const pending = useMemo(() => {
+    const out: Array<{ row: number; fields: Record<string, string> }> = [];
     items.forEach(i => {
+      const fields: Record<string, string> = {};
       const p = priceOf(i);
-      if (p > 0 && p !== num(i.clientPrice)) out.push(i.row);
+      if (p > 0 && p !== num(i.clientPrice)) fields.clientPrice = String(p);
+      const h = hoursOf(i);
+      if (h > 0 && h !== num(i.time)) fields.time = String(h);
+      if (Object.keys(fields).length) out.push({ row: i.row, fields });
     });
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, prices, meta]);
+  const pendingPrices = pending;
 
-  /** Ціни, введені в панелі, записуються в картку (колонка «Ціна клієнту»). */
+  /**
+   * Записуємо в картку те, що порахували: ціну за штуку в «Ціна клієнту»
+   * і час різу в «Час на виконання». Одним запитом на всі рядки —
+   * erp.rowsUpdate саме для цього: у кожного рядка свої значення.
+   */
   async function applyPrices() {
-    const rows = pendingPrices.filter(r => byRow.has(r));
-    if (!rows.length) { onToast('Немає нових цін для запису', true); return; }
+    const rows = pending.filter(p => byRow.has(p.row));
+    if (!rows.length) { onToast('Немає що записувати — усе вже в картці', true); return; }
     setSaving(true);
     try {
-      // однакову ціну пишемо однією дією, різні — по групах значень
-      const byPrice = new Map<string, number[]>();
-      rows.forEach(r => {
-        const it = byRow.get(r)!;
-        const v = String(priceOf(it));
-        byPrice.set(v, [...(byPrice.get(v) || []), r]);
-      });
-      for (const [price, rs] of byPrice) {
-        await api.bulkUpdate(rs, { clientPrice: price });
-      }
-      onToast(`✅ Ціни записані в картку: ${rows.length} поз.`);
+      const res = await api.rowsUpdate(rows);
+      const withTime = rows.filter(r => r.fields.time).length;
+      const withPrice = rows.filter(r => r.fields.clientPrice).length;
+      onToast(`✅ У картку: ціни ${withPrice} поз.${withTime ? ` · час різу ${withTime} поз.` : ''} (${res.cells} значень)`);
       setPrices({});
       onApplied();
     } catch (e: any) {
-      onToast(e?.message || 'Не вдалося записати ціни', true);
+      onToast(e?.message || 'Не вдалося записати в картку', true);
     } finally {
       setSaving(false);
     }
@@ -417,7 +426,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                                 onChange={e => setMetaVal(i.row, 'bends', e.target.value)}
                                 inputMode="decimal" placeholder="0"
                                 title={bendsAll(i) ? `Всього гібів: ${bendsAll(i)}` : 'Кількість гібів на одній деталі'}
-                                className="w-full px-1.5 py-1 rounded-lg bg-amber-50 ring-1 ring-amber-200 focus:ring-2 focus:ring-amber-400 outline-none text-[12px] tabular-nums text-right"
+                                className="k-input w-full px-1.5 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right"
                               />
                             ) : (
                               <span className="block text-center" style={{ color: 'var(--ink-3)' }}>—</span>
@@ -432,7 +441,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                                 onChange={e => setMetaVal(i.row, 'cutMin', e.target.value)}
                                 inputMode="decimal" placeholder="0"
                                 title={cutHours(i) ? `На всі: ${cutHours(i).toFixed(2)} год` : 'Хвилин різу на одну деталь'}
-                                className="w-full px-1.5 py-1 rounded-lg bg-sky-50 ring-1 ring-sky-200 focus:ring-2 focus:ring-sky-400 outline-none text-[12px] tabular-nums text-right"
+                                className="k-input w-full px-1.5 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right"
                               />
                             ) : (
                               <span className="block text-center" style={{ color: 'var(--ink-3)' }}>—</span>
@@ -458,7 +467,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                                 setMetaVal(i.row, 'price', e.target.value);
                               }}
                               inputMode="decimal" placeholder="0"
-                              className="w-full px-1.5 py-1 rounded-lg bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[12px] tabular-nums text-right"
+                              className="k-input w-full px-1.5 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right"
                             />
                           </td>
                           <td className="px-2 py-1.5 tabular-nums font-semibold whitespace-nowrap">
@@ -483,7 +492,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                       value={bendPriceAll}
                       onChange={e => applyBendPrice(e.target.value)}
                       inputMode="decimal" placeholder="0"
-                      className="w-[74px] px-2 py-1 rounded-lg bg-white ring-1 ring-amber-200 focus:ring-2 focus:ring-amber-400 outline-none text-[12px] tabular-nums text-right"
+                      className="k-input w-[74px] px-2 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right"
                     />
                   </label>
                   <span className="text-[11.5px] font-bold tabular-nums" style={{ color: '#92400E' }}>
@@ -517,9 +526,9 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                 <button onClick={applyPrices} disabled={saving || !pendingPrices.length}
                   className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-bold press disabled:opacity-40"
                   style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
-                  title="Ціни зберігаються в прорахунку одразу; ця кнопка ставить їх ще й у колонку «Ціна клієнту» картки">
+                  title="Прорахунок зберігається окремо; ця кнопка ставить у картку ціну за штуку («Ціна клієнту») і час різу («Час на виконання»)">
                   {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                  {saving ? 'Записую…' : `Записати ціни в картку${pendingPrices.length ? ` (${pendingPrices.length})` : ''}`}
+                  {saving ? 'Записую…' : `Записати в картку${pending.length ? ` (${pending.length})` : ''}`}
                 </button>
               </div>
             </div>
@@ -551,7 +560,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                       className={`rounded-2xl bg-white p-2.5 ring-1 transition-colors ${on ? 'ring-teal-300' : 'ring-gray-200/70'}`}>
                       <div className="flex items-center gap-1.5">
                         <select value={b.kind} onChange={e => patch(b.id, { kind: e.target.value })}
-                          className="px-2 py-1 rounded-lg bg-teal-50 text-teal-700 text-[11.5px] font-bold outline-none">
+                          className="k-input px-2 py-1 rounded-lg bg-teal-50 text-teal-700 text-[11.5px] font-bold outline-none">
                           {KINDS.map(k => <option key={k} value={k}>{k}</option>)}
                           {!KINDS.includes(b.kind) && <option value={b.kind}>{b.kind}</option>}
                         </select>
@@ -566,7 +575,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                         value={b.invoiceName}
                         onChange={e => patch(b.id, { invoiceName: e.target.value })}
                         placeholder="Назва в рахунку — напр. «Порізка комплект металу 3мм»"
-                        className="mt-1.5 w-full px-2 py-1.5 rounded-lg bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[12px]"
+                        className="k-input mt-1.5 w-full px-2 py-1.5 rounded-lg outline-none text-[12px]"
                       />
 
                       <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
@@ -627,11 +636,11 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                             <input value={e.label}
                               onChange={ev => patch(b.id, { extras: b.extras.map((x, k) => k === idx ? { ...x, label: ev.target.value } : x) })}
                               placeholder="Витрата — напр. «метал 3мм, лист»"
-                              className="flex-1 min-w-0 px-2 py-1 rounded-lg bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 outline-none text-[11.5px]" />
+                              className="k-input flex-1 min-w-0 px-2 py-1 rounded-lg outline-none text-[11.5px]" />
                             <input value={e.sum || ''}
                               onChange={ev => patch(b.id, { extras: b.extras.map((x, k) => k === idx ? { ...x, sum: num(ev.target.value) } : x) })}
                               inputMode="decimal" placeholder="0"
-                              className="w-[84px] px-2 py-1 rounded-lg bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 outline-none text-[11.5px] tabular-nums text-right" />
+                              className="k-input w-[84px] px-2 py-1 rounded-lg outline-none text-[11.5px] tabular-nums text-right" />
                             <button onClick={() => patch(b.id, { extras: b.extras.filter((_, k) => k !== idx) })}
                               className="p-1 press text-red-500 flex-shrink-0" aria-label="Прибрати витрату">
                               <X size={12} />

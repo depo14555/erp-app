@@ -82,12 +82,12 @@ export default function DeliverySheet({ items, onClose, onToast, onDone }: Props
           {method === 'Нова Пошта' && (
             <input value={ttn} onChange={e => setTtn(e.target.value.replace(/[^\d]/g, ''))}
               placeholder="№ ТТН (наприклад 20450...)" inputMode="numeric"
-              className="w-full px-3 py-2.5 rounded-xl bg-gray-50 ring-1 ring-gray-200/80 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[13px] tabular-nums" />
+              className="k-input w-full px-3 py-2.5 rounded-xl outline-none text-[13px] tabular-nums" />
           )}
 
           <input value={note} onChange={e => setNote(e.target.value)}
             placeholder="Примітка (куди, кому, коли — необов'язково)"
-            className="w-full px-3 py-2.5 rounded-xl bg-gray-50 ring-1 ring-gray-200/80 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[12.5px]" />
+            className="k-input w-full px-3 py-2.5 rounded-xl outline-none text-[12.5px]" />
 
           {/* Вибрані деталі */}
           <div className="rounded-2xl ring-1 ring-gray-200/60 divide-y divide-gray-50 max-h-[200px] overflow-y-auto">

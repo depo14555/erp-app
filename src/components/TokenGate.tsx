@@ -73,7 +73,7 @@ export default function TokenGate({ onSuccess }: Props) {
           onChange={e => setValue(e.target.value)}
           placeholder="Ключ доступу"
           autoFocus
-          className="w-full px-4 py-3 rounded-2xl bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[14px]"
+          className="k-input w-full px-4 py-3 rounded-2xl outline-none text-[14px]"
         />
 
         {error && (

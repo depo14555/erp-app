@@ -474,8 +474,8 @@ export default function AssemblySheet({ detail, onClose, onMinimize, onToast, on
                               value={String(setsOf(g.p.fileId, g.own))}
                               onChange={e => setSetsRaw(s => ({ ...s, [g.p.fileId]: e.target.value.replace(/[^\d.,]/g, '') }))}
                               inputMode="numeric"
-                              className="w-[46px] px-1.5 py-[3px] rounded-[6px] text-[11.5px] font-mono text-right outline-none"
-                              style={{ background: 'var(--surface)', boxShadow: 'inset 0 0 0 1px var(--line-2)' }} />
+                              className="k-input w-[46px] px-1.5 py-[3px] rounded-[6px] text-[11.5px] font-mono text-right outline-none"
+                              />
                             <span className="k-label">компл.</span>
                           </span>
                           <span className="text-[11.5px] font-bold tabular-nums flex-shrink-0" style={{ color: 'var(--violet)' }}>

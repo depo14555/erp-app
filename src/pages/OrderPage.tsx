@@ -552,7 +552,7 @@ export default function OrderPage({
               value={q}
               onChange={e => setQ(e.target.value)}
               placeholder="Пошук деталі…"
-              className="w-full pl-7 pr-6 py-[6px] rounded-lg bg-white outline-none text-[12.5px]"
+              className="k-input w-full pl-7 pr-6 py-[6px] rounded-lg outline-none text-[12.5px]"
               style={{ boxShadow: 'inset 0 0 0 1px var(--line)' }}
             />
             {q && (
@@ -1177,7 +1177,7 @@ function FilterChip({ value, onChange, label, options }: {
   return (
     <div className="relative">
       <select value={value} onChange={e => onChange(e.target.value)}
-        className="appearance-none pl-2.5 pr-6 py-1.5 rounded-xl text-[11px] font-bold outline-none max-w-[130px] truncate transition-colors"
+        className="k-input appearance-none pl-2.5 pr-6 py-1.5 rounded-xl text-[11px] font-bold outline-none max-w-[130px] truncate transition-colors"
         style={value
           ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
           : { background: '#F3F4F6', color: 'var(--ink-2)' }}>

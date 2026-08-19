@@ -156,7 +156,7 @@ export default function ChatPage({ onToast }: Props) {
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
           rows={1}
           placeholder="Повідомлення…"
-          className="flex-1 resize-none px-3 py-2.5 rounded-2xl bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-[13px] max-h-28"
+          className="k-input flex-1 resize-none px-3 py-2.5 rounded-2xl outline-none text-[13px] max-h-28"
         />
         <button
           onClick={send}

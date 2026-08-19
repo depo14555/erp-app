@@ -47,7 +47,7 @@ export default function StatusPicker({ title, subtitle, options, current, onPick
               onChange={e => setCustom(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && typed) onPick(typed); }}
               placeholder="Знайти або вписати свій варіант…"
-              className="w-full px-3 py-2 rounded-xl bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[13px]"
+              className="k-input w-full px-3 py-2 rounded-xl outline-none text-[13px]"
             />
           </div>
         )}

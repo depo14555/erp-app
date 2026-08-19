@@ -224,7 +224,7 @@ export default function PartPage({ partId, onClose, onOpenOrder, onToast }: Prop
               <div className="bg-white rounded-2xl ring-1 ring-gray-200/70 p-3 space-y-2">
                 <textarea value={noteDraft} onChange={e => setNoteDraft(e.target.value)} rows={3} autoFocus
                   placeholder="Примітка до деталі…"
-                  className="w-full p-2.5 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-blue-400 text-[13px]" />
+                  className="k-input w-full p-2.5 rounded-xl outline-none text-[13px]" />
                 <div className="flex gap-2">
                   <button onClick={saveNote} disabled={busy}
                     className="flex-1 py-2 rounded-xl text-[12.5px] font-bold text-white press" style={{ background: 'var(--accent)' }}>

@@ -180,7 +180,7 @@ export default function KanbanBoard({
                 if (e.key === 'Escape') setNewBoard(null);
               }}
               placeholder="Назва дошки"
-              className="w-[150px] px-2.5 py-1.5 rounded-xl bg-white ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 outline-none text-[12px]" />
+              className="k-input w-[150px] px-2.5 py-1.5 rounded-xl outline-none text-[12px]" />
             <button onClick={() => addBoard(newBoard)}
               className="px-2.5 py-1.5 rounded-xl text-[12px] font-bold text-white press"
               style={{ background: 'var(--accent)' }}>Створити</button>
@@ -230,7 +230,7 @@ export default function KanbanBoard({
                         if (e.key === 'Enter') renameColumn(name, renameTo);
                         if (e.key === 'Escape') setRenaming('');
                       }}
-                      className="flex-1 min-w-0 px-2 py-1 rounded-lg bg-white ring-1 ring-[var(--accent)] outline-none text-[12.5px] font-bold" />
+                      className="k-input flex-1 min-w-0 px-2 py-1 rounded-lg ring-[var(--accent)] outline-none text-[12.5px] font-bold" />
                   ) : (
                     <p className="text-[12.5px] font-bold truncate flex-1"
                       style={{ color: isRest ? 'var(--ink-3)' : st.fg }}>
@@ -340,7 +340,7 @@ export default function KanbanBoard({
                   <input autoFocus value={newCol} onChange={e => setNewCol(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') addColumn(); if (e.key === 'Escape') setAdding(false); }}
                     placeholder="Назва колонки"
-                    className="w-full px-2.5 py-1.5 rounded-xl bg-gray-50 ring-1 ring-gray-200 outline-none text-[12.5px]" />
+                    className="k-input w-full px-2.5 py-1.5 rounded-xl outline-none text-[12.5px]" />
                   <div className="flex gap-1 mt-1.5">
                     <button onClick={addColumn} className="flex-1 py-1.5 rounded-xl text-[12px] font-bold text-white press"
                       style={{ background: 'var(--accent)' }}>Додати</button>

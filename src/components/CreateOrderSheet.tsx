@@ -105,7 +105,7 @@ export default function CreateOrderSheet({ lists, orderStatusList, onClose, onTo
                 <p className="text-[10px] font-bold uppercase tracking-wider pb-1" style={{ color: 'var(--ink-3)' }}>Клієнт</p>
                 <input value={client} onChange={e => setClient(e.target.value)} list={clientsId}
                   placeholder="Почніть вводити — підкаже з Контактів"
-                  className="w-full px-3 py-2.5 rounded-xl bg-gray-50 ring-1 ring-gray-200/80 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[13px] font-semibold" />
+                  className="k-input w-full px-3 py-2.5 rounded-xl outline-none text-[13px] font-semibold" />
                 <datalist id={clientsId}>
                   {(lists?.clients || []).map(c => <option key={c} value={c} />)}
                 </datalist>
@@ -116,7 +116,7 @@ export default function CreateOrderSheet({ lists, orderStatusList, onClose, onTo
                   <p className="text-[10px] font-bold uppercase tracking-wider pb-1" style={{ color: 'var(--ink-3)' }}>Статус</p>
                   <div className="relative">
                     <select value={status} onChange={e => setStatus(e.target.value)}
-                      className="w-full appearance-none px-3 py-2.5 rounded-xl text-[12.5px] font-bold outline-none focus:ring-2 focus:ring-blue-400"
+                      className="k-input w-full appearance-none px-3 py-2.5 rounded-xl text-[12.5px] font-bold outline-none"
                       style={{ background: statusStyle(status).bg, color: statusStyle(status).fg }}>
                       {(orderStatusList.length ? orderStatusList : ['Нова']).map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
@@ -126,14 +126,14 @@ export default function CreateOrderSheet({ lists, orderStatusList, onClose, onTo
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-wider pb-1" style={{ color: 'var(--ink-3)' }}>Термін</p>
                   <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-gray-50 ring-1 ring-gray-200/80 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[12.5px]" />
+                    className="k-input w-full px-3 py-2 rounded-xl outline-none text-[12.5px]" />
                 </div>
               </div>
 
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider pb-1" style={{ color: 'var(--ink-3)' }}>Примітка</p>
                 <input value={note} onChange={e => setNote(e.target.value)} placeholder="необов'язково"
-                  className="w-full px-3 py-2 rounded-xl bg-gray-50 ring-1 ring-gray-200/80 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[12.5px]" />
+                  className="k-input w-full px-3 py-2 rounded-xl outline-none text-[12.5px]" />
               </div>
 
               {/* Файли */}

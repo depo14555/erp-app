@@ -328,7 +328,7 @@ function AddInvoiceSheet({ file, onToast, onClose, onSaved }: {
             <p className="text-[11px] font-bold mb-1" style={{ color: 'var(--ink-3)' }}>Контрагент</p>
             <input value={contractor} onChange={e => setContractor(e.target.value)} list="erp-contractors"
               placeholder="хто виставив"
-              className="w-full px-3 py-2 rounded-xl bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 outline-none text-[13px]" />
+              className="k-input w-full px-3 py-2 rounded-xl outline-none text-[13px]" />
             <datalist id="erp-contractors">
               {names.map((n, i) => <option key={`${n}:${i}`} value={n} />)}
             </datalist>
@@ -357,7 +357,7 @@ function Field({ label, value, onChange, placeholder }: {
     <div>
       <p className="text-[11px] font-bold mb-1" style={{ color: 'var(--ink-3)' }}>{label}</p>
       <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-        className="w-full px-3 py-2 rounded-xl bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 outline-none text-[13px]" />
+        className="k-input w-full px-3 py-2 rounded-xl outline-none text-[13px]" />
     </div>
   );
 }
@@ -485,7 +485,7 @@ function LinkInvoiceSheet({ invoice, onToast, onClose, onLinked }: {
                   <div className="relative flex-1">
                     <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input value={q} onChange={e => setQ(e.target.value)} placeholder="Пошук позиції…"
-                      className="w-full pl-7 pr-2 py-1.5 rounded-xl bg-gray-50 ring-1 ring-gray-200/80 focus:ring-2 focus:ring-blue-400 outline-none text-[12px]" />
+                      className="k-input w-full pl-7 pr-2 py-1.5 rounded-xl outline-none text-[12px]" />
                   </div>
                   <button onClick={() => setSel(sel.size === shown.length ? new Set() : new Set(shown.map(i => i.row)))}
                     className="text-[11.5px] font-bold px-2 py-1.5 rounded-xl press" style={{ color: 'var(--accent)' }}>
