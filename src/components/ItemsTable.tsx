@@ -18,7 +18,7 @@ import { OrderItem, Lists, statusStyle } from '../types';
 type Field = 'op' | 'executor' | 'qty' | 'assignedQty' | 'material' | 'thickness' | 'note' | 'rowStatus'
   | 'name' | 'clientPrice' | 'payStatus' | 'assembly' | 'time' | 'execPrice';
 
-export type TableMode = 'prod' | 'buh' | 'log' | 'calc';
+export type TableMode = 'prod' | 'money' | 'log';
 
 /** Число з клітинки таблиці («1 200,00» → 1200). */
 export function num(v: unknown): number {
@@ -318,10 +318,9 @@ export default function ItemsTable({
     );
   }
 
-  const buh = mode === 'buh';
+  const buh = mode === 'money';
   const log = mode === 'log';
-  const calc = mode === 'calc';
-  const cols = buh ? COLS_BUH : log ? COLS_LOG : calc ? COLS_CALC : COLS_PROD;
+  const cols = buh ? COLS_MONEY : log ? COLS_LOG : COLS_PROD;
 
   // ── Фільтри прямо в шапці колонок ──
   const shown = useMemo(() => {
@@ -510,29 +509,13 @@ export default function ItemsTable({
                     {noteWithoutDelivery(item.note) || '—'}
                   </td>
                 </>
-              ) : calc ? (
-                <>
-                  <td className="px-1 py-1">{cell(item, 'assembly')}</td>
-                  <td className="px-1 py-1">{cell(item, 'op')}</td>
-                  <td className="px-1 py-1 tabular-nums">{cell(item, 'qty')}</td>
-                  <td className="px-1 py-1 tabular-nums">{cell(item, 'assignedQty')}</td>
-                  <td className="px-1 py-1 tabular-nums">{cell(item, 'time')}</td>
-                  <td className="px-3 py-1.5 tabular-nums text-[12px] whitespace-nowrap"
-                    style={{ color: timeAllOf(item) ? 'var(--ink)' : 'var(--ink-3)' }}>
-                    {timeAllOf(item) ? `${timeAllOf(item).toFixed(2)} год` : '—'}
-                  </td>
-                  <td className="px-1 py-1 tabular-nums">{cell(item, 'clientPrice')}</td>
-                  <td className="px-3 py-1.5 tabular-nums text-[12px] font-semibold whitespace-nowrap">
-                    {item.clientSum || (qtyOf(item) && num(item.clientPrice)
-                      ? (qtyOf(item) * num(item.clientPrice)).toFixed(2)
-                      : '—')}
-                  </td>
-                </>
               ) : buh ? (
                 <>
                   <td className="px-1 py-1">{cell(item, 'op')}</td>
                   <td className="px-1 py-1">{cell(item, 'executor')}</td>
                   <td className="px-1 py-1 tabular-nums">{cell(item, 'qty')}</td>
+                  <td className="px-1 py-1 tabular-nums">{cell(item, 'assignedQty')}</td>
+                  <td className="px-1 py-1 tabular-nums">{cell(item, 'time')}</td>
                   <td className="px-1 py-1 tabular-nums">{cell(item, 'clientPrice')}</td>
                   <td className="px-3 py-1.5 tabular-nums text-[12px] font-semibold whitespace-nowrap">
                     {item.clientSum || '—'}
@@ -655,33 +638,26 @@ const COLS_LOG: Col[] = [
   { key: 'note', label: 'Примітка', w: 'min-w-[130px]' },
 ];
 
-const COLS_BUH: Col[] = [
+/**
+ * Зона «Гроші»: раніше це були дві зони — «Прорахунок» і «Бухгалтерія»,
+ * і вони показували ті самі ціну й суму за різними правилами. Тепер одна:
+ * скільки роботи (призначено, час) і скільки грошей (ціна, сума, оплата).
+ */
+const COLS_MONEY: Col[] = [
   { key: 'id', label: 'ID', w: 'w-[110px]' },
   { key: 'name', label: 'Найменування', w: 'min-w-[240px]' },
   { key: 'op', label: 'Операція', w: 'w-[130px]', filter: true },
   { key: 'executor', label: 'Виконавець', w: 'w-[150px]', filter: true },
   { key: 'qty', label: 'К-сть', w: 'w-[70px]' },
-  { key: 'clientPrice', label: 'Ціна', w: 'w-[90px]' },
+  { key: 'assignedQty', label: 'Призн.', w: 'w-[80px]' },
+  { key: 'time', label: 'Час/шт, год', w: 'w-[95px]' },
+  { key: 'clientPrice', label: 'Ціна/шт', w: 'w-[90px]' },
   { key: 'clientSum', label: 'Сума', w: 'w-[100px]' },
   { key: 'payStatus', label: 'Оплата', w: 'w-[160px]', filter: true },
   { key: 'invoice', label: 'Рахунок клієнту', w: 'w-[120px]' },
   // Рахунок, який виставив нам виконавець — заповнюється прив'язкою
   { key: 'execInvoice', label: 'Рахунок від викон.', w: 'w-[130px]', filter: true },
   { key: 'note', label: 'Примітка', w: 'min-w-[140px]' },
-];
-
-/** Зона «Прорахунок»: те, з чого рахується вартість роботи. */
-const COLS_CALC: Col[] = [
-  { key: 'id', label: 'ID', w: 'w-[110px]' },
-  { key: 'name', label: 'Найменування', w: 'min-w-[230px]' },
-  { key: 'assembly', label: 'Збірка', w: 'w-[150px]', filter: true },
-  { key: 'op', label: 'Операція', w: 'w-[130px]', filter: true },
-  { key: 'qty', label: 'К-сть', w: 'w-[70px]' },
-  { key: 'assignedQty', label: 'Призн.', w: 'w-[80px]' },
-  { key: 'time', label: 'Час/шт, год', w: 'w-[95px]' },
-  { key: 'timeAll', label: 'Час всього', w: 'w-[100px]' },
-  { key: 'clientPrice', label: 'Ціна/шт', w: 'w-[90px]' },
-  { key: 'clientSum', label: 'Сума', w: 'w-[100px]' },
 ];
 
 /** Попап-список: фіксована позиція біля клітинки, пошук, чек на поточному. */

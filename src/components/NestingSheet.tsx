@@ -21,6 +21,12 @@ import {
 } from '../lib/nesting';
 
 interface Props {
+  /**
+   * Вбудований режим: розкрій живе всередині картки «Лазерна порізка»
+   * у прорахунку — без власного вікна, шапки й затемнення. Раніше це
+   * була окрема подорож, з якої суму переносили руками.
+   */
+  embedded?: boolean;
   detail: OrderDetail;
   onClose: () => void;
   onMinimize?: () => void;
@@ -47,7 +53,7 @@ function money(n: number): string {
 /** Розібрані DXF живуть поза компонентом: закрив вікно — повторно не читаємо. */
 const parsedCache = new Map<string, any>();
 
-export default function NestingSheet({ detail, onClose, onMinimize, onToast }: Props) {
+export default function NestingSheet({ detail, onClose, onMinimize, onToast, embedded }: Props) {
   const [phase, setPhase] = useState<Phase>('load');
   const [items, setItems] = useState<NestItem[]>([]);
   const [folderUrl, setFolderUrl] = useState('');
@@ -307,39 +313,8 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast }: P
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-[80] flex items-end lg:items-center lg:justify-center">
-      <div className="absolute inset-0 bg-black/50 animate-fade-in" onClick={phase === 'work' ? undefined : onClose} />
-      <div className="relative w-full lg:w-[1180px] max-h-[94dvh] lg:max-h-[92vh] bg-white rounded-t-3xl lg:rounded-3xl flex flex-col shadow-2xl animate-sheet-up overflow-hidden">
-
-        <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b hairline flex items-center gap-2.5">
-          <span className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
-            <Scissors size={16} />
-          </span>
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-[15px] leading-tight">Розкрій DXF</p>
-            <p className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>
-              {detail.header.orderNum || detail.header.projectId}
-              {items.length ? ` · деталей у картці: ${items.length}` : ''}
-              {noLink ? ` · без файлу: ${noLink}` : ''}
-            </p>
-          </div>
-          {results.length > 0 && (
-            <div className="hidden sm:flex items-center gap-3 mr-2 text-[11.5px]" style={{ color: 'var(--ink-2)' }}>
-              <span>листів <b>{totals.sheets}</b></span>
-              <span>{totals.kg.toFixed(1)} кг</span>
-              <span>{(totals.timeMin / 60).toFixed(1)} год</span>
-              <span className="text-[14px] font-bold">{money(totals.cost)} грн</span>
-            </div>
-          )}
-          {onMinimize && <MinimizeButton onClick={onMinimize} />}
-          {phase !== 'work' && (
-            <button onClick={onClose} className="p-2 rounded-xl press" style={{ color: 'var(--ink-3)' }} aria-label="Закрити">
-              <X size={18} />
-            </button>
-          )}
-        </div>
-
+  const body = (
+    <>
         {phase === 'load' && (
           <div className="p-10 flex flex-col items-center gap-2">
             <Loader2 size={24} className="animate-spin text-sky-600" />
@@ -510,6 +485,54 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast }: P
             )}
           </div>
         )}
+    </>
+  );
+
+  // Усередині картки прорахунку — просто блок, без вікна й затемнення
+  if (embedded) {
+    return (
+      <div className="flex flex-col rounded-lg overflow-hidden"
+        style={{ background: 'var(--surface)', boxShadow: 'inset 0 0 0 1px var(--blue-line)' }}>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end lg:items-center lg:justify-center">
+      <div className="absolute inset-0 bg-black/50 animate-fade-in" onClick={phase === 'work' ? undefined : onClose} />
+      <div className="relative w-full lg:w-[1180px] max-h-[94dvh] lg:max-h-[92vh] bg-white rounded-t-3xl lg:rounded-3xl flex flex-col shadow-2xl animate-sheet-up overflow-hidden">
+
+        <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b hairline flex items-center gap-2.5">
+          <span className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+            <Scissors size={16} />
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-[15px] leading-tight">Розкрій DXF</p>
+            <p className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>
+              {detail.header.orderNum || detail.header.projectId}
+              {items.length ? ` · деталей у картці: ${items.length}` : ''}
+              {noLink ? ` · без файлу: ${noLink}` : ''}
+            </p>
+          </div>
+          {results.length > 0 && (
+            <div className="hidden sm:flex items-center gap-3 mr-2 text-[11.5px]" style={{ color: 'var(--ink-2)' }}>
+              <span>листів <b>{totals.sheets}</b></span>
+              <span>{totals.kg.toFixed(1)} кг</span>
+              <span>{(totals.timeMin / 60).toFixed(1)} год</span>
+              <span className="text-[14px] font-bold">{money(totals.cost)} грн</span>
+            </div>
+          )}
+          {onMinimize && <MinimizeButton onClick={onMinimize} />}
+          {phase !== 'work' && (
+            <button onClick={onClose} className="p-2 rounded-xl press" style={{ color: 'var(--ink-3)' }} aria-label="Закрити">
+              <X size={18} />
+            </button>
+          )}
+        </div>
+
+        {body}
+
       </div>
     </div>
   );

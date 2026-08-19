@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronLeft, RefreshCw, FolderOpen, FileText, Ruler, Box, Paperclip,
   ExternalLink, User, Search, Printer, X, Send, Tags, Rocket, Paintbrush, Receipt,
-  FolderTree, Calculator, Scissors, Wrench, Layers, ShoppingCart, Blocks, Scale,
+  FolderTree, Calculator, Wrench, Layers, ShoppingCart, Blocks, Scale,
   LayoutGrid, Table2 as TableIcon,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
@@ -76,18 +76,21 @@ const GROUP_META = {
 const PAGE = 40; // позицій на групу за раз — великі замовлення (400+) не вішають телефон
 
 /** Зони таблиці позицій — під різні ролі в одному замовленні. */
+/*
+  Три зони замість чотирьох. «Прорахунок» і «Бухгалтерія» показували ті
+  самі ціну й суму — тепер це одна зона «Гроші»: скільки роботи і скільки
+  грошей. Рахує вікно прорахунку, таблиця показує результат.
+*/
 const ZONES: Array<{ key: TableMode; label: string; short: string; icon: string }> = [
-  { key: 'prod', label: 'Виробництво', short: 'Вироб.', icon: '🏭' },
-  { key: 'calc', label: 'Прорахунок', short: 'Прорах.', icon: '🧮' },
-  { key: 'buh',  label: 'Бухгалтерія', short: 'Бухг.', icon: '💰' },
-  { key: 'log',  label: 'Логістика', short: 'Логіст.', icon: '🚚' },
+  { key: 'prod',  label: 'Виробництво', short: 'Вироб.', icon: '🏭' },
+  { key: 'money', label: 'Гроші', short: 'Гроші', icon: '💰' },
+  { key: 'log',   label: 'Логістика', short: 'Логіст.', icon: '🚚' },
 ];
 
 /** Дії з замовленням для телефона (на десктопі те саме в сайдбарі). */
 const TOOLS: Array<{ key: string; label: string; hint: string; Icon: typeof Rocket; color: string; ai?: boolean }> = [
   { key: 'tech',    label: 'Тех.запуск',   hint: 'файли папки → рядки картки', Icon: Rocket,     color: '#EA580C' },
   { key: 'distr',   label: 'Розподіл КД',  hint: 'по виконавцях і операціях',  Icon: FolderTree, color: '#7C3AED' },
-  { key: 'nest',    label: 'Розкрій DXF',  hint: 'листи, вага, вартість різу', Icon: Scissors,   color: '#0891B2' },
   { key: 'calc',    label: 'Прорахунок',   hint: 'час, ціни, групи в рахунок', Icon: Calculator, color: '#0D9488' },
   { key: 'photo',   label: 'Фотошоп',      hint: 'закрити зайве на кресленні', Icon: Paintbrush, color: '#DB2777' },
   { key: 'send',    label: 'Виконавцю',    hint: 'відправити позиції в його таблицю', Icon: Send, color: '#4F46E5' },
@@ -972,7 +975,6 @@ export default function OrderPage({
         <div className={hide('calc')}>
           <CalcSheet
             detail={detail}
-            onOpenNest={() => setShowNest(true)}
             onClose={() => setShowCalc(false)}
             onMinimize={() => minimize('calc')}
             onToast={onToast}

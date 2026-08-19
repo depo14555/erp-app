@@ -12,6 +12,7 @@ import {
   ArrowRight, Wallet, CheckSquare, Square, Scissors, CornerUpRight, Wrench,
 } from 'lucide-react';
 import { MinimizeButton } from './PageSheet';
+import NestingSheet from './NestingSheet';
 import { api } from '../api';
 import { OrderDetail, OrderItem, CalcBundle, CalcData, CalcRowMeta } from '../types';
 import { num, qtyOf, timeAllOf } from './ItemsTable';
@@ -23,12 +24,6 @@ interface Props {
   onToast: (msg: string, err?: boolean) => void;
   /** Ціни записані в картку — оновити замовлення. */
   onApplied: () => void;
-  /**
-   * Відкрити розкрій. Він живе всередині картки «Лазерна порізка»:
-   * листи, вага металу й вартість різу — частина прорахунку, а не
-   * окреме вікно, з якого суму переносили руками.
-   */
-  onOpenNest?: () => void;
 }
 
 /** Класифікація групи — як це називається у нас і в рахунку. */
@@ -53,7 +48,7 @@ function isDxf(i: OrderItem): boolean {
   return /\.dxf$/i.test(String(i.name || ''));
 }
 
-export default function CalcSheet({ detail, onClose, onMinimize, onToast, onApplied, onOpenNest }: Props) {
+export default function CalcSheet({ detail, onClose, onMinimize, onToast, onApplied }: Props) {
   const items = useMemo(() => detail.items.filter(i => !i.group), [detail.items]);
   const [bundles, setBundles] = useState<CalcBundle[]>([]);
   const [updatedAt, setUpdatedAt] = useState('');
@@ -69,6 +64,8 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
   /** Картки за видами робіт — головний вигляд; таблиця позицій лишається під ним. */
   const [view, setView] = useState<'cards' | 'table'>('cards');
   const [openCard, setOpenCard] = useState<string>('cut');
+  /** Розкрій розгортається в картці порізки — важкий, тому не одразу. */
+  const [showNest, setShowNest] = useState(false);
 
   useEffect(() => {
     api.calcGet(detail.header.headerRow)
@@ -571,24 +568,25 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                         </table>
 
                         {isCut && (
-                          <div className="rounded-lg p-2.5"
-                            style={{ background: 'var(--blue-bg)', boxShadow: 'inset 0 0 0 1px var(--blue-line)' }}>
-                            <div className="flex items-center gap-2 flex-wrap">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 flex-wrap rounded-lg px-2.5 py-2"
+                              style={{ background: 'var(--blue-bg)', boxShadow: 'inset 0 0 0 1px var(--blue-line)' }}>
                               <span className="text-[12px] font-bold" style={{ color: 'var(--blue)' }}>Розкрій на листи</span>
                               <span className="k-label" style={nestInfo ? { color: 'var(--blue)' } : undefined}>
                                 {nestInfo || 'ще не розкладали'}
                               </span>
-                              {onOpenNest && (
-                                <button onClick={onOpenNest}
-                                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold press ml-auto"
-                                  style={{ background: 'var(--blue)', color: '#fff' }}>
-                                  <Scissors size={11} /> {nestInfo ? 'Перерозкласти' : 'Розкласти на листи'}
-                                </button>
-                              )}
+                              <button onClick={() => setShowNest(v => !v)}
+                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold press ml-auto"
+                                style={showNest
+                                  ? { background: 'var(--surface)', color: 'var(--blue)', boxShadow: 'inset 0 0 0 1px var(--blue-line)' }
+                                  : { background: 'var(--blue)', color: '#fff' }}>
+                                <Scissors size={11} /> {showNest ? 'Згорнути розкрій' : nestInfo ? 'Перерозкласти' : 'Розкласти на листи'}
+                              </button>
                             </div>
-                            <span className="k-label mt-1">
-                              звідти беруться листи, вага металу й вартість різу — окремим рядком у рахунок
-                            </span>
+                            {/* Сам розкрій — тут же: листи, вага, залишок, вартість різу */}
+                            {showNest && (
+                              <NestingSheet embedded detail={detail} onToast={onToast} onClose={() => setShowNest(false)} />
+                            )}
                           </div>
                         )}
                       </div>

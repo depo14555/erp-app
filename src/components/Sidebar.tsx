@@ -8,7 +8,7 @@
 import {
   LayoutDashboard, ClipboardList, MessageSquare, Truck, Building2, UserRound,
   LogOut, RefreshCw, Receipt, Printer, Lock, FileInput, Bell, Menu,
-  FolderOpen, Rocket, Paintbrush, Send, FolderTree, Calculator, Scissors, ShoppingCart, Blocks, Scale,
+  FolderOpen, Rocket, Paintbrush, Send, FolderTree, Calculator, ShoppingCart, Blocks, Scale,
 } from 'lucide-react';
 import { AppTab } from '../types';
 import { EnvKey } from '../api';
@@ -98,9 +98,6 @@ const AI_TOOLS: ToolItem[] = [
 
 const STEP_3: ToolItem[] = [
   { key: 'calc', label: 'Порахувати', Icon: Calculator, color: '#0D9488' },
-  // Розкрій лишається окремим пунктом, поки не переїхав усередину
-  // прорахунку — інакше він став би недосяжним
-  { key: 'nest', label: 'Розкрій DXF', Icon: Scissors, color: '#0891B2' },
   { key: 'distr', label: 'Розподіл КД', Icon: FolderTree, color: '#7C3AED' },
   { key: 'send', label: 'Відправити виконавцю', Icon: Send, color: '#4F46E5' },
   { key: 'billing', label: 'Рахунки і оплати', Icon: Receipt, color: 'var(--green)' },
