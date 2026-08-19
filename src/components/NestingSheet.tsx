@@ -68,6 +68,8 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast }: P
   const [results, setResults] = useState<any[]>([]);
   const [problems, setProblems] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  /** Яка саме дія зараз іде — щоб крутилка стояла на своїй кнопці. */
+  const [act, setAct] = useState<'' | 'layouts' | 'pronest' | 'calc'>('');
   const parsedRef = useRef<Map<string, any>>(parsedCache);
 
   // Поки читаємо файли / рахуємо / зберігаємо — сторінку не можна втратити
@@ -221,7 +223,7 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast }: P
   /** Розкладки → DXF-файли на Диск + текстовий звіт. */
   async function saveLayouts() {
     if (!results.length) return;
-    setSaving(true);
+    setSaving(true); setAct('layouts');
     try {
       const base = safeFileName(detail.header.orderNum || detail.header.projectId || 'Розкрій');
       const files: Array<{ name: string; content: string }> = [];
@@ -247,13 +249,13 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast }: P
     } catch (e: any) {
       onToast(e?.message || 'Не вдалося зберегти розкладки', true);
     } finally {
-      setSaving(false);
+      setSaving(false); setAct('');
     }
   }
 
   /** Пакет для ProNest: DXF по товщинах + Перелік.csv. */
   async function pronest() {
-    setSaving(true);
+    setSaving(true); setAct('pronest');
     try {
       const base = safeFileName(detail.header.orderNum || detail.header.projectId || 'Замовлення');
       const payload = {
@@ -271,14 +273,14 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast }: P
     } catch (e: any) {
       onToast(e?.message || 'Не вдалося зібрати пакет', true);
     } finally {
-      setSaving(false);
+      setSaving(false); setAct('');
     }
   }
 
   /** Вартість порізки → окрема група в Прорахунку. */
   async function toCalc() {
     if (!results.length) return;
-    setSaving(true);
+    setSaving(true); setAct('calc');
     try {
       const cur = await api.calcGet(detail.header.headerRow);
       const bundles: CalcBundle[] = cur.data?.bundles || [];
@@ -301,7 +303,7 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast }: P
     } catch (e: any) {
       onToast(e?.message || 'Не вдалося передати в прорахунок', true);
     } finally {
-      setSaving(false);
+      setSaving(false); setAct('');
     }
   }
 
@@ -483,19 +485,22 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast }: P
                 <button onClick={saveLayouts} disabled={saving}
                   className="flex items-center gap-1.5 px-3 py-2.5 rounded-2xl text-[12px] font-bold press disabled:opacity-40"
                   style={{ background: '#F3F4F6', color: 'var(--ink-2)' }}>
-                  <Save size={13} /> Зберегти розкладки
+                  {act === 'layouts' ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                  {act === 'layouts' ? 'Зберігаю…' : 'Зберегти розкладки'}
                 </button>
                 <button onClick={toCalc} disabled={saving}
                   className="flex items-center gap-1.5 px-3 py-2.5 rounded-2xl text-[12px] font-bold press disabled:opacity-40"
                   style={{ background: '#CCFBF1', color: '#0F766E' }}>
-                  <Calculator size={13} /> У прорахунок
+                  {act === 'calc' ? <Loader2 size={13} className="animate-spin" /> : <Calculator size={13} />}
+                  {act === 'calc' ? 'Переношу…' : 'У прорахунок'}
                 </button>
               </>
             )}
             <button onClick={pronest} disabled={saving || !chosen.length}
               className="flex items-center gap-1.5 px-3 py-2.5 rounded-2xl text-[12px] font-bold press disabled:opacity-40"
               style={{ background: '#F3F4F6', color: 'var(--ink-2)' }}>
-              <Package size={13} /> Пакет ProNest
+              {act === 'pronest' ? <Loader2 size={13} className="animate-spin" /> : <Package size={13} />}
+              {act === 'pronest' ? 'Збираю пакет…' : 'Пакет ProNest'}
             </button>
             {folderUrl && (
               <a href={folderUrl} target="_blank" rel="noreferrer"

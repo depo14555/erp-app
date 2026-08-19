@@ -75,7 +75,16 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
   }, []);
 
   const byRow = useMemo(() => new Map(items.map(i => [i.row, i])), [items]);
-  const priceOf = (i: OrderItem) => (prices[i.row] !== undefined ? num(prices[i.row]) : num(i.clientPrice));
+  /**
+   * Ціна позиції: щойно введена → збережена в прорахунку → з картки.
+   * Середня ланка й була дірою: ціни трималися лише в пам'яті вікна,
+   * тому після «Зберегти прорахунок» у групах знову світилось 0,00.
+   */
+  const priceOf = (i: OrderItem) => {
+    if (prices[i.row] !== undefined) return num(prices[i.row]);
+    const saved = meta[String(i.row)]?.price;
+    return saved !== undefined ? saved : num(i.clientPrice);
+  };
   const sumOf = (i: OrderItem) => priceOf(i) * qtyOf(i);
 
   /** Рядки, які вже лежать у якійсь групі. */
@@ -201,16 +210,31 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
     }
   }
 
+  /**
+   * Ціни з прорахунку, яких ще немає в картці. Беремо і щойно введені,
+   * і збережені раніше — після перевідкриття вікна кнопка має працювати.
+   */
+  const pendingPrices = useMemo(() => {
+    const out: number[] = [];
+    items.forEach(i => {
+      const p = priceOf(i);
+      if (p > 0 && p !== num(i.clientPrice)) out.push(i.row);
+    });
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, prices, meta]);
+
   /** Ціни, введені в панелі, записуються в картку (колонка «Ціна клієнту»). */
   async function applyPrices() {
-    const rows = Object.keys(prices).map(Number).filter(r => prices[r] !== '' && byRow.has(r));
+    const rows = pendingPrices.filter(r => byRow.has(r));
     if (!rows.length) { onToast('Немає нових цін для запису', true); return; }
     setSaving(true);
     try {
       // однакову ціну пишемо однією дією, різні — по групах значень
       const byPrice = new Map<string, number[]>();
       rows.forEach(r => {
-        const v = String(num(prices[r]));
+        const it = byRow.get(r)!;
+        const v = String(priceOf(it));
         byPrice.set(v, [...(byPrice.get(v) || []), r]);
       });
       for (const [price, rs] of byPrice) {
@@ -380,8 +404,12 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                           </td>
                           <td className="px-1 py-1 w-[86px]">
                             <input
-                              value={prices[i.row] ?? i.clientPrice ?? ''}
-                              onChange={e => setPrices(p => ({ ...p, [i.row]: e.target.value }))}
+                              value={prices[i.row] ?? metaOf(i.row).price ?? i.clientPrice ?? ''}
+                              // пишемо і в meta — це те, що йде в «Зберегти прорахунок»
+                              onChange={e => {
+                                setPrices(p => ({ ...p, [i.row]: e.target.value }));
+                                setMetaVal(i.row, 'price', e.target.value);
+                              }}
                               inputMode="decimal" placeholder="0"
                               className="w-full px-1.5 py-1 rounded-lg bg-gray-50 ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-400 focus:bg-white outline-none text-[12px] tabular-nums text-right"
                             />
@@ -431,10 +459,12 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                   {cutBusy ? <Loader2 size={12} className="animate-spin" /> : <Scissors size={12} />}
                   {cutBusy || 'Час порізки з DXF'}
                 </button>
-                <button onClick={applyPrices} disabled={saving || !Object.keys(prices).length}
+                <button onClick={applyPrices} disabled={saving || !pendingPrices.length}
                   className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-bold press disabled:opacity-40"
-                  style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
-                  <Save size={12} /> Записати ціни в картку
+                  style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
+                  title="Ціни зберігаються в прорахунку одразу; ця кнопка ставить їх ще й у колонку «Ціна клієнту» картки">
+                  {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                  {saving ? 'Записую…' : `Записати ціни в картку${pendingPrices.length ? ` (${pendingPrices.length})` : ''}`}
                 </button>
               </div>
             </div>
