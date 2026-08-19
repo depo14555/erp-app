@@ -147,12 +147,20 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
           const fd = await api.fileData(it.fileId);
           const text = decodeURIComponent(escape(atob(fd.base64)));
           const parsed: any = (nest as any).parseDxf(text);
-          const key = String(it.thickness || '');
+          // Таблиці швидкості й тарифу читають ключ «матеріал · товщина».
+          // Раніше сюди йшла сама товщина — ключ не розпізнавався,
+          // і час рахувався з запасною швидкістю 2 м/хв для будь-якої сталі.
+          const key = `${it.material || 'Ст.3'} · ${String(it.thickness || '').replace('.', ',')}`;
           const speed = (nest as any).suggestSpeed(key) || 2;         // м/хв
           const pierce = (nest as any).suggestPierceSec(key) || 0.5;  // с на врізку
-          const min = (parsed.cutLen / 1000) / speed + (parsed.loops || 1) * pierce / 60;
+          const perM = (nest as any).suggestPerM(key) || 0;           // грн/м різу
+          const lenM = parsed.cutLen / 1000;
+          const loops = parsed.loops || 1;
+          const min = lenM / speed + loops * pierce / 60;
           const cur = { ...(next[String(it.row)] || {}) };
           cur.cutMin = Math.round(min * 1000) / 1000;
+          // Тариф постачальника: 1 врізка = 100 мм різу
+          if (perM) cur.cutPrice = Math.round((lenM + loops * 0.1) * perM * 100) / 100;
           next[String(it.row)] = cur;
           done++;
         } catch { failed++; }
@@ -208,6 +216,38 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
     } finally {
       setSaving(false);
     }
+  }
+
+  /** Позиції, для яких порахований тариф різу, але ціна ще інша. */
+  const cutPriced = useMemo(
+    () => items.filter(i => {
+      const c = metaOf(i.row).cutPrice;
+      return !!c && c !== priceOf(i);
+    }).map(i => i.row),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [items, meta, prices]
+  );
+
+  /**
+   * Тариф різу стає ціною за штуку. Саме це й питають найчастіше:
+   * «є 150 деталей і тариф — порахуй». Ставимо ціну кожній позиції,
+   * далі сума рахується як завжди: к-сть × ціна.
+   */
+  function priceFromCut() {
+    if (!cutPriced.length) return;
+    const nextPrices = { ...prices };
+    setMeta(m => {
+      const next = { ...m };
+      cutPriced.forEach(r => {
+        const c = next[String(r)]?.cutPrice;
+        if (!c) return;
+        next[String(r)] = { ...next[String(r)], price: c };
+        nextPrices[r] = String(c);
+      });
+      return next;
+    });
+    setPrices(nextPrices);
+    onToast(`✂️ Ціну з тарифу різу поставлено ${cutPriced.length} позиціям`);
   }
 
   /**
@@ -397,6 +437,13 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                             ) : (
                               <span className="block text-center" style={{ color: 'var(--ink-3)' }}>—</span>
                             )}
+                            {/* Тариф різу з DXF: скільки коштує розрізати ОДНУ деталь */}
+                            {metaOf(i.row).cutPrice ? (
+                              <span className="block text-[9.5px] text-right mt-0.5 tabular-nums" style={{ color: '#0369A1' }}
+                                title="Довжина контуру за тарифом товщини + врізки (1 врізка = 100 мм різу)">
+                                {money(metaOf(i.row).cutPrice!)} грн/шт
+                              </span>
+                            ) : null}
                           </td>
 
                           <td className="px-2 py-1.5 tabular-nums whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
@@ -459,6 +506,14 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                   {cutBusy ? <Loader2 size={12} className="animate-spin" /> : <Scissors size={12} />}
                   {cutBusy || 'Час порізки з DXF'}
                 </button>
+                {cutPriced.length > 0 && (
+                  <button onClick={priceFromCut} disabled={saving || !!cutBusy}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-bold press disabled:opacity-50"
+                    style={{ background: '#E0F2FE', color: '#0369A1' }}
+                    title="Поставити тариф різу як ціну за штуку. Якщо в групі вже стоїть рядок витрат «лазерна порізка», приберіть його — інакше порізка порахується двічі">
+                    <CornerUpRight size={12} /> Тариф → ціна ({cutPriced.length})
+                  </button>
+                )}
                 <button onClick={applyPrices} disabled={saving || !pendingPrices.length}
                   className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-bold press disabled:opacity-40"
                   style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
@@ -541,10 +596,20 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                             return (
                               <div key={r} className="flex items-center gap-1.5 text-[11px] px-1.5 py-1 rounded-lg bg-gray-50">
                                 <span className="flex-1 truncate">{i.name}</span>
-                                <span className="tabular-nums flex-shrink-0" style={{ color: 'var(--ink-3)' }}>
-                                  {qtyOf(i)}×{money(priceOf(i))}
+                                {/*
+                                  «120×0,00 → 0,00» читалось як множення на нуль
+                                  і збивало з пантелику. Коли ціни на позицію
+                                  немає, показуємо просто кількість: гроші цієї
+                                  групи сидять у рядку витрат нижче.
+                                */}
+                                <span className="tabular-nums flex-shrink-0" style={{ color: 'var(--ink-3)' }}
+                                  title={priceOf(i) ? 'кількість × ціна за 1 шт' : 'ціну за позицію не проставлено'}>
+                                  {priceOf(i) ? `${qtyOf(i)}×${money(priceOf(i))}` : `${qtyOf(i)} шт`}
                                 </span>
-                                <span className="tabular-nums font-semibold flex-shrink-0">{money(sumOf(i))}</span>
+                                <span className="tabular-nums font-semibold flex-shrink-0"
+                                  style={sumOf(i) ? undefined : { color: 'var(--line-2)', fontWeight: 400 }}>
+                                  {sumOf(i) ? money(sumOf(i)) : '—'}
+                                </span>
                                 <button onClick={() => patch(b.id, { rows: b.rows.filter(x => x !== r) })}
                                   className="p-0.5 press flex-shrink-0" style={{ color: 'var(--ink-3)' }} aria-label="Прибрати">
                                   <X size={11} />
