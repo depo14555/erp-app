@@ -12,7 +12,7 @@ import {
   LayoutGrid, Table2 as TableIcon,
 } from 'lucide-react';
 import StatusPicker from '../components/StatusPicker';
-import ItemsTable, { TableMode } from '../components/ItemsTable';
+import ItemsTable, { TableMode, num } from '../components/ItemsTable';
 import DeliverySheet from '../components/DeliverySheet';
 import BulkEditSheet from '../components/BulkEditSheet';
 import { api } from '../api';
@@ -22,7 +22,7 @@ import TechLaunchSheet from '../components/TechLaunchSheet';
 import PhotoSheet from '../components/PhotoSheet';
 import BillingSheet from '../components/BillingSheet';
 import DistributionSheet from '../components/DistributionSheet';
-import CalcSheet from '../components/CalcSheet';
+import CalcSheet, { isBend } from '../components/CalcSheet';
 import NestingSheet from '../components/NestingSheet';
 import PurchasedSheet from '../components/PurchasedSheet';
 import AssemblySheet from '../components/AssemblySheet';
@@ -32,7 +32,7 @@ import DrawingPane from '../components/DrawingPane';
 import PinchZoom from '../components/PinchZoom';
 import PurchasedInline, { PurchLine } from '../components/PurchasedInline';
 import { AiBadge } from '../components/Sidebar';
-import { OrderDetail, OrderItem, Lists, PurchasedRow, statusStyle, fileKind } from '../types';
+import { OrderDetail, OrderItem, Lists, PurchasedRow, CalcData, CalcRowMeta, statusStyle, fileKind } from '../types';
 
 interface Props {
   detail: OrderDetail;
@@ -221,6 +221,40 @@ export default function OrderPage({
   }, [autoOpen, header.headerRow]);
 
   const real = useMemo(() => items.filter(i => !i.group), [items]);
+
+  /**
+   * Прорахунок сторінки: звідси і сума в плитці, і гіби в зоні «Гроші».
+   * Один запит на замовлення — краще, ніж по одному з кожного місця,
+   * якому ці дані знадобились.
+   */
+  const [calc, setCalc] = useState<CalcData | null>(null);
+  useEffect(() => {
+    let alive = true;
+    api.calcGet(header.headerRow)
+      .then(r => { if (alive) setCalc(r.data || null); })
+      .catch(() => { /* прорахунку може ще не бути — це не помилка */ });
+    return () => { alive = false; };
+  }, [header.headerRow, insightsTick]);
+
+  /**
+   * Гіби по рядках — для колонки в таблиці. Показуємо лише там, де
+   * операція справді гнуття: у прорахунку могла лишитись стара цифра
+   * на рядку, який після зміни операції вже не гнуть.
+   */
+  const bends = useMemo(() => {
+    const out: Record<string, number> = {};
+    real.forEach(i => {
+      if (!isBend(i)) return;
+      const n = (calc?.meta?.[String(i.row)] as CalcRowMeta | undefined)?.bends;
+      if (n) out[String(i.row)] = n;
+    });
+    return out;
+  }, [calc, real]);
+
+  /** Скільки грошей у тому, що зараз відмічено галочками. */
+  const selSum = useMemo(() => real.reduce((s, i) => (
+    selected.has(i.row) ? s + num(i.clientPrice) * (num(i.assignedQty) || num(i.qty)) : s
+  ), 0), [real, selected]);
   /** Скільки важить те, що зараз відмічено галочками (за штампами ТМЦ). */
   const selKg = useMemo(
     () => weighItems(real.filter(i => selected.has(i.row)), masses),
@@ -638,7 +672,7 @@ export default function OrderPage({
 
         <OrderInsights
           order={header.projectId}
-          headerRow={header.headerRow}
+          calcTotal={calc?.total || 0}
           items={real}
           gap={gap}
           onGap={setGap}
@@ -679,6 +713,7 @@ export default function OrderPage({
                   onPreview={setPreview}
                   previewRow={preview?.row ?? null}
                   rowStatusList={rowStatusList}
+                  bends={bends}
                 />
               );
               return isNarrow
@@ -854,11 +889,21 @@ export default function OrderPage({
         />
       )}
 
-      {/* Панель масових дій — з'являється, коли є вибрані рядки */}
+      {/* Панель масових дій — з'являється, коли є вибрані рядки.
+          fixed, а не absolute: міряє себе по екрану, а не по колонці з
+          таблицею — інакше на вузькому екрані її розчавлює в стовпчик. */}
       {selected.size > 0 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 bg-gray-900 text-white rounded-2xl shadow-2xl pl-4 pr-1.5 py-1.5 animate-sheet-up">
-          <span className="text-[12.5px] font-bold tabular-nums whitespace-nowrap">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center justify-center gap-1.5 flex-wrap bg-gray-900 text-white rounded-2xl shadow-2xl px-2 py-1.5 animate-sheet-up w-max max-w-[calc(100vw-1.5rem)]">
+          <span className="text-[12.5px] font-bold tabular-nums whitespace-nowrap px-1.5">
             {selected.size} вибрано
+            {/* Гроші вибраного: у кожного рядка своя робота і своя ціна,
+                тому маршрутні рядки рахуються всі — на відміну від ваги */}
+            {selSum > 0 && (
+              <span className="font-mono font-normal text-white/80"
+                title="Ціна × кількість по кожному вибраному рядку">
+                {' · '}{selSum.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} грн
+              </span>
+            )}
             {/* Вага вибраного: маршрутні рядки одного креслення важать один раз */}
             {selKg.kg > 0 ? (
               <span className="font-mono font-normal text-white/60"

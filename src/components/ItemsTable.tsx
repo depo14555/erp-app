@@ -71,6 +71,8 @@ interface Props {
   previewRow?: number | null;
   /** Статуси рядка зі «Спец.аркуша» — приходять зі списком замовлень. */
   rowStatusList?: string[];
+  /** Гіби з прорахунку: номер рядка → скільки гібів на одній деталі. */
+  bends?: Record<string, number>;
 }
 
 interface PopState {
@@ -83,7 +85,7 @@ interface PopState {
 
 export default function ItemsTable({
   items, lists, mode, onSave, onAddOp, selected, onToggleRow, onSelectRows,
-  grouped, purchasedBy, onPreview, previewRow, rowStatusList,
+  grouped, purchasedBy, onPreview, previewRow, rowStatusList, bends,
 }: Props) {
   const [edit, setEdit] = useState<{ row: number; field: Field } | null>(null);
   const [pop, setPop] = useState<PopState | null>(null);
@@ -322,6 +324,14 @@ export default function ItemsTable({
   const log = mode === 'log';
   const cols = buh ? COLS_MONEY : log ? COLS_LOG : COLS_PROD;
 
+  /** Гібів на одній деталі — з прорахунку, за номером рядка. */
+  const bendsOf = (i: OrderItem) => bends?.[String(i.row)] || 0;
+  /** Сума, порахована з ціни й кількості: коли в таблиці її ще немає. */
+  const calcSum = (i: OrderItem) => {
+    const v = num(i.clientPrice) * qtyOf(i);
+    return v > 0 ? v.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+  };
+
   // ── Фільтри прямо в шапці колонок ──
   const shown = useMemo(() => {
     const active = Object.entries(colFilters).filter(([, v]) => v.size);
@@ -516,9 +526,25 @@ export default function ItemsTable({
                   <td className="px-1 py-1 tabular-nums">{cell(item, 'qty')}</td>
                   <td className="px-1 py-1 tabular-nums">{cell(item, 'assignedQty')}</td>
                   <td className="px-1 py-1 tabular-nums">{cell(item, 'time')}</td>
+                  <td className="px-3 py-1.5 tabular-nums text-[12px] whitespace-nowrap"
+                    title={bendsOf(item) ? `Всього гібів: ${bendsOf(item) * qtyOf(item)} · ставиться в прорахунку` : 'Гіби ставляться в прорахунку, в картці «Гнуття»'}>
+                    {bendsOf(item)
+                      ? <>{bendsOf(item)} <span style={{ color: 'var(--ink-3)' }}>· {bendsOf(item) * qtyOf(item)}</span></>
+                      : <span style={{ color: 'var(--ink-3)' }}>—</span>}
+                  </td>
                   <td className="px-1 py-1 tabular-nums">{cell(item, 'clientPrice')}</td>
                   <td className="px-3 py-1.5 tabular-nums text-[12px] font-semibold whitespace-nowrap">
-                    {item.clientSum || '—'}
+                    {item.clientSum || (calcSum(item)
+                      // Ціна є, а суми в таблиці ще немає — показуємо пораховану,
+                      // щоб у грошах не було дірки; запишеться при наступному збереженні
+                      ? <span style={{ color: 'var(--ink-3)' }} title="Ціна × кількість. У таблиці суми ще немає — запишеться при збереженні прорахунку">
+                          {calcSum(item)}
+                        </span>
+                      : '—')}
+                  </td>
+                  <td className="px-1 py-1 tabular-nums">{cell(item, 'execPrice')}</td>
+                  <td className="px-3 py-1.5 tabular-nums text-[12px] whitespace-nowrap">
+                    {item.execSum || <span style={{ color: 'var(--ink-3)' }}>—</span>}
                   </td>
                   <td className="px-1 py-1">{cell(item, 'payStatus')}</td>
                   <td className="px-3 py-1.5 whitespace-nowrap">
@@ -651,8 +677,13 @@ const COLS_MONEY: Col[] = [
   { key: 'qty', label: 'К-сть', w: 'w-[70px]' },
   { key: 'assignedQty', label: 'Призн.', w: 'w-[80px]' },
   { key: 'time', label: 'Час/шт, год', w: 'w-[95px]' },
+  // Гіби живуть у прорахунку, а не в колонці картки — сюди їх приносить
+  // OrderPage, щоб зона «Гроші» показувала всю роботу, а не половину
+  { key: 'bends', label: 'Гібів/шт', w: 'w-[85px]' },
   { key: 'clientPrice', label: 'Ціна/шт', w: 'w-[90px]' },
   { key: 'clientSum', label: 'Сума', w: 'w-[100px]' },
+  { key: 'execPrice', label: 'Ціна викон.', w: 'w-[95px]' },
+  { key: 'execSum', label: 'Сума викон.', w: 'w-[105px]' },
   { key: 'payStatus', label: 'Оплата', w: 'w-[160px]', filter: true },
   { key: 'invoice', label: 'Рахунок клієнту', w: 'w-[120px]' },
   // Рахунок, який виставив нам виконавець — заповнюється прив'язкою

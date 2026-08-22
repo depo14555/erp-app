@@ -46,7 +46,7 @@ function uid(): string {
 }
 
 /** Позиція гнеться? Дивимось операцію картки. */
-function isBend(i: OrderItem): boolean {
+export function isBend(i: OrderItem): boolean {
   return /гнут|гиб|гіб|бенд/i.test(String(i.op || ''));
 }
 /** Позиція ріжеться лазером? Файл креслення — DXF. */
