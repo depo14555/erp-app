@@ -73,6 +73,8 @@ interface Props {
   rowStatusList?: string[];
   /** Гіби з прорахунку: номер рядка → скільки гібів на одній деталі. */
   bends?: Record<string, number>;
+  /** Зона «Гроші» коротко: тільки хто, скільки і чи оплачено. */
+  moneyCompact?: boolean;
 }
 
 interface PopState {
@@ -85,7 +87,7 @@ interface PopState {
 
 export default function ItemsTable({
   items, lists, mode, onSave, onAddOp, selected, onToggleRow, onSelectRows,
-  grouped, purchasedBy, onPreview, previewRow, rowStatusList, bends,
+  grouped, purchasedBy, onPreview, previewRow, rowStatusList, bends, moneyCompact,
 }: Props) {
   const [edit, setEdit] = useState<{ row: number; field: Field } | null>(null);
   const [pop, setPop] = useState<PopState | null>(null);
@@ -322,7 +324,7 @@ export default function ItemsTable({
 
   const buh = mode === 'money';
   const log = mode === 'log';
-  const cols = buh ? COLS_MONEY : log ? COLS_LOG : COLS_PROD;
+  const cols = buh ? (moneyCompact ? COLS_MONEY_SHORT : COLS_MONEY) : log ? COLS_LOG : COLS_PROD;
 
   /** Гібів на одній деталі — з прорахунку, за номером рядка. */
   const bendsOf = (i: OrderItem) => bends?.[String(i.row)] || 0;
@@ -521,17 +523,17 @@ export default function ItemsTable({
                 </>
               ) : buh ? (
                 <>
-                  <td className="px-1 py-1">{cell(item, 'op')}</td>
+                  {!moneyCompact && <td className="px-1 py-1">{cell(item, 'op')}</td>}
                   <td className="px-1 py-1">{cell(item, 'executor')}</td>
                   <td className="px-1 py-1 tabular-nums">{cell(item, 'qty')}</td>
-                  <td className="px-1 py-1 tabular-nums">{cell(item, 'assignedQty')}</td>
-                  <td className="px-1 py-1 tabular-nums">{cell(item, 'time')}</td>
-                  <td className="px-3 py-1.5 tabular-nums text-[12px] whitespace-nowrap"
+                  {!moneyCompact && <td className="px-1 py-1 tabular-nums">{cell(item, 'assignedQty')}</td>}
+                  {!moneyCompact && <td className="px-1 py-1 tabular-nums">{cell(item, 'time')}</td>}
+                  {!moneyCompact && <td className="px-3 py-1.5 tabular-nums text-[12px] whitespace-nowrap"
                     title={bendsOf(item) ? `Всього гібів: ${bendsOf(item) * qtyOf(item)} · ставиться в прорахунку` : 'Гіби ставляться в прорахунку, в картці «Гнуття»'}>
                     {bendsOf(item)
                       ? <>{bendsOf(item)} <span style={{ color: 'var(--ink-3)' }}>· {bendsOf(item) * qtyOf(item)}</span></>
                       : <span style={{ color: 'var(--ink-3)' }}>—</span>}
-                  </td>
+                  </td>}
                   <td className="px-1 py-1 tabular-nums">{cell(item, 'clientPrice')}</td>
                   <td className="px-3 py-1.5 tabular-nums text-[12px] font-semibold whitespace-nowrap">
                     {item.clientSum || (calcSum(item)
@@ -542,12 +544,12 @@ export default function ItemsTable({
                         </span>
                       : '—')}
                   </td>
-                  <td className="px-1 py-1 tabular-nums">{cell(item, 'execPrice')}</td>
-                  <td className="px-3 py-1.5 tabular-nums text-[12px] whitespace-nowrap">
+                  {!moneyCompact && <td className="px-1 py-1 tabular-nums">{cell(item, 'execPrice')}</td>}
+                  {!moneyCompact && <td className="px-3 py-1.5 tabular-nums text-[12px] whitespace-nowrap">
                     {item.execSum || <span style={{ color: 'var(--ink-3)' }}>—</span>}
-                  </td>
+                  </td>}
                   <td className="px-1 py-1">{cell(item, 'payStatus')}</td>
-                  <td className="px-3 py-1.5 whitespace-nowrap">
+                  {!moneyCompact && <td className="px-3 py-1.5 whitespace-nowrap">
                     {item.invoiceNum ? (
                       item.invoiceUrl
                         ? <a href={item.invoiceUrl} target="_blank" rel="noreferrer"
@@ -556,15 +558,15 @@ export default function ItemsTable({
                           </a>
                         : <span className="text-[12px]">{item.invoiceNum}</span>
                     ) : <span style={{ color: 'var(--ink-3)' }}>—</span>}
-                  </td>
-                  <td className="px-3 py-1.5 whitespace-nowrap">
+                  </td>}
+                  {!moneyCompact && <td className="px-3 py-1.5 whitespace-nowrap">
                     {item.execInvoice
                       ? <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700">
                           {item.execInvoice}
                         </span>
                       : <span style={{ color: 'var(--ink-3)' }}>—</span>}
-                  </td>
-                  <td className="px-1 py-1">{cell(item, 'note')}</td>
+                  </td>}
+                  {!moneyCompact && <td className="px-1 py-1">{cell(item, 'note')}</td>}
                 </>
               ) : (
                 <>
@@ -669,6 +671,17 @@ const COLS_LOG: Col[] = [
  * і вони показували ті самі ціну й суму за різними правилами. Тепер одна:
  * скільки роботи (призначено, час) і скільки грошей (ціна, сума, оплата).
  */
+/** «Гроші» коротко: відповідає на «хто, скільки і чи оплачено» без прокрутки. */
+const COLS_MONEY_SHORT: Col[] = [
+  { key: 'id', label: 'ID', w: 'w-[110px]' },
+  { key: 'name', label: 'Найменування', w: 'min-w-[280px]' },
+  { key: 'executor', label: 'Виконавець', w: 'w-[160px]', filter: true },
+  { key: 'qty', label: 'К-сть', w: 'w-[70px]' },
+  { key: 'clientPrice', label: 'Ціна/шт', w: 'w-[90px]' },
+  { key: 'clientSum', label: 'Сума', w: 'w-[110px]' },
+  { key: 'payStatus', label: 'Оплата', w: 'w-[160px]', filter: true },
+];
+
 const COLS_MONEY: Col[] = [
   { key: 'id', label: 'ID', w: 'w-[110px]' },
   { key: 'name', label: 'Найменування', w: 'min-w-[240px]' },

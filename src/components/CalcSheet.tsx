@@ -16,6 +16,7 @@ import NestingSheet from './NestingSheet';
 import { api } from '../api';
 import { OrderDetail, OrderItem, CalcBundle, CalcData, CalcRowMeta, CalcNest, CalcLine } from '../types';
 import { num, qtyOf, timeAllOf } from './ItemsTable';
+import { calcFromStored, calcToStored } from '../lib/calcKeys';
 
 interface Props {
   detail: OrderDetail;
@@ -24,6 +25,8 @@ interface Props {
   onToast: (msg: string, err?: boolean) => void;
   /** Ціни записані в картку — оновити замовлення. */
   onApplied: () => void;
+  /** Відкрити «Рахунки і оплати» — туди веде чернетка рахунку. */
+  onOpenBilling?: () => void;
 }
 
 /** Класифікація групи — як це називається у нас і в рахунку. */
@@ -54,7 +57,7 @@ function isDxf(i: OrderItem): boolean {
   return /\.dxf$/i.test(String(i.name || ''));
 }
 
-export default function CalcSheet({ detail, onClose, onMinimize, onToast, onApplied }: Props) {
+export default function CalcSheet({ detail, onClose, onMinimize, onToast, onApplied, onOpenBilling }: Props) {
   const items = useMemo(() => detail.items.filter(i => !i.group), [detail.items]);
   const [bundles, setBundles] = useState<CalcBundle[]>([]);
   const [updatedAt, setUpdatedAt] = useState('');
@@ -85,13 +88,15 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
   useEffect(() => {
     api.calcGet(detail.header.headerRow)
       .then(r => {
-        setBundles(r.data?.bundles || []);
-        setMeta(r.data?.meta || {});
-        setExtras((r.data?.extras || []).map(e => ({ label: e.label, sumTxt: e.sum ? String(e.sum) : '' })));
-        setNests(r.data?.nests || []);
-        setBendPrice(r.data?.bendPrice ? String(r.data.bendPrice) : '');
-        setUpdatedAt(r.data?.updatedAt || '');
-        if (r.data?.bundles?.length) setActive(r.data.bundles[0].id);
+        // Сховище тримає ID позицій — в пам'яті працюємо з номерами рядків
+        const d = calcFromStored(r.data, detail.items);
+        setBundles(d.bundles || []);
+        setMeta(d.meta || {});
+        setExtras((d.extras || []).map(e => ({ label: e.label, sumTxt: e.sum ? String(e.sum) : '' })));
+        setNests(d.nests || []);
+        setBendPrice(d.bendPrice ? String(d.bendPrice) : '');
+        setUpdatedAt(d.updatedAt || '');
+        if (d.bundles?.length) setActive(d.bundles[0].id);
       })
       .catch(e => onToast(e?.message || 'Не вдалося прочитати прорахунок', true))
       .finally(() => setLoading(false));
@@ -239,12 +244,6 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
   /** Позиції картки, де складена ціна відрізняється від поточної. */
   const cardPriceable = (rows: OrderItem[]) =>
     rows.filter(i => composedOf(i) > 0 && composedOf(i) !== priceOf(i));
-  /** Те саме по всьому замовленню — для нижньої панелі списку позицій. */
-  const allPriceable = useMemo(
-    () => cardPriceable(items),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [items, meta, prices, bendPrice]
-  );
 
   /**
    * Ціна за штуку складається з робіт: тариф різу плюс гіби. Обидві
@@ -310,8 +309,12 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
     });
   }
 
-  /** Рахунок збирається з карток: одна картка — один рядок рахунку. */
-  function bundlesFromCards() {
+  /**
+   * Чернетка рахунку: одна картка робіт — один рядок майбутнього рахунку.
+   * Збирає групи, зберігає прорахунок і веде в «Рахунки і оплати» —
+   * рахунок створюється лише там, один шлях замість двох.
+   */
+  async function draftInvoice() {
     const made: CalcBundle[] = cards
       .filter(c => c.rows.length)
       .map(c => {
@@ -328,9 +331,12 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
       });
     // рядки витрат із розкрою не втрачаємо — вони живуть у своїх групах
     const keep = bundles.filter(b => !made.some(m => m.kind === b.kind) && b.extras.length);
-    setBundles([...made, ...keep]);
+    const next = [...made, ...keep];
+    setBundles(next);
     setActive(made[0]?.id || '');
-    onToast(`📋 Рахунок зібрано з ${made.length} карток`);
+    await save(next);
+    onToast(`📋 Чернетка з ${made.length} робіт збережена — далі «Рахунки і оплати»`);
+    onOpenBilling?.();
   }
 
   function setMetaVal(row: number, key: keyof CalcRowMeta, raw: string) {
@@ -479,9 +485,9 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
    * потім тихо перечитуємо й звіряємо: якщо хаб чогось не дописав,
    * скажемо про це, а не мовчатимемо.
    */
-  async function save() {
+  async function save(bundlesOver?: CalcBundle[]) {
     const data: CalcData = {
-      bundles, meta,
+      bundles: bundlesOver ?? bundles, meta,
       extras: extras.filter(e => e.label || num(e.sumTxt)).map(e => ({ label: e.label, sum: num(e.sumTxt) })),
       nests,
       bendPrice: num(bendPrice) || undefined,
@@ -494,7 +500,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
     setSaveState('saving');
     setUpdatedAt(nowStamp());                       // оптимістично, до відповіді
     try {
-      const res = await api.calcSave(detail.header.headerRow, data, rows);
+      const res = await api.calcSave(detail.header.headerRow, calcToStored(data, detail.items), rows);
       setUpdatedAt(res.updatedAt || nowStamp());
       setPrices({});
       onToast(`💾 Збережено · ${res.bundles} груп`
@@ -552,30 +558,6 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, prices, meta]);
-  const pendingPrices = pending;
-
-  /**
-   * Записуємо в картку те, що порахували: ціну за штуку в «Ціна клієнту»
-   * і час різу в «Час на виконання». Одним запитом на всі рядки —
-   * erp.rowsUpdate саме для цього: у кожного рядка свої значення.
-   */
-  async function applyPrices() {
-    const rows = pending.filter(p => byRow.has(p.row));
-    if (!rows.length) { onToast('Немає що записувати — усе вже в картці', true); return; }
-    setSaving(true);
-    try {
-      const res = await api.rowsUpdate(rows);
-      const withTime = rows.filter(r => r.fields.time).length;
-      const withPrice = rows.filter(r => r.fields.clientPrice).length;
-      onToast(`✅ У картку: ціни ${withPrice} поз.${withTime ? ` · час різу ${withTime} поз.` : ''} (${res.cells} значень)`);
-      setPrices({});
-      onApplied();
-    } catch (e: any) {
-      onToast(e?.message || 'Не вдалося записати в картку', true);
-    } finally {
-      setSaving(false);
-    }
-  }
 
   function toggleRow(row: number) {
     setSel(prev => { const n = new Set(prev); n.has(row) ? n.delete(row) : n.add(row); return n; });
@@ -628,6 +610,19 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
         ) : view === 'cards' ? (
           <>
             <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5" style={{ background: 'var(--bg)' }}>
+              {/* Порядок роботи — щоб не вгадувати, котру кнопку першою */}
+              <div className="flex items-center gap-2 flex-wrap px-1">
+                {['Перерахувати з DXF', 'Гіби і ціна за гіб', 'Різ + гіби → ціна', 'Зберегти'].map((t, i) => (
+                  <span key={t} className="flex items-center gap-1.5">
+                    <span className="w-[17px] h-[17px] rounded flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                      style={{ background: 'var(--accent-soft)', color: 'var(--accent)', boxShadow: 'inset 0 0 0 1px var(--accent)' }}>
+                      {i + 1}
+                    </span>
+                    <span className="k-label" style={{ color: 'var(--ink-2)' }}>{t}</span>
+                    {i < 3 && <span className="k-label">→</span>}
+                  </span>
+                ))}
+              </div>
               {cards.map(card => {
                 const on = openCard === card.key;
                 const isCut = card.key === 'cut';
@@ -904,18 +899,13 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
               style={{ background: 'var(--surface)' }}>
               <span className="k-label">Разом по замовленню</span>
               <span className="k-value text-[15px]">{money(totals.all)} грн</span>
-              <button onClick={bundlesFromCards}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold press ml-auto"
+              <button onClick={draftInvoice} disabled={saving}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold press ml-auto disabled:opacity-40"
+                title="Зібрати роботи в групи, зберегти і відкрити «Рахунки і оплати»"
                 style={{ background: 'var(--surface)', color: 'var(--ink)', boxShadow: 'inset 0 0 0 1px var(--line-2)' }}>
-                <Layers size={12} /> Зібрати рахунок ({cards.length})
+                <Layers size={12} /> Чернетка рахунку ({cards.length})
               </button>
-              <button onClick={applyPrices} disabled={saving || !pending.length}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold press disabled:opacity-40"
-                style={{ background: 'var(--accent-soft)', color: 'var(--accent)', boxShadow: 'inset 0 0 0 1px var(--accent)' }}>
-                {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                Записати в картку{pending.length ? ` (${pending.length})` : ''}
-              </button>
-              <button onClick={save} disabled={saving}
+              <button onClick={() => save()} disabled={saving}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold press"
                 style={{ background: 'var(--green)', color: '#fff' }}>
                 {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Зберегти
@@ -937,17 +927,19 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                 <p className="text-[12px] font-bold flex-1">
                   Позиції <span style={{ color: 'var(--ink-3)' }}>({items.length})</span>
                 </p>
+                {/* Ручні групи — рідкісний випадок: звичайний шлях — «Чернетка
+                    рахунку» у виді «Роботи». Тому кнопки тихі, без акценту. */}
                 {sel.size > 0 && (
                   <button onClick={addBundle}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold text-white press"
-                    style={{ background: '#0D9488' }}>
-                    <Layers size={12} /> Об'єднати {sel.size} у групу
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold press"
+                    style={{ background: 'var(--bg)', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px var(--line-2)' }}>
+                    <Layers size={12} /> У групу ({sel.size})
                   </button>
                 )}
                 {sel.size > 0 && active && (
                   <button onClick={() => addSelected(active)}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11.5px] font-bold press"
-                    style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
+                    style={{ background: 'var(--bg)', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px var(--line-2)' }}>
                     <ArrowRight size={12} /> у відкриту
                   </button>
                 )}
@@ -1076,28 +1068,9 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                   Інші: <b style={{ color: 'var(--ink-2)' }}>{money(totals.extras)}</b>
                   {totals.cut > 0 && <> · Порізка: <b style={{ color: 'var(--ink-2)' }}>{totals.cut.toFixed(2)} год</b></>}
                 </span>
-                <button onClick={cutFromDxf} disabled={!!cutBusy || saving}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-bold press disabled:opacity-50"
-                  style={{ background: '#E0F2FE', color: '#0369A1' }}
-                  title="Прочитати DXF і порахувати час різу за довжиною контурів і врізками">
-                  {cutBusy ? <Loader2 size={12} className="animate-spin" /> : <Scissors size={12} />}
-                  {cutBusy || 'Час порізки з DXF'}
-                </button>
-                {allPriceable.length > 0 && (
-                  <button onClick={() => composePrice(allPriceable)} disabled={saving || !!cutBusy}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-bold press disabled:opacity-50"
-                    style={{ background: '#E0F2FE', color: '#0369A1' }}
-                    title="Скласти ціну за штуку з робіт: тариф різу + гіби. Якщо вартість розкрою вже стоїть рядком в «Інших витратах», приберіть його — інакше порізка порахується двічі">
-                    <CornerUpRight size={12} /> Різ + гіби → ціна ({allPriceable.length})
-                  </button>
-                )}
-                <button onClick={applyPrices} disabled={saving || !pendingPrices.length}
-                  className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-bold press disabled:opacity-40"
-                  style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
-                  title="Прорахунок зберігається окремо; ця кнопка ставить у картку ціну за штуку («Ціна клієнту») і час різу («Час на виконання»)">
-                  {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                  {saving ? 'Записую…' : `Записати в картку${pending.length ? ` (${pending.length})` : ''}`}
-                </button>
+                {/* Дії різу, ціни й запису живуть у картках робіт і в «Зберегти» —
+                    тут лише підсумки, без другого комплекту кнопок */}
+                <span className="ml-auto k-label">рахунок і запис — у виді «Роботи»</span>
               </div>
             </div>
 
@@ -1230,7 +1203,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                   <span className="text-[12px] font-bold">Разом по замовленню</span>
                   <span className="text-[16px] font-bold tabular-nums">{money(totals.all)} грн</span>
                 </div>
-                <button onClick={save} disabled={saving}
+                <button onClick={() => save()} disabled={saving}
                   className="w-full py-2.5 rounded-2xl font-bold text-[13.5px] text-white press disabled:opacity-50 flex items-center justify-center gap-2"
                   style={{ background: '#0D9488' }}>
                   {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}

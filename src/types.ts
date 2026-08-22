@@ -70,6 +70,8 @@ export interface CalcExtra {
 
 export interface CalcBundle {
   id: string;
+  /** ID позицій (формат v2) — переживають зсуви рядків; rows лишаються робочими. */
+  ids?: string[];
   /** Класифікація: «Порізка металу», «Токарні роботи»… */
   kind: string;
   /** Як це піде в рахунок: «Порізка комплект металу 3мм». */
@@ -110,6 +112,8 @@ export interface CalcRowMeta {
  * до закриття вікна.
  */
 export interface CalcNest {
+  /** ID позицій групи (формат v2) — переживають зсуви рядків. */
+  ids?: string[];
   key: string;
   sheetW: number;
   sheetH: number;
@@ -140,6 +144,8 @@ export interface CalcLine {
 }
 
 export interface CalcData {
+  /** 2 = ключі за ID позицій, не за номерами рядків. */
+  v?: number;
   bundles: CalcBundle[];
   /** Гіби і час порізки за номером рядка картки. */
   meta?: Record<string, CalcRowMeta>;

@@ -72,6 +72,12 @@ export function weighItems(items: OrderItem[], masses: Record<string, number>) {
 
 export default function OrderInsights({ order, items, gap, onGap, onTool, refreshKey, onMasses, calcTotal }: Props) {
   const [open, setOpen] = useState(() => localStorage.getItem(OPEN_KEY) !== '0');
+  /**
+   * Комплектність згортається сама, коли все заповнено: на 100 %
+   * сітка полів більше нічого не каже — досить одного зеленого рядка.
+   * Клік по рядку повертає сітку, якщо треба глянути.
+   */
+  const [compOverride, setCompOverride] = useState<boolean | null>(null);
   const [ai, setAi] = useState<OrderAiSummary | null>(null);
 
   useEffect(() => {
@@ -188,10 +194,18 @@ export default function OrderInsights({ order, items, gap, onGap, onTool, refres
 
           {/* ШТАМП 2: комплектність специфікації — смужка показує пропорцію */}
           <div className="k-frame paper overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-1.5 border-b" style={{ borderColor: 'var(--paper-line)' }}>
+            <button onClick={() => setCompOverride(v => (v === null ? pct >= 100 ? true : false : !v))}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-left press"
+              style={{ borderBottom: (compOverride ?? pct < 100) ? '1px solid var(--paper-line)' : undefined }}>
               <span className="k-head">Комплектність специфікації</span>
-              <span className="k-value ml-auto text-[10.5px]">заповнено {pct}%</span>
-            </div>
+              {pct >= 100 && <span className="k-label" style={{ color: 'var(--green)' }}>✓ все заповнено</span>}
+              <span className="k-value ml-auto text-[10.5px]"
+                style={pct >= 100 ? { color: 'var(--green)' } : undefined}>заповнено {pct}%</span>
+              {(compOverride ?? pct < 100)
+                ? <ChevronDown size={12} style={{ color: 'var(--ink-3)' }} />
+                : <ChevronRight size={12} style={{ color: 'var(--ink-3)' }} />}
+            </button>
+            {(compOverride ?? pct < 100) && (
             <div className="grid grid-cols-4 lg:grid-cols-8">
               {GAP_FIELDS.map(({ key, label }, i) => {
                 const n = filled[key] || 0;
@@ -219,6 +233,7 @@ export default function OrderInsights({ order, items, gap, onGap, onTool, refres
                 );
               })}
             </div>
+            )}
           </div>
 
           {ai && ai.files > 0 && (

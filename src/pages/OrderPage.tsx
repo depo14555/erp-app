@@ -23,6 +23,7 @@ import PhotoSheet from '../components/PhotoSheet';
 import BillingSheet from '../components/BillingSheet';
 import DistributionSheet from '../components/DistributionSheet';
 import CalcSheet, { isBend } from '../components/CalcSheet';
+import { calcFromStored } from '../lib/calcKeys';
 import NestingSheet from '../components/NestingSheet';
 import PurchasedSheet from '../components/PurchasedSheet';
 import AssemblySheet from '../components/AssemblySheet';
@@ -227,14 +228,18 @@ export default function OrderPage({
    * Один запит на замовлення — краще, ніж по одному з кожного місця,
    * якому ці дані знадобились.
    */
+  /** «Гроші» коротко (7 колонок) чи все (16). Коротко — за замовчуванням. */
+  const [moneyAll, setMoneyAll] = useState(() => localStorage.getItem('erp-money-all') === '1');
   const [calc, setCalc] = useState<CalcData | null>(null);
   useEffect(() => {
     let alive = true;
     api.calcGet(header.headerRow)
-      .then(r => { if (alive) setCalc(r.data || null); })
+      // Сховище тримає ID позицій — розгортаємо в поточні номери рядків
+      .then(r => { if (alive) setCalc(calcFromStored(r.data, items)); })
       .catch(() => { /* прорахунку може ще не бути — це не помилка */ });
     return () => { alive = false; };
-  }, [header.headerRow, insightsTick]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [header.headerRow, insightsTick, items]);
 
   /**
    * Гіби по рядках — для колонки в таблиці. Показуємо лише там, де
@@ -571,6 +576,17 @@ export default function OrderPage({
                 </button>
               );
             })}
+            {/* 16 колонок грошей на ноутбуці гортаються вбік — тому коротко
+                за замовчуванням, а «Все» вмикають свідомо */}
+            {tableMode === 'money' && (
+              <button
+                onClick={() => setMoneyAll(v => { localStorage.setItem('erp-money-all', v ? '0' : '1'); return !v; })}
+                title={moneyAll ? 'Показати 7 головних колонок' : 'Показати всі 16 колонок'}
+                className="px-2.5 py-[6px] text-[11px] font-bold whitespace-nowrap"
+                style={{ color: 'var(--accent)', borderLeft: '1px solid var(--line)' }}>
+                {moneyAll ? 'Коротко' : 'Все'}
+              </button>
+            )}
           </div>
         )}
 
@@ -714,6 +730,7 @@ export default function OrderPage({
                   previewRow={preview?.row ?? null}
                   rowStatusList={rowStatusList}
                   bends={bends}
+                  moneyCompact={!moneyAll}
                 />
               );
               return isNarrow
@@ -1025,6 +1042,7 @@ export default function OrderPage({
             onMinimize={() => minimize('calc')}
             onToast={onToast}
             onApplied={() => { markFinished('calc'); onRefresh('Оновлюю ціни в картці…'); }}
+            onOpenBilling={() => { minimize('calc'); setShowBilling(true); }}
           />
         </div>
       )}
