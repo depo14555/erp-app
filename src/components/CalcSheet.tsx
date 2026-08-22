@@ -119,8 +119,10 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
   }, [bundles]);
 
   const metaOf = (row: number): CalcRowMeta => meta[String(row)] || {};
+  /** Гібів на одній деталі — лише для операції гнуття. */
+  const bendsOf = (i: OrderItem) => (isBend(i) ? metaOf(i.row).bends || 0 : 0);
   /** Гібів на всю призначену кількість. */
-  const bendsAll = (i: OrderItem) => (metaOf(i.row).bends || 0) * qtyOf(i);
+  const bendsAll = (i: OrderItem) => bendsOf(i) * qtyOf(i);
   /** Ціна гіба для позиції: власна, якщо є, інакше спільна на замовлення. */
   const bendPriceOf = (i: OrderItem) => metaOf(i.row).bendPrice || num(bendPrice);
   /** Вартість гнуття позиції: гіби × ціна за гіб. */
@@ -185,17 +187,12 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
     });
   }, [items, meta]);
 
-  /** Рядки з гібами: операція «Гнуття» або просто проставлена к-сть гібів. */
-  const bendRows = useMemo(
-    () => items.filter(i => isBend(i) || (metaOf(i.row).bends || 0) > 0),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [items, meta]
-  );
+  /** Рядки, які гнуть. Тільки за операцією — гіби решти позицій не наші. */
+  const bendRows = useMemo(() => items.filter(isBend), [items]);
 
   /**
-   * Картки робіт. Гнуття — окрема картка навіть тоді, коли операція
-   * рядка «Лазер»: розгортку ріжуть і гнуть на тій самій позиції, а
-   * гроші за гіби треба бачити окремо — інакше їх ніде порахувати.
+   * Картки робіт. Якщо гнуття не виділили окремою операцією, картка
+   * все одно збирає гнуті рядки — щоб було де поставити ціну за гіб.
    */
   const cards = useMemo(() => {
     const list: Array<{ key: string; label: string; kind: string; rows: OrderItem[]; bendCard?: boolean }> =
@@ -234,7 +231,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
   /** Складена ціна позиції: тариф різу + гіби. */
   const composedOf = (i: OrderItem) => {
     const m = metaOf(i.row);
-    return Math.round(((m.cutPrice || 0) + (m.bends || 0) * bendPriceOf(i)) * 100) / 100;
+    return Math.round(((m.cutPrice || 0) + bendsOf(i) * bendPriceOf(i)) * 100) / 100;
   };
   /** Гіби цієї позиції вже покладені в ціну за штуку? */
   const bendInPrice = (i: OrderItem) => composedOf(i) > 0 && priceOf(i) === composedOf(i);
@@ -488,6 +485,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
       extras: extras.filter(e => e.label || num(e.sumTxt)).map(e => ({ label: e.label, sum: num(e.sumTxt) })),
       nests,
       bendPrice: num(bendPrice) || undefined,
+      total: totals.all,
       lines: buildLines(),
     };
     const rows = pending.filter(p => byRow.has(p.row));
@@ -636,6 +634,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                 const isBendCard = !!card.bendCard;
                 const sum = cardSum(card);
                 const canPrice = cardPriceable(card.rows);
+                const hasBends = card.rows.some(isBend);
                 const withPrice = card.rows.filter(i => priceOf(i) > 0).length;
                 return (
                   <div key={card.key} className="card overflow-hidden" style={{ background: 'var(--surface)' }}>
@@ -730,7 +729,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                             <tr>
                               <th className="k-label text-left pb-1">позиція</th>
                               <th className="k-label text-right pb-1 pr-1 whitespace-nowrap">к-сть</th>
-                              <th className="k-label text-right pb-1 pr-1 whitespace-nowrap">гіб/шт</th>
+                              {hasBends && <th className="k-label text-right pb-1 pr-1 whitespace-nowrap">гіб/шт</th>}
                               <th className="k-label text-right pb-1 pr-1 whitespace-nowrap">ціна/шт</th>
                               <th className="k-label text-right pb-1 whitespace-nowrap">сума</th>
                             </tr>
@@ -740,9 +739,10 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                               const m = metaOf(i.row);
                               const bp = bendPriceOf(i);
                               const rowSum = isBendCard ? bendSum(i) : sumOf(i);
+                              const bends = bendsOf(i);
                               const hint = [
                                 m.cutPrice ? `різ ${money(m.cutPrice)}` : '',
-                                m.bends && bp ? `гіби ${m.bends}×${money(bp)}` : '',
+                                bends && bp ? `гіби ${bends}×${money(bp)}` : '',
                               ].filter(Boolean).join(' + ');
                               return (
                                 <tr key={i.row} className="border-t hairline">
@@ -752,13 +752,19 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                                   </td>
                                   <td className="py-[5px] px-1 text-right font-mono text-[11.5px] whitespace-nowrap"
                                     style={{ color: 'var(--ink-3)' }}>{qtyOf(i) || '—'} шт</td>
-                                  <td className="py-[5px] px-1 w-[62px]">
-                                    <input value={m.bends ?? ''}
-                                      onChange={e => setMetaVal(i.row, 'bends', e.target.value)}
-                                      inputMode="decimal" placeholder="—"
-                                      title={bendsAll(i) ? `Всього гібів: ${bendsAll(i)}` : 'Скільки гібів на одній деталі'}
-                                      className="k-input w-full px-1.5 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right" />
-                                  </td>
+                                  {hasBends && (
+                                    <td className="py-[5px] px-1 w-[62px]">
+                                      {isBend(i) ? (
+                                        <input value={m.bends ?? ''}
+                                          onChange={e => setMetaVal(i.row, 'bends', e.target.value)}
+                                          inputMode="decimal" placeholder="0"
+                                          title={bendsAll(i) ? `Всього гібів: ${bendsAll(i)}` : 'Скільки гібів на одній деталі'}
+                                          className="k-input w-full px-1.5 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right" />
+                                      ) : (
+                                        <span className="block text-center" style={{ color: 'var(--ink-3)' }}>—</span>
+                                      )}
+                                    </td>
+                                  )}
                                   <td className="py-[5px] px-1 w-[84px]">
                                     <input value={prices[i.row] ?? m.price ?? i.clientPrice ?? ''}
                                       onChange={e => {
@@ -793,8 +799,9 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                                 <Scissors size={11} /> {showNest ? 'Згорнути розкрій' : nestInfo ? 'Перерозкласти' : 'Розкласти на листи'}
                               </button>
                             </div>
-                            {/* Що вже розклали — лишається після закриття вікна */}
-                            {nests.length > 0 && (
+                            {/* Що вже розклали — лишається після закриття панелі.
+                                Поки панель відкрита, ті самі цифри показує вона. */}
+                            {nests.length > 0 && !showNest && (
                               <div className="rounded-lg overflow-hidden" style={{ boxShadow: 'inset 0 0 0 1px var(--line)' }}>
                                 {nests.map((n, k) => (
                                   <div key={n.key + k}
@@ -821,6 +828,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                             {showNest && (
                               <NestingSheet embedded detail={detail} onToast={onToast}
                                 onClose={() => setShowNest(false)}
+                                saved={nests}
                                 onNest={setNests}
                                 onExtra={putExtra} />
                             )}
@@ -978,16 +986,19 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                           </td>
                           <td className="px-2 py-1.5 tabular-nums whitespace-nowrap">{qtyOf(i) || '—'}</td>
 
-                          {/* Гіби ставимо будь-якому рядку: розгортку ріжуть і гнуть,
-                              а операція в неї одна — «Лазер» */}
+                          {/* Гіби — лише там, де операція справді гнуття */}
                           <td className="px-1 py-1 w-[74px]">
-                            <input
-                              value={metaOf(i.row).bends ?? ''}
-                              onChange={e => setMetaVal(i.row, 'bends', e.target.value)}
-                              inputMode="decimal" placeholder="—"
-                              title={bendsAll(i) ? `Всього гібів: ${bendsAll(i)}` : 'Кількість гібів на одній деталі'}
-                              className="k-input w-full px-1.5 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right"
-                            />
+                            {isBend(i) ? (
+                              <input
+                                value={metaOf(i.row).bends ?? ''}
+                                onChange={e => setMetaVal(i.row, 'bends', e.target.value)}
+                                inputMode="decimal" placeholder="0"
+                                title={bendsAll(i) ? `Всього гібів: ${bendsAll(i)}` : 'Кількість гібів на одній деталі'}
+                                className="k-input w-full px-1.5 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right"
+                              />
+                            ) : (
+                              <span className="block text-center" style={{ color: 'var(--ink-3)' }}>—</span>
+                            )}
                           </td>
 
                           {/* Час порізки — лише для DXF */}

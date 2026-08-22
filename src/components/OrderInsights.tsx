@@ -14,7 +14,7 @@
 // ================================================================
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, Blocks, ShoppingCart, Weight, Scissors } from 'lucide-react';
+import { ChevronDown, ChevronRight, Blocks, ShoppingCart, Weight, Calculator } from 'lucide-react';
 import { api } from '../api';
 import { driveIdFromUrl } from '../lib/ai';
 import { num } from './ItemsTable';
@@ -39,6 +39,8 @@ interface Props {
   gap: string;
   onGap: (field: string) => void;
   onTool: (t: 'asm' | 'purch' | 'calc' | 'tmc') => void;
+  /** Рядок шапки картки — щоб прочитати збережений прорахунок. */
+  headerRow: number;
   /** Змінюється після записів у картку — привід перечитати зведення. */
   refreshKey?: number;
   /** Маси зі штампів (fileId → кг) — щоб сторінка могла зважити вибране. */
@@ -68,9 +70,19 @@ export function weighItems(items: OrderItem[], masses: Record<string, number>) {
   return { kg, files: seen.size, missing: missing.size };
 }
 
-export default function OrderInsights({ order, items, gap, onGap, onTool, refreshKey, onMasses }: Props) {
+export default function OrderInsights({ order, items, gap, onGap, onTool, refreshKey, onMasses, headerRow }: Props) {
   const [open, setOpen] = useState(() => localStorage.getItem(OPEN_KEY) !== '0');
   const [ai, setAi] = useState<OrderAiSummary | null>(null);
+  /** Скільки вийшло по грошах — показуємо прямо в плитці прорахунку. */
+  const [calcTotal, setCalcTotal] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+    api.calcGet(headerRow)
+      .then(r => { if (alive) setCalcTotal(r.data?.total || 0); })
+      .catch(() => { /* прорахунку може ще не бути — це не помилка */ });
+    return () => { alive = false; };
+  }, [headerRow, refreshKey]);
 
   useEffect(() => {
     let alive = true;
@@ -132,11 +144,11 @@ export default function OrderInsights({ order, items, gap, onGap, onTool, refres
       tool: 'tmc' as const,
     },
     {
-      key: 'cut', Icon: Scissors, label: 'Порізка і гіби',
-      value: ai && (ai.cutRows || ai.bendRows)
-        ? [ai.cutRows ? `${ai.cutRows} різ` : '', ai.bendRows ? `${ai.bendRows} гнуття` : '']
-            .filter(Boolean).join(' · ')
+      key: 'calc', Icon: Calculator, label: 'Прорахунок',
+      value: calcTotal
+        ? `${calcTotal.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} грн`
         : '',
+      empty: 'не рахували', act: 'порахувати →',
       tool: 'calc' as const,
     },
   ];
@@ -172,10 +184,14 @@ export default function OrderInsights({ order, items, gap, onGap, onTool, refres
                   <span className="k-label block">{label}</span>
                   <span className="k-value block truncate"
                     style={value ? undefined : { color: 'var(--ink-2)', fontWeight: 400 }}>
-                    {value || 'не читали'}
+                    {value || (tiles[i] as any).empty || 'не читали'}
                   </span>
                 </span>
-                {!value && <span className="k-label flex-shrink-0" style={{ color: 'var(--accent)' }}>прочитати →</span>}
+                {!value && (
+                  <span className="k-label flex-shrink-0" style={{ color: 'var(--accent)' }}>
+                    {(tiles[i] as any).act || 'прочитати →'}
+                  </span>
+                )}
               </button>
             ))}
           </div>

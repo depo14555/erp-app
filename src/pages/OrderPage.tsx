@@ -638,6 +638,7 @@ export default function OrderPage({
 
         <OrderInsights
           order={header.projectId}
+          headerRow={header.headerRow}
           items={real}
           gap={gap}
           onGap={setGap}

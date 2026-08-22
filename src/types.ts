@@ -149,6 +149,8 @@ export interface CalcData {
   nests?: CalcNest[];
   /** Ціна за один гіб — одна на замовлення. */
   bendPrice?: number;
+  /** Разом по замовленню на момент збереження — для плитки в картці. */
+  total?: number;
   /** Плоский зріз для аркуша «Прорахунок». Похідне — не зберігається в JSON. */
   lines?: CalcLine[];
   updatedAt?: string;

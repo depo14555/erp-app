@@ -97,7 +97,6 @@ const AI_TOOLS: ToolItem[] = [
 ];
 
 const STEP_3: ToolItem[] = [
-  { key: 'calc', label: 'Порахувати', Icon: Calculator, color: '#0D9488' },
   { key: 'distr', label: 'Розподіл КД', Icon: FolderTree, color: '#7C3AED' },
   { key: 'send', label: 'Відправити виконавцю', Icon: Send, color: '#4F46E5' },
   { key: 'billing', label: 'Рахунки і оплати', Icon: Receipt, color: 'var(--green)' },

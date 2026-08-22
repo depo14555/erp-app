@@ -34,6 +34,12 @@ interface Props {
   onNest?: (nests: CalcNest[]) => void;
   /** Вартість розкрою рядком в «Інші витрати» замість окремої групи. */
   onExtra?: (label: string, sum: number) => void;
+  /**
+   * Що вже розклали раніше. Показуємо збережене замість порожньої
+   * форми — щоб не примушувати рахувати наново тільки для того, аби
+   * побачити, скільки листів пішло.
+   */
+  saved?: CalcNest[];
   detail: OrderDetail;
   onClose: () => void;
   onMinimize?: () => void;
@@ -60,7 +66,7 @@ function money(n: number): string {
 /** Розібрані DXF живуть поза компонентом: закрив вікно — повторно не читаємо. */
 const parsedCache = new Map<string, any>();
 
-export default function NestingSheet({ detail, onClose, onMinimize, onToast, embedded, onNest, onExtra }: Props) {
+export default function NestingSheet({ detail, onClose, onMinimize, onToast, embedded, onNest, onExtra, saved }: Props) {
   const [phase, setPhase] = useState<Phase>('load');
   const [items, setItems] = useState<NestItem[]>([]);
   const [folderUrl, setFolderUrl] = useState('');
@@ -397,6 +403,31 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast, emb
 
         {(phase === 'setup' || phase === 'done') && (
           <div className="flex-1 min-h-0 overflow-y-auto">
+            {/* Що вже розкладали: цифри лишаються, поки їх не перерахують */}
+            {!results.length && !!saved?.length && (
+              <div className="px-4 py-3 border-b hairline">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-[12px] font-bold" style={{ color: 'var(--blue)' }}>Розкладено раніше</span>
+                  <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
+                    картинки листів малюються при перерозкладанні
+                  </span>
+                </div>
+                {saved.map((n, k) => (
+                  <div key={n.key + k} className="flex items-center gap-2 flex-wrap py-1"
+                    style={k ? { borderTop: '1px dashed var(--line)' } : undefined}>
+                    <span className="text-[12.5px] font-bold whitespace-nowrap">{n.key}</span>
+                    <span className="text-[11.5px]" style={{ color: 'var(--ink-2)', flex: '1 1 240px' }}>
+                      листів {n.sheets} ({n.sheetW}×{n.sheetH}) · заповнення {n.usedPct}% ·
+                      деталі {n.kgParts.toFixed(1)} кг · метал {n.kgSheets.toFixed(1)} кг ·
+                      остача {n.kgRest.toFixed(1)} кг · різ {n.lenM.toFixed(1)} м ·
+                      врізок {n.pierces} · {n.timeMin} хв · {n.at}
+                    </span>
+                    <span className="text-[13px] font-bold tabular-nums whitespace-nowrap">{money(n.cost)} грн</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Налаштування */}
             <div className="px-4 py-3 border-b hairline space-y-2.5">
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -516,7 +547,7 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast, emb
             <button onClick={run} disabled={!chosen.length}
               className="flex-1 min-w-[220px] py-2.5 rounded-2xl font-bold text-[13.5px] text-white press disabled:opacity-40"
               style={{ background: '#0891B2' }}>
-              ✂️ Розкроїти · {chosen.length} груп ({totalParts} деталей)
+              ✂️ {!results.length && saved?.length ? 'Перерозкласти' : 'Розкроїти'} · {chosen.length} груп ({totalParts} деталей)
             </button>
             {results.length > 0 && (
               <>
