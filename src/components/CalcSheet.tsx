@@ -14,7 +14,7 @@ import {
 import { MinimizeButton } from './PageSheet';
 import NestingSheet from './NestingSheet';
 import { api } from '../api';
-import { OrderDetail, OrderItem, CalcBundle, CalcData, CalcRowMeta } from '../types';
+import { OrderDetail, OrderItem, CalcBundle, CalcData, CalcRowMeta, CalcNest, CalcLine } from '../types';
 import { num, qtyOf, timeAllOf } from './ItemsTable';
 
 interface Props {
@@ -31,6 +31,12 @@ const KINDS = [
   'Порізка металу', 'Гнуття', 'Токарні роботи', 'Фрезерні роботи',
   'Зварювальні роботи', 'Покриття', 'Матеріал', 'Логістика', 'Інше',
 ];
+
+/** Найчастіші витрати, яких немає в кресленнях — щоб не набирати руками. */
+const EXTRA_PRESETS = ['Метал', 'Доставка', 'Порошкове фарбування', 'Оцинкування', 'Кріплення', 'Пакування'];
+
+/** Рядок «Інших витрат» в UI: суму тримаємо текстом, щоб «12,5» дописувалось. */
+interface ExtraRow { label: string; sumTxt: string }
 
 function money(n: number): string {
   return n.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -66,12 +72,24 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
   const [openCard, setOpenCard] = useState<string>('cut');
   /** Розкрій розгортається в картці порізки — важкий, тому не одразу. */
   const [showNest, setShowNest] = useState(false);
+  /** Інші витрати замовлення: метал, доставка, покриття. */
+  const [extras, setExtras] = useState<ExtraRow[]>([]);
+  const [openExtras, setOpenExtras] = useState(false);
+  /** Зафіксовані розкладки — щоб після закриття вікна вони не зникали. */
+  const [nests, setNests] = useState<CalcNest[]>([]);
+  /** Ціна за один гіб — одна на замовлення. */
+  const [bendPrice, setBendPrice] = useState('');
+  /** Стан збереження: показуємо одразу, звіряємо потім. */
+  const [saveState, setSaveState] = useState<'' | 'saving' | 'ok' | 'bad'>('');
 
   useEffect(() => {
     api.calcGet(detail.header.headerRow)
       .then(r => {
         setBundles(r.data?.bundles || []);
         setMeta(r.data?.meta || {});
+        setExtras((r.data?.extras || []).map(e => ({ label: e.label, sumTxt: e.sum ? String(e.sum) : '' })));
+        setNests(r.data?.nests || []);
+        setBendPrice(r.data?.bendPrice ? String(r.data.bendPrice) : '');
         setUpdatedAt(r.data?.updatedAt || '');
         if (r.data?.bundles?.length) setActive(r.data.bundles[0].id);
       })
@@ -103,8 +121,10 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
   const metaOf = (row: number): CalcRowMeta => meta[String(row)] || {};
   /** Гібів на всю призначену кількість. */
   const bendsAll = (i: OrderItem) => (metaOf(i.row).bends || 0) * qtyOf(i);
+  /** Ціна гіба для позиції: власна, якщо є, інакше спільна на замовлення. */
+  const bendPriceOf = (i: OrderItem) => metaOf(i.row).bendPrice || num(bendPrice);
   /** Вартість гнуття позиції: гіби × ціна за гіб. */
-  const bendSum = (i: OrderItem) => bendsAll(i) * (metaOf(i.row).bendPrice || 0);
+  const bendSum = (i: OrderItem) => bendsAll(i) * bendPriceOf(i);
   /** Час порізки позиції, год. */
   const cutHours = (i: OrderItem) => (metaOf(i.row).cutMin || 0) * qtyOf(i) / 60;
 
@@ -117,10 +137,15 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
       bendCost += bendSum(i);
       cut += cutHours(i);
     });
-    const extras = bundles.reduce((s, b) => s + b.extras.reduce((x, e) => x + (e.sum || 0), 0), 0);
-    return { time, sum, extras, bends, bendCost, cut, all: sum + extras + bendCost };
+    // Витрати живуть у двох місцях: власний список замовлення й старі
+    // рядки всередині груп рахунку — беремо обидва, щоб нічого не з'їло.
+    const ex = extras.reduce((s, e) => s + num(e.sumTxt), 0)
+      + bundles.reduce((s, b) => s + b.extras.reduce((x, e) => x + (e.sum || 0), 0), 0);
+    // Гіби окремо в суму НЕ йдуть: вони входять у ціну за штуку кнопкою
+    // «Гіби → ціна». Інакше та сама робота порахувалась би двічі.
+    return { time, sum, extras: ex, bends, bendCost, cut, all: sum + ex };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, prices, bundles, meta]);
+  }, [items, prices, bundles, meta, extras, bendPrice]);
 
   /**
    * КАРТКИ ЗА ВИДАМИ РОБІТ. Рахують не «позицію за позицією», а
@@ -160,20 +185,114 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
     });
   }, [items, meta]);
 
+  /** Рядки з гібами: операція «Гнуття» або просто проставлена к-сть гібів. */
+  const bendRows = useMemo(
+    () => items.filter(i => isBend(i) || (metaOf(i.row).bends || 0) > 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [items, meta]
+  );
+
   /**
-   * Що вже дав розкрій. Вікно розкрою кладе в групи рядок витрат
-   * «лазерна порізка … м, врізок …, листів …» — з нього й читаємо,
-   * щоб картка показувала стан, а не порожнечу.
+   * Картки робіт. Гнуття — окрема картка навіть тоді, коли операція
+   * рядка «Лазер»: розгортку ріжуть і гнуть на тій самій позиції, а
+   * гроші за гіби треба бачити окремо — інакше їх ніде порахувати.
+   */
+  const cards = useMemo(() => {
+    const list: Array<{ key: string; label: string; kind: string; rows: OrderItem[]; bendCard?: boolean }> =
+      opCards.map(c => ({ ...c, bendCard: c.key === 'bend' }));
+    if (!list.some(c => c.bendCard) && bendRows.length) {
+      list.splice(list[0]?.key === 'cut' ? 1 : 0, 0,
+        { key: 'bend', label: 'Гнуття', kind: 'Гнуття', rows: bendRows, bendCard: true });
+    }
+    return list;
+  }, [opCards, bendRows]);
+
+  /**
+   * Що вже дав розкрій. Раніше читалось із рядків витрат у групах —
+   * тепер розкладки лежать своїм списком і переживають закриття вікна.
    */
   const nestInfo = useMemo(() => {
+    if (nests.length) {
+      const sheets = nests.reduce((s, n) => s + n.sheets, 0);
+      const kg = nests.reduce((s, n) => s + n.kgSheets, 0);
+      const cost = nests.reduce((s, n) => s + n.cost, 0);
+      return `листів ${sheets} · металу ${kg.toFixed(1)} кг · різ ${money(cost)} грн`;
+    }
     const lines = bundles.flatMap(b => b.extras).filter(e => /порізк|лист/i.test(e.label));
     if (!lines.length) return '';
     const sum = lines.reduce((s, e) => s + (e.sum || 0), 0);
     return `${lines.length} розкладка${lines.length > 1 ? 'и' : ''} · ${money(sum)} грн`;
-  }, [bundles]);
+  }, [nests, bundles]);
 
-  const cardSum = (rows: OrderItem[]) => rows.reduce((s, i) => s + sumOf(i) + bendSum(i), 0);
+  /** Сума картки: у гнуття — гроші за гіби, у решти — ціна × кількість. */
+  const cardSum = (card: { rows: OrderItem[]; bendCard?: boolean }) =>
+    card.bendCard
+      ? card.rows.reduce((s, i) => s + bendSum(i), 0)
+      : card.rows.reduce((s, i) => s + sumOf(i), 0);
   const cardTime = (rows: OrderItem[]) => rows.reduce((s, i) => s + timeAllOf(i) + cutHours(i), 0);
+
+  /** Складена ціна позиції: тариф різу + гіби. */
+  const composedOf = (i: OrderItem) => {
+    const m = metaOf(i.row);
+    return Math.round(((m.cutPrice || 0) + (m.bends || 0) * bendPriceOf(i)) * 100) / 100;
+  };
+  /** Гіби цієї позиції вже покладені в ціну за штуку? */
+  const bendInPrice = (i: OrderItem) => composedOf(i) > 0 && priceOf(i) === composedOf(i);
+
+  /** Позиції картки, де складена ціна відрізняється від поточної. */
+  const cardPriceable = (rows: OrderItem[]) =>
+    rows.filter(i => composedOf(i) > 0 && composedOf(i) !== priceOf(i));
+  /** Те саме по всьому замовленню — для нижньої панелі списку позицій. */
+  const allPriceable = useMemo(
+    () => cardPriceable(items),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [items, meta, prices, bendPrice]
+  );
+
+  /**
+   * Ціна за штуку складається з робіт: тариф різу плюс гіби. Обидві
+   * кнопки ведуть сюди, тому натиснути двічі безпечно — результат той
+   * самий, а не подвоєний.
+   */
+  function composePrice(rows: OrderItem[]) {
+    const targets = rows.filter(i => composedOf(i) > 0);
+    if (!targets.length) { onToast('Нема з чого складати: порахуйте різ або проставте гіби', true); return; }
+    const nextPrices = { ...prices };
+    const nextMeta = { ...meta };
+    targets.forEach(i => {
+      const p = composedOf(i);
+      nextMeta[String(i.row)] = { ...(nextMeta[String(i.row)] || {}), price: p };
+      nextPrices[i.row] = String(p);
+    });
+    setMeta(nextMeta);
+    setPrices(nextPrices);
+    onToast(`💰 Ціну складено для ${targets.length} поз.`);
+  }
+
+  function addExtra(label = '') {
+    setExtras(e => [...e, { label, sumTxt: '' }]);
+    setOpenExtras(true);
+  }
+  function patchExtra(idx: number, patch: Partial<ExtraRow>) {
+    setExtras(e => e.map((x, i) => (i === idx ? { ...x, ...patch } : x)));
+  }
+  function delExtra(idx: number) {
+    setExtras(e => e.filter((_, i) => i !== idx));
+  }
+  /** Дописати/оновити витрату з розкрою — по назві, щоб не плодити дублі. */
+  function putExtra(label: string, sum: number) {
+    setExtras(prev => {
+      const head = label.split('·')[0].trim();
+      const i = prev.findIndex(x => x.label.startsWith(head));
+      const line = { label, sumTxt: String(Math.round(sum * 100) / 100) };
+      return i >= 0 ? prev.map((x, k) => (k === i ? line : x)) : [...prev, line];
+    });
+    setOpenExtras(true);
+  }
+  function nestToExtra(n: CalcNest) {
+    putExtra(`Лазерна порізка ${n.key} · листів ${n.sheets} (${n.sheetW}×${n.sheetH})`, n.cost);
+    onToast(`➕ ${n.key} — ${money(n.cost)} грн в «Інші витрати»`);
+  }
 
   /** Одна ціна на всі позиції картки — найчастіша дія при прорахунку. */
   function priceCard(rows: OrderItem[], raw: string) {
@@ -196,7 +315,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
 
   /** Рахунок збирається з карток: одна картка — один рядок рахунку. */
   function bundlesFromCards() {
-    const made: CalcBundle[] = opCards
+    const made: CalcBundle[] = cards
       .filter(c => c.rows.length)
       .map(c => {
         const old = bundles.find(b => b.kind === c.kind);
@@ -303,52 +422,112 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
     setSel(new Set());
   }
 
+  function nowStamp(): string {
+    const d = new Date();
+    const p2 = (n: number) => String(n).padStart(2, '0');
+    return `${p2(d.getDate())}.${p2(d.getMonth() + 1)}.${d.getFullYear()} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+  }
+
+  /** Плоский зріз прорахунку — те, що ляже в аркуш «Прорахунок». */
+  function buildLines(): CalcLine[] {
+    const out: CalcLine[] = [];
+    cards.forEach(c => {
+      if (!c.rows.length) return;
+      const sum = cardSum(c);
+      const time = cardTime(c.rows);
+      const qty = c.rows.reduce((s, i) => s + qtyOf(i), 0);
+      if (c.bendCard) {
+        // Гроші за гіби вже сидять у ціні за штуку — сюди пишемо нулем,
+        // інакше «Разом» у таблиці рахувало б ту саму роботу двічі.
+        const gibs = c.rows.reduce((s, i) => s + bendsAll(i), 0);
+        const inPrice = c.rows.every(bendInPrice);
+        out.push({
+          section: 'Роботи', name: 'Гнуття', payTo: 'клієнт',
+          count: c.rows.length, qty: gibs, sum: 0, time,
+          note: `гібів ${gibs} на ${money(sum)} грн — ${inPrice ? 'входить у ціну позицій' : 'ще не перенесено в ціну'}`,
+        });
+        return;
+      }
+      out.push({
+        section: 'Роботи', name: c.label, payTo: 'клієнт',
+        count: c.rows.length, qty, sum, time, note: '',
+      });
+    });
+    // Розкрій пишемо без суми: вартість різу потрапляє в гроші лише
+    // тоді, коли її свідомо перенесли в «Інші витрати» чи в ціну.
+    nests.forEach(n => out.push({
+      section: 'Розкрій', name: `${n.key} · ${n.sheets} л. ${n.sheetW}×${n.sheetH}`, payTo: '',
+      count: n.rows.length, qty: n.parts, sum: 0, time: n.timeMin / 60,
+      note: `різ ${n.lenM.toFixed(1)} м · врізок ${n.pierces} · деталі ${n.kgParts.toFixed(1)} кг · `
+        + `метал ${n.kgSheets.toFixed(1)} кг · остача ${n.kgRest.toFixed(1)} кг · `
+        + `заповнення ${n.usedPct}% · різ ${money(n.cost)} грн · ${n.at}`,
+    }));
+    extras.forEach(e => out.push({
+      section: 'Інші витрати', name: e.label || 'без назви', payTo: 'клієнт',
+      count: 0, qty: 0, sum: num(e.sumTxt), time: 0, note: '',
+    }));
+    out.push({
+      section: 'РАЗОМ', name: detail.header.orderNum || detail.header.projectId, payTo: '',
+      count: items.length, qty: items.reduce((s, i) => s + qtyOf(i), 0),
+      sum: totals.all, time: totals.time + totals.cut,
+      note: `гібів ${totals.bends} · час різу ${totals.cut.toFixed(1)} год`,
+    });
+    return out;
+  }
+
+  /**
+   * Збереження одним рухом: структура прорахунку, ціни й час у самій
+   * картці і людський зріз в аркуші «Прорахунок» — бо джерело правди
+   * таблиця, а не це вікно. В UI показуємо збережене одразу, а вже
+   * потім тихо перечитуємо й звіряємо: якщо хаб чогось не дописав,
+   * скажемо про це, а не мовчатимемо.
+   */
   async function save() {
+    const data: CalcData = {
+      bundles, meta,
+      extras: extras.filter(e => e.label || num(e.sumTxt)).map(e => ({ label: e.label, sum: num(e.sumTxt) })),
+      nests,
+      bendPrice: num(bendPrice) || undefined,
+      lines: buildLines(),
+    };
+    const rows = pending.filter(p => byRow.has(p.row));
+    const prev = updatedAt;
     setSaving(true);
+    setSaveState('saving');
+    setUpdatedAt(nowStamp());                       // оптимістично, до відповіді
     try {
-      const data: CalcData = { bundles, meta };
-      const res = await api.calcSave(detail.header.headerRow, data);
-      setUpdatedAt(res.updatedAt);
-      const n = res.bundles;
-      const word = n % 10 === 1 && n % 100 !== 11 ? 'група' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'групи' : 'груп');
-      onToast(`💾 Прорахунок збережено · ${n} ${word}`);
+      const res = await api.calcSave(detail.header.headerRow, data, rows);
+      setUpdatedAt(res.updatedAt || nowStamp());
+      setPrices({});
+      onToast(`💾 Збережено · ${res.bundles} груп`
+        + (res.cells ? ` · у картку ${res.cells} знач.` : '')
+        + (res.sheetRows ? ` · в таблицю ${res.sheetRows} ряд.` : ''));
+      if (res.cells) onApplied();
+      verify(data);
     } catch (e: any) {
+      setUpdatedAt(prev);
+      setSaveState('bad');
       onToast(e?.message || 'Не вдалося зберегти', true);
     } finally {
       setSaving(false);
     }
   }
 
-  /** Позиції, для яких порахований тариф різу, але ціна ще інша. */
-  const cutPriced = useMemo(
-    () => items.filter(i => {
-      const c = metaOf(i.row).cutPrice;
-      return !!c && c !== priceOf(i);
-    }).map(i => i.row),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [items, meta, prices]
-  );
-
-  /**
-   * Тариф різу стає ціною за штуку. Саме це й питають найчастіше:
-   * «є 150 деталей і тариф — порахуй». Ставимо ціну кожній позиції,
-   * далі сума рахується як завжди: к-сть × ціна.
-   */
-  function priceFromCut() {
-    if (!cutPriced.length) return;
-    const nextPrices = { ...prices };
-    setMeta(m => {
-      const next = { ...m };
-      cutPriced.forEach(r => {
-        const c = next[String(r)]?.cutPrice;
-        if (!c) return;
-        next[String(r)] = { ...next[String(r)], price: c };
-        nextPrices[r] = String(c);
-      });
-      return next;
-    });
-    setPrices(nextPrices);
-    onToast(`✂️ Ціну з тарифу різу поставлено ${cutPriced.length} позиціям`);
+  /** Тиха звірка: що реально лежить у хабі після збереження. */
+  async function verify(sent: CalcData) {
+    try {
+      const r = await api.calcGet(detail.header.headerRow);
+      const got = r.data || ({} as CalcData);
+      const same =
+        (got.bundles || []).length === sent.bundles.length &&
+        Object.keys(got.meta || {}).length === Object.keys(sent.meta || {}).length &&
+        (got.extras || []).length === (sent.extras || []).length &&
+        (got.nests || []).length === (sent.nests || []).length;
+      setSaveState(same ? 'ok' : 'bad');
+      if (!same) onToast('⚠️ Збережене не збіглося з тим, що в хабі — збережіть ще раз', true);
+    } catch {
+      setSaveState('bad');
+    }
   }
 
   /** Час на одну деталь у годинах — з хвилин різу, порахованих із DXF. */
@@ -400,26 +579,6 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
     }
   }
 
-  /** Ціна за гіб одна на замовлення — тримаємо її в meta кожного гнутого рядка. */
-  const bendPriceAll = useMemo(() => {
-    const vals = items.filter(isBend).map(i => metaOf(i.row).bendPrice).filter(v => v);
-    return vals.length ? String(vals[0]) : '';
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, meta]);
-
-  function applyBendPrice(raw: string) {
-    const v = num(raw);
-    setMeta(m => {
-      const next = { ...m };
-      items.filter(isBend).forEach(i => {
-        const cur = { ...(next[String(i.row)] || {}) };
-        if (v > 0) cur.bendPrice = v; else delete cur.bendPrice;
-        if (Object.keys(cur).length) next[String(i.row)] = cur; else delete next[String(i.row)];
-      });
-      return next;
-    });
-  }
-
   function toggleRow(row: number) {
     setSel(prev => { const n = new Set(prev); n.has(row) ? n.delete(row) : n.add(row); return n; });
   }
@@ -436,9 +595,12 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
           </span>
           <div className="flex-1 min-w-0">
             <p className="font-bold text-[15px] leading-tight">Прорахунок</p>
-            <p className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>
-              {detail.header.orderNum || detail.header.projectId}
-              {updatedAt ? ` · збережено ${updatedAt}` : ' · ще не збережено'}
+            <p className="text-[11.5px] flex items-center gap-1.5 flex-wrap" style={{ color: 'var(--ink-3)' }}>
+              <span>{detail.header.orderNum || detail.header.projectId}</span>
+              <span>{updatedAt ? `· збережено ${updatedAt}` : '· ще не збережено'}</span>
+              {saveState === 'saving' && <span style={{ color: 'var(--blue)' }}>· зберігаю…</span>}
+              {saveState === 'ok' && <span style={{ color: 'var(--green)' }}>· звірено ✓</span>}
+              {saveState === 'bad' && <span style={{ color: 'var(--accent)' }}>· не звірено</span>}
             </p>
           </div>
           <div className="hidden sm:flex items-center gap-3 mr-2">
@@ -468,11 +630,12 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
         ) : view === 'cards' ? (
           <>
             <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5" style={{ background: 'var(--bg)' }}>
-              {opCards.map(card => {
+              {cards.map(card => {
                 const on = openCard === card.key;
                 const isCut = card.key === 'cut';
-                const isBendCard = card.key === 'bend';
-                const sum = cardSum(card.rows);
+                const isBendCard = !!card.bendCard;
+                const sum = cardSum(card);
+                const canPrice = cardPriceable(card.rows);
                 const withPrice = card.rows.filter(i => priceOf(i) > 0).length;
                 return (
                   <div key={card.key} className="card overflow-hidden" style={{ background: 'var(--surface)' }}>
@@ -487,16 +650,30 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                       <span className="min-w-0 flex-1">
                         <span className="block text-[13.5px] font-bold truncate">{card.label}</span>
                         <span className="k-label">
-                          {card.rows.length} поз. · ціна є в {withPrice}
+                          {card.rows.length} поз. · {isBendCard
+                            ? `гібів ${card.rows.reduce((s, i) => s + bendsAll(i), 0) || 0}`
+                            : `ціна є в ${withPrice}`}
                           {cardTime(card.rows) > 0 ? ` · ${cardTime(card.rows).toFixed(1)} год` : ''}
                         </span>
                       </span>
-                      {withPrice < card.rows.length && (
+                      {!isBendCard && withPrice < card.rows.length && (
                         <span className="k-chip" style={{ background: 'var(--amber-bg)', color: 'var(--amber)', borderColor: 'var(--amber-line)' }}>
                           нема ціни: {card.rows.length - withPrice}
                         </span>
                       )}
-                      <span className="k-value text-[14px] whitespace-nowrap">{sum ? money(sum) : '—'}</span>
+                      {/* Гнуття не окремий пиріг: його гроші живуть у ціні за
+                          штуку. Чіп каже, чи їх туди вже переклали. */}
+                      {isBendCard && sum > 0 && (
+                        <span className="k-chip" style={card.rows.every(bendInPrice)
+                          ? { background: 'var(--green-bg)', color: 'var(--green)', borderColor: 'var(--green-line)' }
+                          : { background: 'var(--amber-bg)', color: 'var(--amber)', borderColor: 'var(--amber-line)' }}>
+                          {card.rows.every(bendInPrice) ? 'у ціні' : '→ у ціну'}
+                        </span>
+                      )}
+                      <span className="k-value text-[14px] whitespace-nowrap"
+                        style={isBendCard ? { color: 'var(--ink-2)' } : undefined}>
+                        {sum ? money(sum) : '—'}
+                      </span>
                     </button>
 
                     {on && (
@@ -511,21 +688,31 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                                 {cutBusy ? <Loader2 size={11} className="animate-spin" /> : <Scissors size={11} />}
                                 {cutBusy || 'Перерахувати з DXF'}
                               </button>
-                              {cutPriced.length > 0 && (
-                                <button onClick={priceFromCut}
+                              {canPrice.length > 0 && (
+                                <button onClick={() => composePrice(canPrice)}
                                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold press"
                                   style={{ background: 'var(--accent-soft)', color: 'var(--accent)', boxShadow: 'inset 0 0 0 1px var(--accent)' }}>
-                                  <CornerUpRight size={11} /> Тариф → ціна ({cutPriced.length})
+                                  <CornerUpRight size={11} /> Тариф → ціна ({canPrice.length})
                                 </button>
                               )}
                             </>
                           ) : isBendCard ? (
                             <>
                               <span className="k-label">Ціна за один гіб</span>
-                              <input value={bendPriceAll} onChange={e => applyBendPrice(e.target.value)}
+                              <input value={bendPrice} onChange={e => setBendPrice(e.target.value)}
                                 inputMode="decimal" placeholder="0"
+                                title="Одна ціна на все замовлення; у рядку можна перебити своєю"
                                 className="k-input w-[74px] px-2 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right" />
-                              <span className="k-label">гібів усього: {totals.bends || '—'}</span>
+                              <span className="k-label">
+                                гібів {card.rows.reduce((s, i) => s + bendsAll(i), 0) || '—'} · на {money(cardSum(card))} грн
+                              </span>
+                              {canPrice.length > 0 && (
+                                <button onClick={() => composePrice(canPrice)}
+                                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold press"
+                                  style={{ background: 'var(--accent-soft)', color: 'var(--accent)', boxShadow: 'inset 0 0 0 1px var(--accent)' }}>
+                                  <CornerUpRight size={11} /> Різ + гіби → ціна ({canPrice.length})
+                                </button>
+                              )}
                             </>
                           ) : (
                             <span className="k-label">Ціна ставиться руками — цю роботу з креслення не порахувати</span>
@@ -539,31 +726,54 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                         </div>
 
                         <table className="w-full border-collapse text-[12px]">
+                          <thead>
+                            <tr>
+                              <th className="k-label text-left pb-1">позиція</th>
+                              <th className="k-label text-right pb-1 pr-1 whitespace-nowrap">к-сть</th>
+                              <th className="k-label text-right pb-1 pr-1 whitespace-nowrap">гіб/шт</th>
+                              <th className="k-label text-right pb-1 pr-1 whitespace-nowrap">ціна/шт</th>
+                              <th className="k-label text-right pb-1 whitespace-nowrap">сума</th>
+                            </tr>
+                          </thead>
                           <tbody>
-                            {card.rows.map(i => (
-                              <tr key={i.row} className="border-t hairline">
-                                <td className="py-[5px] pr-2 truncate" style={{ maxWidth: 0, width: '100%' }} title={i.name}>
-                                  {i.name}
-                                  {metaOf(i.row).cutPrice ? (
-                                    <span className="k-label">тариф різу {money(metaOf(i.row).cutPrice as number)} грн/шт</span>
-                                  ) : null}
-                                </td>
-                                <td className="py-[5px] px-1 text-right font-mono text-[11.5px] whitespace-nowrap"
-                                  style={{ color: 'var(--ink-3)' }}>{qtyOf(i) || '—'} шт</td>
-                                <td className="py-[5px] px-1 w-[84px]">
-                                  <input value={prices[i.row] ?? metaOf(i.row).price ?? i.clientPrice ?? ''}
-                                    onChange={e => {
-                                      setPrices(p => ({ ...p, [i.row]: e.target.value }));
-                                      setMetaVal(i.row, 'price', e.target.value);
-                                    }}
-                                    inputMode="decimal" placeholder="0"
-                                    className="k-input w-full px-1.5 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right" />
-                                </td>
-                                <td className="py-[5px] pl-1 text-right font-mono font-semibold whitespace-nowrap w-[86px]">
-                                  {sumOf(i) ? money(sumOf(i)) : <span className="k-empty">—</span>}
-                                </td>
-                              </tr>
-                            ))}
+                            {card.rows.map(i => {
+                              const m = metaOf(i.row);
+                              const bp = bendPriceOf(i);
+                              const rowSum = isBendCard ? bendSum(i) : sumOf(i);
+                              const hint = [
+                                m.cutPrice ? `різ ${money(m.cutPrice)}` : '',
+                                m.bends && bp ? `гіби ${m.bends}×${money(bp)}` : '',
+                              ].filter(Boolean).join(' + ');
+                              return (
+                                <tr key={i.row} className="border-t hairline">
+                                  <td className="py-[5px] pr-2 truncate" style={{ maxWidth: 0, width: '100%' }} title={i.name}>
+                                    {i.name}
+                                    {hint ? <span className="k-label block">{hint} = {money(composedOf(i))} грн/шт</span> : null}
+                                  </td>
+                                  <td className="py-[5px] px-1 text-right font-mono text-[11.5px] whitespace-nowrap"
+                                    style={{ color: 'var(--ink-3)' }}>{qtyOf(i) || '—'} шт</td>
+                                  <td className="py-[5px] px-1 w-[62px]">
+                                    <input value={m.bends ?? ''}
+                                      onChange={e => setMetaVal(i.row, 'bends', e.target.value)}
+                                      inputMode="decimal" placeholder="—"
+                                      title={bendsAll(i) ? `Всього гібів: ${bendsAll(i)}` : 'Скільки гібів на одній деталі'}
+                                      className="k-input w-full px-1.5 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right" />
+                                  </td>
+                                  <td className="py-[5px] px-1 w-[84px]">
+                                    <input value={prices[i.row] ?? m.price ?? i.clientPrice ?? ''}
+                                      onChange={e => {
+                                        setPrices(p => ({ ...p, [i.row]: e.target.value }));
+                                        setMetaVal(i.row, 'price', e.target.value);
+                                      }}
+                                      inputMode="decimal" placeholder="0"
+                                      className="k-input w-full px-1.5 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right" />
+                                  </td>
+                                  <td className="py-[5px] pl-1 text-right font-mono font-semibold whitespace-nowrap w-[86px]">
+                                    {rowSum ? money(rowSum) : <span className="k-empty">—</span>}
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
 
@@ -583,9 +793,36 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                                 <Scissors size={11} /> {showNest ? 'Згорнути розкрій' : nestInfo ? 'Перерозкласти' : 'Розкласти на листи'}
                               </button>
                             </div>
+                            {/* Що вже розклали — лишається після закриття вікна */}
+                            {nests.length > 0 && (
+                              <div className="rounded-lg overflow-hidden" style={{ boxShadow: 'inset 0 0 0 1px var(--line)' }}>
+                                {nests.map((n, k) => (
+                                  <div key={n.key + k}
+                                    className="flex items-center gap-2 flex-wrap px-2.5 py-1.5"
+                                    style={k ? { borderTop: '1px solid var(--line)' } : undefined}>
+                                    <span className="text-[12px] font-bold whitespace-nowrap">{n.key}</span>
+                                    <span className="k-label" style={{ flex: '1 1 240px' }}>
+                                      листів {n.sheets} ({n.sheetW}×{n.sheetH}) · заповнення {n.usedPct}% ·
+                                      деталі {n.kgParts.toFixed(1)} кг · метал {n.kgSheets.toFixed(1)} кг ·
+                                      остача {n.kgRest.toFixed(1)} кг · різ {n.lenM.toFixed(1)} м ·
+                                      врізок {n.pierces} · {n.timeMin.toFixed(0)} хв · {n.at}
+                                    </span>
+                                    <span className="k-value whitespace-nowrap">{money(n.cost)} грн</span>
+                                    <button onClick={() => nestToExtra(n)}
+                                      className="px-2 py-1 rounded-lg text-[11px] font-bold press whitespace-nowrap"
+                                      style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
+                                      → у витрати
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                             {/* Сам розкрій — тут же: листи, вага, залишок, вартість різу */}
                             {showNest && (
-                              <NestingSheet embedded detail={detail} onToast={onToast} onClose={() => setShowNest(false)} />
+                              <NestingSheet embedded detail={detail} onToast={onToast}
+                                onClose={() => setShowNest(false)}
+                                onNest={setNests}
+                                onExtra={putExtra} />
                             )}
                           </div>
                         )}
@@ -596,15 +833,62 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
               })}
 
               <div className="card overflow-hidden" style={{ background: 'var(--surface)' }}>
-                <div className="flex items-center gap-2 px-3 py-2.5">
+                <button onClick={() => setOpenExtras(v => !v)}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-left press">
                   <span className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
                     style={{ background: 'var(--bg)', color: 'var(--ink-2)' }}><Plus size={14} /></span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13.5px] font-bold">Інші витрати</span>
-                    <span className="k-label">метал, доставка, покриття — усе, чого немає в кресленнях</span>
+                    <span className="k-label">
+                      {extras.length
+                        ? `${extras.length} ряд. · метал, доставка, покриття`
+                        : 'метал, доставка, покриття — усе, чого немає в кресленнях'}
+                    </span>
                   </span>
                   <span className="k-value text-[14px]">{totals.extras ? money(totals.extras) : '—'}</span>
-                </div>
+                </button>
+
+                {openExtras && (
+                  <div className="px-3 pb-3 border-t hairline pt-2.5 space-y-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {EXTRA_PRESETS.map(preset => (
+                        <button key={preset} onClick={() => addExtra(preset)}
+                          className="px-2 py-1 rounded-lg text-[11px] font-bold press"
+                          style={{ background: 'var(--bg)', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
+                          + {preset}
+                        </button>
+                      ))}
+                    </div>
+
+                    {extras.map((e, k) => (
+                      <div key={k} className="flex items-center gap-2">
+                        <input value={e.label} onChange={ev => patchExtra(k, { label: ev.target.value })}
+                          placeholder="за що — піде рядком у рахунок"
+                          className="k-input flex-1 min-w-0 px-2 py-1.5 rounded-lg outline-none text-[12.5px]" />
+                        <input value={e.sumTxt} onChange={ev => patchExtra(k, { sumTxt: ev.target.value })}
+                          inputMode="decimal" placeholder="0"
+                          className="k-input w-[104px] px-2 py-1.5 rounded-lg outline-none text-[12.5px] tabular-nums text-right" />
+                        <button onClick={() => delExtra(k)} className="p-1.5 rounded-lg press"
+                          style={{ color: 'var(--ink-3)' }} aria-label="Прибрати рядок">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ))}
+
+                    <button onClick={() => addExtra()}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold press"
+                      style={{ background: 'var(--bg)', color: 'var(--ink-2)', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
+                      <Plus size={12} /> Додати рядок
+                    </button>
+
+                    {bundles.some(b => b.extras.length) && (
+                      <p className="k-label">
+                        ще {money(bundles.reduce((s, b) => s + b.extras.reduce((x, e) => x + (e.sum || 0), 0), 0))} грн
+                        лежить у групах рахунку — з попередніх розкладок
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -615,7 +899,7 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
               <button onClick={bundlesFromCards}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold press ml-auto"
                 style={{ background: 'var(--surface)', color: 'var(--ink)', boxShadow: 'inset 0 0 0 1px var(--line-2)' }}>
-                <Layers size={12} /> Зібрати рахунок ({opCards.length})
+                <Layers size={12} /> Зібрати рахунок ({cards.length})
               </button>
               <button onClick={applyPrices} disabled={saving || !pending.length}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11.5px] font-bold press disabled:opacity-40"
@@ -694,19 +978,16 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                           </td>
                           <td className="px-2 py-1.5 tabular-nums whitespace-nowrap">{qtyOf(i) || '—'}</td>
 
-                          {/* Гіби — лише там, де операція справді гнуття */}
+                          {/* Гіби ставимо будь-якому рядку: розгортку ріжуть і гнуть,
+                              а операція в неї одна — «Лазер» */}
                           <td className="px-1 py-1 w-[74px]">
-                            {isBend(i) ? (
-                              <input
-                                value={metaOf(i.row).bends ?? ''}
-                                onChange={e => setMetaVal(i.row, 'bends', e.target.value)}
-                                inputMode="decimal" placeholder="0"
-                                title={bendsAll(i) ? `Всього гібів: ${bendsAll(i)}` : 'Кількість гібів на одній деталі'}
-                                className="k-input w-full px-1.5 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right"
-                              />
-                            ) : (
-                              <span className="block text-center" style={{ color: 'var(--ink-3)' }}>—</span>
-                            )}
+                            <input
+                              value={metaOf(i.row).bends ?? ''}
+                              onChange={e => setMetaVal(i.row, 'bends', e.target.value)}
+                              inputMode="decimal" placeholder="—"
+                              title={bendsAll(i) ? `Всього гібів: ${bendsAll(i)}` : 'Кількість гібів на одній деталі'}
+                              className="k-input w-full px-1.5 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right"
+                            />
                           </td>
 
                           {/* Час порізки — лише для DXF */}
@@ -765,8 +1046,8 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                   <label className="flex items-center gap-1.5 text-[11.5px]" style={{ color: 'var(--ink-3)' }}>
                     ціна за гіб
                     <input
-                      value={bendPriceAll}
-                      onChange={e => applyBendPrice(e.target.value)}
+                      value={bendPrice}
+                      onChange={e => setBendPrice(e.target.value)}
                       inputMode="decimal" placeholder="0"
                       className="k-input w-[74px] px-2 py-1 rounded-lg outline-none text-[12px] tabular-nums text-right"
                     />
@@ -791,12 +1072,12 @@ export default function CalcSheet({ detail, onClose, onMinimize, onToast, onAppl
                   {cutBusy ? <Loader2 size={12} className="animate-spin" /> : <Scissors size={12} />}
                   {cutBusy || 'Час порізки з DXF'}
                 </button>
-                {cutPriced.length > 0 && (
-                  <button onClick={priceFromCut} disabled={saving || !!cutBusy}
+                {allPriceable.length > 0 && (
+                  <button onClick={() => composePrice(allPriceable)} disabled={saving || !!cutBusy}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11.5px] font-bold press disabled:opacity-50"
                     style={{ background: '#E0F2FE', color: '#0369A1' }}
-                    title="Поставити тариф різу як ціну за штуку. Якщо в групі вже стоїть рядок витрат «лазерна порізка», приберіть його — інакше порізка порахується двічі">
-                    <CornerUpRight size={12} /> Тариф → ціна ({cutPriced.length})
+                    title="Скласти ціну за штуку з робіт: тариф різу + гіби. Якщо вартість розкрою вже стоїть рядком в «Інших витратах», приберіть його — інакше порізка порахується двічі">
+                    <CornerUpRight size={12} /> Різ + гіби → ціна ({allPriceable.length})
                   </button>
                 )}
                 <button onClick={applyPrices} disabled={saving || !pendingPrices.length}

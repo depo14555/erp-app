@@ -584,8 +584,13 @@ export const api = {
     return post('erp.calcGet', { headerRow });
   },
 
-  calcSave(headerRow: number, data: CalcData): Promise<{ ok: boolean; updatedAt: string; bundles: number }> {
-    return post('erp.calcSave', { headerRow, data });
+  /**
+   * Зберегти прорахунок. Разом із ним — рядки в саму картку (ціна, час):
+   * таблиця джерело правди, тож прорахунок не має лишатися лише в собі.
+   */
+  calcSave(headerRow: number, data: CalcData, rows?: Array<{ row: number; fields: Record<string, string> }>):
+    Promise<{ ok: boolean; updatedAt: string; bundles: number; cells: number; sheetRows: number }> {
+    return post('erp.calcSave', { headerRow, data, rows: rows || [] });
   },
 
   /** Розподіл КД: що буде розподілено — виконавець → операція → файли. */

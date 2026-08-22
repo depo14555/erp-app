@@ -14,7 +14,7 @@ import {
 import { MinimizeButton } from './PageSheet';
 import { useBusy } from '../lib/busy';
 import { api } from '../api';
-import { OrderDetail, NestItem, NestPrice, CalcBundle } from '../types';
+import { OrderDetail, NestItem, NestPrice, CalcBundle, CalcNest } from '../types';
 import {
   parseDxf, computeMetrics, bestAngle, orientAt, packGroup, packTrueShape, buildDxf,
   drawPart, thickOf, suggestPerM, suggestSpeed, suggestPierceSec, weightOf, safeFileName,
@@ -27,6 +27,13 @@ interface Props {
    * була окрема подорож, з якої суму переносили руками.
    */
   embedded?: boolean;
+  /**
+   * Розкладку порахували — віддаємо її прорахунку, щоб вона там
+   * лишилась і після закриття вікна: листи, вага, остача, вартість.
+   */
+  onNest?: (nests: CalcNest[]) => void;
+  /** Вартість розкрою рядком в «Інші витрати» замість окремої групи. */
+  onExtra?: (label: string, sum: number) => void;
   detail: OrderDetail;
   onClose: () => void;
   onMinimize?: () => void;
@@ -53,7 +60,7 @@ function money(n: number): string {
 /** Розібрані DXF живуть поза компонентом: закрив вікно — повторно не читаємо. */
 const parsedCache = new Map<string, any>();
 
-export default function NestingSheet({ detail, onClose, onMinimize, onToast, embedded }: Props) {
+export default function NestingSheet({ detail, onClose, onMinimize, onToast, embedded, onNest, onExtra }: Props) {
   const [phase, setPhase] = useState<Phase>('load');
   const [items, setItems] = useState<NestItem[]>([]);
   const [folderUrl, setFolderUrl] = useState('');
@@ -77,6 +84,10 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast, emb
   /** Яка саме дія зараз іде — щоб крутилка стояла на своїй кнопці. */
   const [act, setAct] = useState<'' | 'layouts' | 'pronest' | 'calc'>('');
   const parsedRef = useRef<Map<string, any>>(parsedCache);
+  /** Коли саме розклали — щоб підпис не «мигав» при зміні тарифів. */
+  const stampRef = useRef('');
+  /** Що вже віддали назовні — не смикаємо прорахунок на кожен рендер. */
+  const sentRef = useRef('');
 
   // Поки читаємо файли / рахуємо / зберігаємо — сторінку не можна втратити
   useBusy(phase === 'work' || saving, 'Розкрій DXF');
@@ -142,6 +153,9 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast, emb
 
   async function run() {
     if (!chosen.length) return;
+    const d = new Date();
+    const p2 = (n: number) => String(n).padStart(2, '0');
+    stampRef.current = `${p2(d.getDate())}.${p2(d.getMonth() + 1)} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
     setPhase('work');
     setProblems([]);
     setResults([]);
@@ -205,6 +219,39 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast, emb
     const timeMin = (speed ? lenM / speed : 0) + pierces * (pierceSec || 0) / 60;
     return { lenM, pierces, w, cost, timeMin, perM, perPierce, perSheet, speed, pierceSec };
   }
+
+  /**
+   * Зведення розкладок для прорахунку. Рахуємо після кожної зміни
+   * тарифів — вартість різу від них залежить, — але віддаємо назовні
+   * тільки коли зведення справді змінилось.
+   */
+  useEffect(() => {
+    if (!onNest || !results.length) return;
+    const list: CalcNest[] = results.map(res => {
+      const m = metricsOf(res);
+      return {
+        key: res.key,
+        sheetW: res.sheetW, sheetH: res.sheetH,
+        sheets: res.sheets.length,
+        parts: res.sheets.reduce((s: number, sh: any) => s + sh.parts.length, 0),
+        lenM: Math.round(m.lenM * 10) / 10,
+        pierces: m.pierces,
+        kgParts: Math.round(m.w.parts * 10) / 10,
+        kgSheets: Math.round(m.w.sheets * 10) / 10,
+        kgRest: Math.round(m.w.rest * 10) / 10,
+        usedPct: m.w.usedPct,
+        cost: Math.round(m.cost * 100) / 100,
+        timeMin: Math.round(m.timeMin),
+        rows: (res.group?.items || []).map((i: NestItem) => i.row),
+        at: stampRef.current,
+      };
+    });
+    const sig = JSON.stringify(list);
+    if (sig === sentRef.current) return;
+    sentRef.current = sig;
+    onNest(list);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results, prices]);
 
   const totals = useMemo(() => {
     let cost = 0, timeMin = 0, sheets = 0, kg = 0;
@@ -283,9 +330,25 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast, emb
     }
   }
 
-  /** Вартість порізки → окрема група в Прорахунку. */
+  /**
+   * Вартість порізки → гроші прорахунку. Усередині картки це просто
+   * рядок «Інших витрат» (нічого нікуди не їде), окремим вікном —
+   * як раніше, власна група рахунку.
+   */
   async function toCalc() {
     if (!results.length) return;
+    if (onExtra) {
+      let n = 0;
+      results.forEach(res => {
+        const m = metricsOf(res);
+        if (!m.cost) return;
+        onExtra(`Лазерна порізка ${res.key} · листів ${res.sheets.length} (${res.sheetW}×${res.sheetH})`,
+          Math.round(m.cost * 100) / 100);
+        n++;
+      });
+      onToast(n ? `➕ ${n} рядк. в «Інші витрати»` : 'Нема вартості — задайте тарифи різу', !n);
+      return;
+    }
     setSaving(true); setAct('calc');
     try {
       const cur = await api.calcGet(detail.header.headerRow);
@@ -467,7 +530,7 @@ export default function NestingSheet({ detail, onClose, onMinimize, onToast, emb
                   className="flex items-center gap-1.5 px-3 py-2.5 rounded-2xl text-[12px] font-bold press disabled:opacity-40"
                   style={{ background: '#CCFBF1', color: '#0F766E' }}>
                   {act === 'calc' ? <Loader2 size={13} className="animate-spin" /> : <Calculator size={13} />}
-                  {act === 'calc' ? 'Переношу…' : 'У прорахунок'}
+                  {act === 'calc' ? 'Переношу…' : onExtra ? 'У витрати' : 'У прорахунок'}
                 </button>
               </>
             )}

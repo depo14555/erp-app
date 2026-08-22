@@ -103,10 +103,54 @@ export interface CalcRowMeta {
   price?: number;
 }
 
+/**
+ * Зафіксована розкладка групи «матеріал · товщина». Розкрій рахували —
+ * значить його результат має лишитися: скільки листів пішло, скільки
+ * металу в деталях і скільки в остачі. Раніше це жило лише на екрані
+ * до закриття вікна.
+ */
+export interface CalcNest {
+  key: string;
+  sheetW: number;
+  sheetH: number;
+  sheets: number;
+  parts: number;
+  lenM: number;
+  pierces: number;
+  kgParts: number;
+  kgSheets: number;
+  kgRest: number;
+  usedPct: number;
+  cost: number;
+  timeMin: number;
+  rows: number[];
+  at: string;
+}
+
+/** Рядок прорахунку для аркуша «Прорахунок» — те, що бачить людина в таблиці. */
+export interface CalcLine {
+  section: string;
+  name: string;
+  payTo: string;
+  count: number;
+  qty: number;
+  sum: number;
+  time: number;
+  note: string;
+}
+
 export interface CalcData {
   bundles: CalcBundle[];
   /** Гіби і час порізки за номером рядка картки. */
   meta?: Record<string, CalcRowMeta>;
+  /** Інші витрати замовлення: метал, доставка, покриття. */
+  extras?: CalcExtra[];
+  /** Розкладки, які вже рахували. */
+  nests?: CalcNest[];
+  /** Ціна за один гіб — одна на замовлення. */
+  bendPrice?: number;
+  /** Плоский зріз для аркуша «Прорахунок». Похідне — не зберігається в JSON. */
+  lines?: CalcLine[];
   updatedAt?: string;
   updatedBy?: string;
 }
