@@ -29,7 +29,7 @@ import NestingSheet from '../components/NestingSheet';
 import PurchasedSheet from '../components/PurchasedSheet';
 import AssemblySheet from '../components/AssemblySheet';
 import TmcSheet from '../components/TmcSheet';
-import OrderInsights, { GAP_FIELDS, weighItems } from '../components/OrderInsights';
+import OrderInsights, { weighItems } from '../components/OrderInsights';
 import DrawingPane from '../components/DrawingPane';
 import PinchZoom from '../components/PinchZoom';
 import PurchasedInline, { PurchLine } from '../components/PurchasedInline';
@@ -187,7 +187,6 @@ export default function OrderPage({
   );
   const [byAsm, setByAsm] = useState(false);   // групувати позиції по збірках
   const [preview, setPreview] = useState<OrderItem | null>(null);  // креслення збоку
-  const [gap, setGap] = useState('');          // «показати рядки, де цього поля немає»
   const [insightsTick, setInsightsTick] = useState(0);
   const [masses, setMasses] = useState<Record<string, number>>({});  // fileId → кг зі штампа
   // Вузький екран — таблиця показується в масштабованому шарі
@@ -204,8 +203,8 @@ export default function OrderPage({
   const st = statusStyle(header.status);
 
   // Новий пошук/фільтр або інше замовлення — показуємо знову з першої сторінки
-  useEffect(() => { setLimits({}); }, [q, fOp, fExec, fStatus, fKind, gap, header.headerRow]);
-  useEffect(() => { setFOp(''); setFExec(''); setFStatus(''); setFKind(''); setQ(''); setGap(''); setSelected(new Set()); setPreview(null); }, [header.headerRow]);
+  useEffect(() => { setLimits({}); }, [q, fOp, fExec, fStatus, fKind, header.headerRow]);
+  useEffect(() => { setFOp(''); setFExec(''); setFStatus(''); setFKind(''); setQ(''); setSelected(new Set()); setPreview(null); }, [header.headerRow]);
   // Кнопка «Друк креслень + QR» у сайдбарі відкриває вікно друку для цього замовлення
   // Сигнали спрацьовують лише при ЗМІНІ (не при монтуванні компонента —
   // інакше вікна самі відкривались при повторному відкритті замовлення)
@@ -284,7 +283,7 @@ export default function OrderPage({
       .filter(k => counts[k])
       .map(k => ({ key: k as string, count: counts[k] }));
   }, [real]);
-  const hasFilter = !!(q.trim() || fOp || fExec || fStatus || fKind || gap);
+  const hasFilter = !!(q.trim() || fOp || fExec || fStatus || fKind);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -295,11 +294,10 @@ export default function OrderPage({
       if (fStatus && i.rowStatus !== fStatus) return false;
       if (fKind && fileKind(i.name) !== fKind) return false;
       // «чого бракує»: лишаємо саме ті рядки, де поле порожнє
-      if (gap && String((i as any)[gap] ?? '').trim()) return false;
       if (query && ![i.name, i.id, i.op, i.executor, i.material, i.note, i.assembly].join(' ').toLowerCase().includes(query)) return false;
       return true;
     });
-  }, [items, q, fOp, fExec, fStatus, fKind, gap, hasFilter]);
+  }, [items, q, fOp, fExec, fStatus, fKind, hasFilter]);
 
   /** Активні фільтри чіпами — щоб було видно стан і зі згорнутою панеллю. */
   const activeFilters = useMemo(() => {
@@ -309,16 +307,12 @@ export default function OrderPage({
     if (fExec) out.push({ key: 'exec', label: fExec, clear: () => setFExec('') });
     if (fStatus) out.push({ key: 'st', label: fStatus, clear: () => setFStatus('') });
     if (fKind) out.push({ key: 'kind', label: fKind.toUpperCase(), clear: () => setFKind('') });
-    if (gap) {
-      const f = GAP_FIELDS.find(x => x.key === gap);
-      out.push({ key: 'gap', label: `без «${f?.label || gap}»`, clear: () => setGap('') });
-    }
     return out;
-  }, [q, fOp, fExec, fStatus, fKind, gap]);
+  }, [q, fOp, fExec, fStatus, fKind]);
 
   const filterCount = activeFilters.length;
   const clearFilters = () => {
-    setQ(''); setFOp(''); setFExec(''); setFStatus(''); setFKind(''); setGap('');
+    setQ(''); setFOp(''); setFExec(''); setFStatus(''); setFKind('');
   };
 
   const groups = useMemo(() => {
@@ -698,8 +692,6 @@ export default function OrderPage({
           order={header.projectId}
           calcTotal={calc?.total || 0}
           items={real}
-          gap={gap}
-          onGap={setGap}
           onTool={t => {
             if (t === 'asm') setShowAsm(true);
             else if (t === 'purch') setShowPurch(true);
