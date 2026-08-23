@@ -15,6 +15,7 @@ import StatusPicker from '../components/StatusPicker';
 import ItemsTable, { TableMode, num } from '../components/ItemsTable';
 import DeliverySheet from '../components/DeliverySheet';
 import BulkEditSheet from '../components/BulkEditSheet';
+import FileReplaceSheet from '../components/FileReplaceSheet';
 import { api } from '../api';
 import PrintSheet from '../components/PrintSheet';
 import SendSheet from '../components/SendSheet';
@@ -56,6 +57,7 @@ interface Props {
   distrSignal?: number;
   calcSignal?: number;
   nestSignal?: number;
+  fupdSignal?: number;
   purchSignal?: number;
   asmSignal?: number;
   tmcSignal?: number;
@@ -96,6 +98,7 @@ const TOOLS: Array<{ key: string; label: string; hint: string; Icon: typeof Rock
   { key: 'photo',   label: 'Фотошоп',      hint: 'закрити зайве на кресленні', Icon: Paintbrush, color: '#DB2777' },
   { key: 'send',    label: 'Виконавцю',    hint: 'відправити позиції в його таблицю', Icon: Send, color: '#4F46E5' },
   { key: 'print',   label: 'Друк + QR',    hint: 'пакет креслень для цеху',    Icon: Printer,    color: '#0369A1' },
+  { key: 'fupd',    label: 'Заміна КД',    hint: 'нові версії креслень з архівом', Icon: RefreshCw, color: '#1565C0' },
   { key: 'billing', label: 'Рахунки',      hint: 'оплати і документи',         Icon: Receipt,    color: 'var(--green)' },
   { key: 'asm',     label: 'Склад збірок', hint: 'що в яку збірку входить',    Icon: Blocks,     color: '#7C3AED', ai: true },
   { key: 'tmc',     label: 'ТМЦ і вага',   hint: 'матеріал, товщина, маса зі штампа', Icon: Scale, color: '#1B4FD8', ai: true },
@@ -114,12 +117,13 @@ function StampCell({ k, v, hot, last }: { k: string; v: string; hot?: boolean; l
 }
 
 /** Вікна інструментів, які можна згорнути (робота продовжується у фоні). */
-type SheetKey = 'print' | 'send' | 'tech' | 'photo' | 'distr' | 'calc' | 'nest' | 'purch' | 'asm' | 'tmc';
+type SheetKey = 'print' | 'send' | 'tech' | 'photo' | 'distr' | 'calc' | 'nest' | 'purch' | 'asm' | 'tmc' | 'fupd';
 const SHEET_META: Record<SheetKey, { label: string; emoji: string }> = {
   print: { label: 'Друк креслень', emoji: '🖨️' },
   send:  { label: 'Відправка виконавцю', emoji: '📤' },
   tech:  { label: 'Тех.запуск', emoji: '🚀' },
   photo: { label: 'Фотошоп креслень', emoji: '🎨' },
+  fupd:  { label: 'Заміна КД', emoji: '🔄' },
   distr: { label: 'Розподіл КД', emoji: '📂' },
   calc:  { label: 'Прорахунок', emoji: '🧮' },
   nest:  { label: 'Розкрій DXF', emoji: '✂️' },
@@ -141,7 +145,7 @@ function useOpenSignal(signal: number | undefined, open: () => void) {
 export default function OrderPage({
   detail, orderStatusList, rowStatusList, lists, loading,
   onBack, onRefresh, onSetOrderStatus, onSetRowStatus, onUpdateRow, onBulkStatus, onToast,
-  printSignal, billingSignal, techSignal, photoSignal, sendSignal, distrSignal, calcSignal, nestSignal, purchSignal, asmSignal, tmcSignal, autoOpen, onAutoOpened,
+  printSignal, billingSignal, techSignal, photoSignal, sendSignal, distrSignal, calcSignal, nestSignal, fupdSignal, purchSignal, asmSignal, tmcSignal, autoOpen, onAutoOpened,
   focusRow, onFocused,
 }: Props) {
   const [q, setQ] = useState('');
@@ -156,6 +160,9 @@ export default function OrderPage({
   const [showTech, setShowTech] = useState(false);
   const [showPhoto, setShowPhoto] = useState(false);
   const [showBilling, setShowBilling] = useState(false);
+  const [showFupd, setShowFupd] = useState(false);
+  /** Позиція, з перегляду якої відкрили заміну — стане ціллю за замовчуванням. */
+  const [fupdRow, setFupdRow] = useState<number | null>(null);
   const [showDistr, setShowDistr] = useState(false);
   const [showCalc, setShowCalc] = useState(false);
   const [showNest, setShowNest] = useState(false);
@@ -210,6 +217,7 @@ export default function OrderPage({
   useOpenSignal(distrSignal, () => setShowDistr(true));
   useOpenSignal(calcSignal, () => setShowCalc(true));
   useOpenSignal(nestSignal, () => setShowNest(true));
+  useOpenSignal(fupdSignal, () => setShowFupd(true));
   useOpenSignal(purchSignal, () => setShowPurch(true));
   useOpenSignal(asmSignal, () => setShowAsm(true));
   useOpenSignal(tmcSignal, () => setShowTmc(true));
@@ -747,6 +755,7 @@ export default function OrderPage({
                 items={filtered.filter(i => !i.group)}
                 onPick={setPreview}
                 onClose={() => setPreview(null)}
+                onReplace={it => { setFupdRow(it.row); setShowFupd(true); }}
               />
             </div>
           )}
@@ -1013,6 +1022,16 @@ export default function OrderPage({
         </div>
       )}
 
+      {showFupd && (
+        <FileReplaceSheet
+          detail={detail}
+          preselectRow={fupdRow}
+          onClose={() => { setShowFupd(false); setFupdRow(null); }}
+          onToast={onToast}
+          onDone={() => onRefresh('Оновлюю після заміни…')}
+        />
+      )}
+
       {showBilling && (
         <BillingSheet
           detail={detail}
@@ -1083,6 +1102,7 @@ export default function OrderPage({
                     else if (key === 'distr') setShowDistr(true);
                     else if (key === 'nest') setShowNest(true);
                     else if (key === 'calc') setShowCalc(true);
+                    else if (key === 'fupd') setShowFupd(true);
                     else if (key === 'photo') setShowPhoto(true);
                     else if (key === 'send') setShowSend(true);
                     else if (key === 'print') setShowPrint(true);

@@ -34,6 +34,7 @@ import SideMenu from './components/SideMenu';
 import Toast from './components/Toast';
 import InstallPrompt from './components/InstallPrompt';
 import UpdatePrompt from './components/UpdatePrompt';
+import WhatsNew from './components/WhatsNew';
 import OfflineBanner from './components/OfflineBanner';
 import LoadingBar from './components/LoadingBar';
 
@@ -64,6 +65,7 @@ export default function App() {
   const [sendTick, setSendTick] = useState(0);         // сайдбар → відправити виконавцю
   const [distrTick, setDistrTick] = useState(0);       // сайдбар → розподіл КД
   const [calcTick, setCalcTick] = useState(0);         // сайдбар → прорахунок
+  const [fupdTick, setFupdTick] = useState(0);         // сайдбар → заміна КД
   const [autoOpen, setAutoOpen] = useState<'calc' | null>(null);  // відкрити інструмент одразу
   const [nestTick, setNestTick] = useState(0);
   const [purchTick, setPurchTick] = useState(0);   // сайдбар → покупні
@@ -331,6 +333,7 @@ export default function App() {
       sendSignal={sendTick}
       distrSignal={distrTick}
       calcSignal={calcTick}
+      fupdSignal={fupdTick}
       nestSignal={nestTick}
       purchSignal={purchTick}
       asmSignal={asmTick}
@@ -366,6 +369,7 @@ export default function App() {
           else if (t === 'purch') setPurchTick(v => v + 1);
           else if (t === 'asm') setAsmTick(v => v + 1);
           else if (t === 'tmc') setTmcTick(v => v + 1);
+          else if (t === 'fupd') setFupdTick(v => v + 1);
         }}
         onLogout={logout}
         onRefresh={refreshCurrent}
@@ -497,6 +501,7 @@ export default function App() {
       <LoadingBar active={loading} label={loadingLabel} />
       <InstallPrompt />
       <UpdatePrompt />
+      <WhatsNew />
     </div>
   );
 }

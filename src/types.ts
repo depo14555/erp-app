@@ -43,6 +43,8 @@ export interface OrderItem {
   executor: string;
   rowStatus: string;
   note: string;
+  /** Мітка 🔄 «файл замінено …» з нотатки клітинки назви. */
+  replaced?: string;
   assembly: string;
   execPrice: string;
   clientPrice: string;

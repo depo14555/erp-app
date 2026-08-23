@@ -312,6 +312,13 @@ export default function ItemsTable({
             {route.step}/{route.total}
           </span>
         )}
+        {item.replaced && (
+          <span className="flex-shrink-0 text-[10px] font-bold px-1 py-0.5 rounded cursor-help"
+            style={{ background: 'var(--blue-bg)', color: 'var(--blue)' }}
+            title={item.replaced}>
+            🔄
+          </span>
+        )}
         <button
           onClick={() => { setDraft(item.name); setEdit({ row: item.row, field: 'name' }); }}
           className="flex-shrink-0 p-0.5 rounded press opacity-0 group-hover:opacity-60 hover:!opacity-100"

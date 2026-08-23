@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   X, ChevronLeft, ChevronRight, ExternalLink, Loader2, FileText,
-  Maximize2, Minimize2, ArrowLeft, ArrowRight,
+  Maximize2, Minimize2, ArrowLeft, ArrowRight, RefreshCw,
 } from 'lucide-react';
 import { api } from '../api';
 import { OrderItem, fileKind } from '../types';
@@ -121,9 +121,11 @@ interface Props {
   items: OrderItem[];
   onPick: (i: OrderItem) => void;
   onClose: () => void;
+  /** Замінити файл цієї позиції — відкриває «Заміну КД» з передвибором. */
+  onReplace?: (item: OrderItem) => void;
 }
 
-export default function DrawingPane({ item, items, onPick, onClose }: Props) {
+export default function DrawingPane({ item, items, onPick, onClose, onReplace }: Props) {
   const [pages, setPages] = useState<string[]>([]);
   const [page, setPage] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -218,6 +220,13 @@ export default function DrawingPane({ item, items, onPick, onClose }: Props) {
           style={{ color: 'var(--ink-2)' }} title={full ? 'Вписати в панель' : 'Реальний масштаб'}>
           {full ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
         </button>
+        {onReplace && (
+          <button onClick={() => onReplace(item)} className="p-1.5 rounded press flex-shrink-0"
+            style={{ color: 'var(--blue)' }}
+            aria-label="Замінити файл" title="Замінити файл (нова версія КД)">
+            <RefreshCw size={14} />
+          </button>
+        )}
         <button onClick={onClose} className="p-1.5 rounded press" style={{ color: 'var(--ink-2)' }}
           aria-label="Закрити креслення" title="Закрити (Esc)">
           <X size={16} />

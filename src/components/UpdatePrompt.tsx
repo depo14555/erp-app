@@ -6,15 +6,18 @@
 //  сервіс-воркер — користувачі застрягають на старій версії.
 // ================================================================
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { RefreshCw, X } from 'lucide-react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useBusyLabels } from '../lib/busy';
+import { APP_VERSION } from '../changelog';
 
 const CHECK_INTERVAL = 15 * 60 * 1000; // перевірка нової версії кожні 15 хв
 
 export default function UpdatePrompt() {
   const busy = useBusyLabels();
+  /** «Що нового» з НОВОГО деплою: changelog.json оминає кеш воркера. */
+  const [changes, setChanges] = useState<string[]>([]);
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
@@ -32,6 +35,19 @@ export default function UpdatePrompt() {
       });
     },
   });
+
+  // Список нової версії — з її changelog.json (свіжий деплой віддає новий)
+  useEffect(() => {
+    if (!needRefresh) return;
+    fetch('/changelog.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(r => r.json())
+      .then(j => {
+        if (j && j.version && j.version !== APP_VERSION && Array.isArray(j.changes)) {
+          setChanges(j.changes.slice(0, 6));
+        }
+      })
+      .catch(() => { /* без списку плашка все одно працює */ });
+  }, [needRefresh]);
 
   // Esc закриває плашку
   useEffect(() => {
@@ -52,7 +68,18 @@ export default function UpdatePrompt() {
         </span>
         <div className="min-w-0">
           <p className="text-[13px] font-bold text-gray-900 leading-tight">Доступна нова версія</p>
-          <p className="text-[11px] text-gray-500">Оновіть, щоб отримати останні зміни</p>
+          {changes.length ? (
+            <ul className="mt-1 space-y-0.5 max-w-[420px]">
+              {changes.map(c => (
+                <li key={c} className="text-[11px] text-gray-600 leading-snug flex gap-1.5">
+                  <span className="text-blue-500 flex-shrink-0">·</span>
+                  <span>{c}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-[11px] text-gray-500">Оновіть, щоб отримати останні зміни</p>
+          )}
         </div>
         <button
           onClick={() => updateServiceWorker(true)}

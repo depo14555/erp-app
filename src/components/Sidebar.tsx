@@ -56,7 +56,7 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
-export type OrderTool = 'billing' | 'tech' | 'photo' | 'send' | 'print' | 'distr' | 'calc' | 'nest' | 'purch' | 'asm' | 'tmc';
+export type OrderTool = 'billing' | 'tech' | 'photo' | 'send' | 'print' | 'distr' | 'calc' | 'nest' | 'purch' | 'asm' | 'tmc' | 'fupd';
 
 interface Props {
   tab: AppTab;
@@ -87,6 +87,8 @@ const STEP_1: ToolItem[] = [
   { key: 'tech', label: 'Тех.запуск', Icon: Rocket, color: '#EA580C' },
   { key: 'photo', label: 'Фотошоп креслень', Icon: Paintbrush, color: '#DB2777' },
   { key: 'print', label: 'Друк креслень + QR', Icon: Printer, color: '#0891B2' },
+  // Клієнт прислав нові версії — заміна з архівом і синхронізацією виконавцям
+  { key: 'fupd', label: 'Заміна КД', Icon: RefreshCw, color: '#1565C0' },
 ];
 
 /** Те, що читає креслення само — окремим блоком, щоб було видно, де працює ШІ. */
