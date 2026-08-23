@@ -503,7 +503,8 @@ export default function OrderPage({
           </button>
 
           <div className="flex items-center gap-3 px-3.5 py-2 min-w-0 flex-1 border-r" style={{ borderColor: 'var(--line)' }}>
-            <span className="font-mono text-[18px] font-semibold whitespace-nowrap">
+            <span className="font-mono text-[18px] font-semibold truncate min-w-0"
+              title={header.orderNum || header.projectId}>
               {header.orderNum || header.projectId || 'Замовлення'}
             </span>
             <button onClick={() => setPickOrder(true)} className="k-chip press flex-shrink-0"
@@ -600,7 +601,7 @@ export default function OrderPage({
           в заголовках колонок; у картках заголовків немає, тому там списки
           лишаються.
         */}
-        <div className="order-3 lg:order-2 w-full lg:w-auto lg:flex-1 lg:min-w-0 flex items-center gap-1.5">
+        <div className="order-3 lg:order-2 w-full lg:w-auto lg:flex-1 lg:min-w-0 flex items-center gap-1.5 flex-wrap lg:flex-nowrap">
           <div className="relative flex-1 min-w-[120px]">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--ink-3)' }} />
             <input

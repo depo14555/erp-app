@@ -73,7 +73,19 @@ export default function FileReplaceSheet({ detail, preselectRow, onClose, onToas
       // (PDF-креслення і DXF-розгортка з одним ядром) перевага тому,
       // що має те саме розширення, що й новий файл
       const ext = (file.name.match(/\.([a-z0-9]+)$/i) || [])[1]?.toLowerCase() || '';
-      const cands = core ? targets.filter(t => coreOf.get(t.row) === core) : [];
+      let cands = core ? targets.filter(t => coreOf.get(t.row) === core) : [];
+      if (!cands.length) {
+        // Файл без децимальника (F01_Plyta_...) — збіг за початком імені:
+        // нова версія зазвичай стара назва + суфікс «_зм2»
+        const stem = file.name.replace(/\.[a-z0-9]+$/i, '').toLowerCase();
+        const pref = targets.filter(t => {
+          const ts = t.name.replace(/\.[a-z0-9]+$/i, '').toLowerCase();
+          return ts.length > 5 && (stem.startsWith(ts) || ts.startsWith(stem));
+        });
+        // Маршрутні рядки дублюють один файл — рахуємо унікальні ІМЕНА
+        const uniq = new Set(pref.map(t => t.name.toLowerCase()));
+        if (pref.length && uniq.size <= 3) cands = pref;
+      }
       const hit = cands.find(t => ext && t.name.toLowerCase().endsWith('.' + ext)) || cands[0];
       const row = hit ? hit.row
         : (list.length === 1 && preselectRow ? preselectRow : 0);
@@ -149,26 +161,32 @@ export default function FileReplaceSheet({ detail, preselectRow, onClose, onToas
           {picks.length > 0 && (
             <div className="space-y-1.5">
               {picks.map((p, i) => (
-                <div key={p.name} className="flex items-center gap-2 flex-wrap p-2 rounded-xl"
+                <div key={p.name} className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 p-2.5 rounded-xl"
                   style={{ boxShadow: 'inset 0 0 0 1px var(--line)' }}>
-                  <span className="text-[12px] font-semibold min-w-0 flex-1 truncate" title={p.name}>{p.name}</span>
-                  <span className="k-label flex-shrink-0">→</span>
+                  {/* Рядок 1: ім'я файлу + вердикт; на ПК все в одну лінію */}
+                  <span className="flex items-center gap-2 min-w-0 sm:flex-1">
+                    <span className="text-[12.5px] font-semibold min-w-0 flex-1 truncate" title={p.name}>{p.name}</span>
+                    {p.auto && <span className="k-chip flex-shrink-0"
+                      style={{ background: 'var(--green-bg)', color: 'var(--green)', borderColor: 'var(--green-line)' }}>
+                      збіг ✓
+                    </span>}
+                    {!p.row && <span className="k-chip flex-shrink-0"
+                      style={{ background: 'var(--amber-bg)', color: 'var(--amber)', borderColor: 'var(--amber-line)' }}>
+                      виберіть позицію
+                    </span>}
+                    <button onClick={() => setPicks(prev => prev.filter((_, k) => k !== i))} disabled={!!busy}
+                      className="p-1 rounded press flex-shrink-0 disabled:opacity-30" aria-label="Прибрати файл"
+                      style={{ color: 'var(--ink-3)' }}><X size={13} /></button>
+                  </span>
+                  {/* Рядок 2: ціль — на телефоні на всю ширину, пальцем зручно */}
                   <select value={p.row} disabled={!!busy}
                     onChange={e => setPicks(prev => prev.map((x, k) => k === i ? { ...x, row: +e.target.value, auto: false } : x))}
-                    className="k-input px-2 py-1 rounded-lg text-[11.5px] outline-none max-w-[280px]">
+                    className="k-input w-full sm:w-[300px] px-2 py-2 sm:py-1 rounded-lg text-[12px] outline-none flex-shrink-0">
                     <option value={0}>— не заміняти —</option>
                     {targets.map(t => (
                       <option key={t.row} value={t.row}>{t.id} · {t.name.slice(0, 46)}</option>
                     ))}
                   </select>
-                  {p.auto && <span className="k-chip flex-shrink-0"
-                    style={{ background: 'var(--green-bg)', color: 'var(--green)', borderColor: 'var(--green-line)' }}>
-                    збіг за децимальником
-                  </span>}
-                  {!p.row && <span className="k-chip flex-shrink-0"
-                    style={{ background: 'var(--amber-bg)', color: 'var(--amber)', borderColor: 'var(--amber-line)' }}>
-                    виберіть позицію
-                  </span>}
                 </div>
               ))}
             </div>
