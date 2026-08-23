@@ -7,7 +7,7 @@
 // ================================================================
 
 import { useEffect, useState } from 'react';
-import { RefreshCw, X } from 'lucide-react';
+import { Loader2, RefreshCw, X } from 'lucide-react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useBusyLabels } from '../lib/busy';
 import { APP_VERSION } from '../changelog';
@@ -18,6 +18,8 @@ export default function UpdatePrompt() {
   const busy = useBusyLabels();
   /** «Що нового» з НОВОГО деплою: changelog.json оминає кеш воркера. */
   const [changes, setChanges] = useState<string[]>([]);
+  /** Натиснули «Оновити» — крутимось, поки воркер міняється і сторінка перезавантажується. */
+  const [updating, setUpdating] = useState(false);
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
@@ -82,14 +84,23 @@ export default function UpdatePrompt() {
           )}
         </div>
         <button
-          onClick={() => updateServiceWorker(true)}
-          className="flex-shrink-0 px-3.5 py-2 bg-blue-600 text-white rounded-xl text-[12px] font-semibold hover:bg-blue-700 active:scale-95 transition-all"
+          onClick={() => {
+            if (updating) return;
+            setUpdating(true);
+            // Страховка: якщо воркер завис і сам не перезавантажив — робимо це силою
+            setTimeout(() => window.location.reload(), 8000);
+            updateServiceWorker(true).catch(() => window.location.reload());
+          }}
+          disabled={updating}
+          className="flex-shrink-0 px-3.5 py-2 bg-blue-600 text-white rounded-xl text-[12px] font-semibold hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-70 disabled:active:scale-100 flex items-center gap-1.5"
         >
-          Оновити
+          {updating && <Loader2 size={13} className="animate-spin" />}
+          {updating ? 'Оновлюю…' : 'Оновити'}
         </button>
         <button
           onClick={() => setNeedRefresh(false)}
-          className="flex-shrink-0 text-gray-400 hover:text-gray-600 p-1"
+          disabled={updating}
+          className="flex-shrink-0 text-gray-400 hover:text-gray-600 p-1 disabled:opacity-40"
           aria-label="Закрити"
         >
           <X size={16} />
