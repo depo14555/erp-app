@@ -236,7 +236,7 @@ export default function ItemsTable({
       <span className="flex items-center gap-0.5 w-full">
       <button
         onClick={e => openEditor(e, item, field)}
-        className={`k-cell w-full px-1.5 py-[3px] text-[12.5px] press ${field === 'material' ? 'whitespace-normal text-left' : 'whitespace-nowrap'}
+        className={`k-cell w-full px-1.5 py-[3px] text-[12.5px] press ${field === 'material' ? 'whitespace-nowrap overflow-hidden text-ellipsis block text-left' : 'whitespace-nowrap'}
           ${numeric ? 'font-mono text-[11.5px] text-right' : 'text-left'}
           ${field === 'executor' && value ? 'font-semibold' : ''}
           ${blank ? 'k-empty !text-center' : ''}`}
@@ -511,7 +511,14 @@ export default function ItemsTable({
                 {item.id}
               </td>
               {/* єдина колонка, де значення таки обрізаємо: імена файлів бувають на сто символів */}
-              <td className="px-2.5 py-[6px] k-clip" style={{ maxWidth: 560 }}>{nameCell(item)}</td>
+              <td className="px-2.5 py-[6px] k-clip" style={{ maxWidth: 560 }}>
+                {nameCell(item)}
+                {/* Довгий матеріал не влазить у свою колонку — повна назва тут, під найменуванням */}
+                {!buh && !log && String(item.material || '').trim().length > 18 && (
+                  <span className="block k-label truncate" style={{ maxWidth: 540 }}
+                    title={item.material}>{item.material}</span>
+                )}
+              </td>
               {log ? (
                 <>
                   <td className="px-1 py-1 tabular-nums">{cell(item, 'qty')}</td>
@@ -577,7 +584,8 @@ export default function ItemsTable({
                 </>
               ) : (
                 <>
-                  <td className="px-1 py-1 k-wrap">{cell(item, 'material')}</td>
+                  <td className="px-1 py-1 k-clip" style={{ maxWidth: 150 }}
+                    title={String(item.material || '')}>{cell(item, 'material')}</td>
                   <td className="px-1 py-1">{cell(item, 'thickness')}</td>
                   <td className="px-1 py-1 tabular-nums">{cell(item, 'qty')}</td>
                   <td className="px-1 py-1">{cell(item, 'op')}</td>
