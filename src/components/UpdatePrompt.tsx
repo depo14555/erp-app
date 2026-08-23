@@ -84,11 +84,23 @@ export default function UpdatePrompt() {
           )}
         </div>
         <button
-          onClick={() => {
+          onClick={async () => {
             if (updating) return;
             setUpdating(true);
-            // Страховка: якщо воркер завис і сам не перезавантажив — робимо це силою
-            setTimeout(() => window.location.reload(), 8000);
+            // У режимі «prompt» плагін НЕ перезавантажує сторінку сам:
+            // новий воркер перемикається, а вкладка так і стоїть на
+            // старому коді — «натискаю і нічого». Тому все своїми руками:
+            // 1) щойно контроль перейшов новому воркеру — перезавантаження;
+            const sw = navigator.serviceWorker;
+            sw?.addEventListener('controllerchange', () => window.location.reload(), { once: true });
+            // 2) страховка: не перемкнувся за 5 с — перезавантажуємось силою
+            //    (skipWaiting уже надіслано, після reload буде нова версія)
+            setTimeout(() => window.location.reload(), 5000);
+            // 3) буквальний поштовх воркеру в черзі + штатний шлях плагіна
+            try {
+              const reg = await sw?.getRegistration();
+              reg?.waiting?.postMessage({ type: 'SKIP_WAITING' });
+            } catch { /* нижче ще штатний шлях */ }
             updateServiceWorker(true).catch(() => window.location.reload());
           }}
           disabled={updating}
