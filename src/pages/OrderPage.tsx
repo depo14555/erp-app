@@ -810,6 +810,13 @@ export default function OrderPage({
                       </div>
 
                       <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                        {item.replaced && (
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg cursor-help"
+                            style={{ background: 'var(--blue-bg)', color: 'var(--blue)' }}
+                            title={item.replaced}>
+                            🔄 замінено
+                          </span>
+                        )}
                         {item.op && (
                           <span className="text-[11px] font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded-lg">
                             {item.op}
